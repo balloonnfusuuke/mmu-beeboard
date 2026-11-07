@@ -34,6 +34,16 @@
 
   var active = requestedSubject();
 
+  /* 保存済みの最新から科目を ID で引き直す。開いた時点のオブジェクトは
+     他タブの保存で古くなるので、再描画のたびに付け替える。 */
+  function subjectById(id) {
+    var found = null;
+    state().subjects.forEach(function (subject) {
+      if (subject.id === id) found = subject;
+    });
+    return found;
+  }
+
   BB.ui.mount({
     title: t('sim.title'),
     head: {
@@ -552,6 +562,10 @@
 
   /* 他タブの保存を取り込んだら描き直す。 */
   BB.store.subscribe(function () {
+    /* active は marks ごと古いオブジェクトを掴んだままなので、保存済みの最新から
+       同じ科目 ID で引き直す。科目が削除されていたら先頭科目に戻す。 */
+    active = (active && subjectById(active.id)) || requestedSubject();
+    if (!active) return;
     /* 他タブの保存では、ヘッダーもページ本体も再読込なしで追いつく。 */
     BB.ui.refreshChrome();
     render();
