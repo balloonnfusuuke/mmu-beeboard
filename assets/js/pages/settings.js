@@ -66,12 +66,22 @@
         '<input id="s-name" class="bb-input" type="text" value="' + esc(data.student.name) + '" data-setting="student.name">' +
         '<p class="text-caption text-muted mt-1.5">' + t('settings.profile.fullNameHint') + '</p></div>' +
         '<div><label class="bb-label" for="s-programme">' + t('settings.profile.programme') + '</label>' +
-        '<input id="s-programme" class="bb-input" type="text" value="' + esc(data.student.programme) + '" disabled>' +
+        '<input id="s-programme" class="bb-input" type="text" value="' + esc(data.student.programme) + '" data-setting="student.programme">' +
         '<p class="text-caption text-muted mt-1.5">' + t('settings.profile.programmeHint') + '</p></div>' +
+        '<div><label class="bb-label" for="s-year">' + t('settings.profile.year') + '</label>' +
+        '<select id="s-year" class="bb-input" data-setting="student.year">' +
+        [1, 2, 3, 4]
+          .map(function (year) {
+            return '<option value="' + year + '"' + (Number(data.student.year) === year ? ' selected' : '') + '>' +
+              t('settings.profile.yearOption', { n: year }) + '</option>';
+          })
+          .join('') +
+        '</select>' +
+        '<p class="text-caption text-muted mt-1.5">' + t('settings.profile.yearHint') + '</p></div>' +
         '<div><label class="bb-label" for="s-id">' + t('settings.profile.studentId') + '</label>' +
         '<input id="s-id" class="bb-input num" type="text" value="' + esc(data.student.studentId) + '" data-setting="student.studentId">' +
         '<p class="text-caption text-muted mt-1.5">' + t('settings.profile.studentIdHint') + '</p></div>' +
-        '<div><label class="bb-label" for="s-term">' + t('settings.profile.activeTrimester') + '</label>' +
+        '<div class="sm:col-span-2"><label class="bb-label" for="s-term">' + t('settings.profile.activeTrimester') + '</label>' +
         '<input id="s-term" class="bb-input" type="text" value="' + esc(BB.ui.termLabel(data)) + '" disabled>' +
         '<p class="text-caption text-muted mt-1.5">' + t('settings.profile.activeTrimesterHint') + '</p></div>' +
         '</div>'
@@ -424,6 +434,8 @@
     BB.store.update(function (data) {
       setPath(data, path, value);
       if (path === 'student.name') data.student.initials = BB.ui.initials(value);
+      /* 学年は選択式だが、保存状態には数値で持たせて辞書の補間が崩れないようにする。 */
+      if (path === 'student.year') data.student.year = Number(value) || 1;
     });
     BB.ui.toast(t('common.saved'));
     BB.ui.refreshChrome();

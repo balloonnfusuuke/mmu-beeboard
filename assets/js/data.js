@@ -17,13 +17,14 @@
   };
 
   /* 公開用のダミー学生。氏名・学籍番号・連絡先は空にしている。
-     氏名は初回セットアップと Settings から変更できる。 */
+     氏名・学籍番号・プログラム・学年は Settings のプロフィールから変更できる。
+     学年の初期値は 1。利用者は何年次とは限らないため、最も浅い年に置く。 */
   var STUDENT = {
     name: 'Student',
     initials: 'S',
     studentId: '',
     programme: 'B.C.S (Hons)',
-    year: 2,
+    year: 1,
     faculty: 'Faculty of Computing and Informatics'
   };
 
