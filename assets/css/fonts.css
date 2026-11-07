@@ -1,7 +1,16 @@
 /* MMU BeeBoard — self-hosted fonts. 外部 CDN に依存しない。
    Plus Jakarta Sans: 可変フォント (wght 400–800)、Google Fonts のサブセットをそのまま同梱。
-   Material Symbols Outlined: 実際に使う 67 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
-   アイコンを増やすときは icon_names を足して再取得すること（GUIDE.md 参照）。 */
+   Material Symbols Outlined: 実際に使う 56 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
+   アイコンを増やすときは下の ICON_NAMES に足して再取得すること。
+   取得元: https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=<ICON_NAMES>&display=block
+   ICON_NAMES（アルファベット順・この並びでないと 400 が返る）:
+   add,add_link,add_task,alarm,arrow_back,arrow_forward,badge,bar_chart,calculate,
+   calendar_month,calendar_today,check,check_circle,chevron_right,close,dark_mode,database,
+   delete,desktop_windows,download,edit,edit_note,event,event_available,event_busy,
+   event_repeat,event_upcoming,flag,gavel,grading,history,history_toggle_off,hourglass_empty,
+   info,light_mode,link,menu_book,military_tech,note_add,palette,person,play_arrow,room,rule,
+   save,schedule,search_off,settings,stop,swap_horiz,task_alt,timer,translate,upload,
+   verified_user,warning */
 
 /* ---------- Plus Jakarta Sans ---------- */
 
