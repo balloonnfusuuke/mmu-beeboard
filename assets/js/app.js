@@ -799,10 +799,11 @@
 
   function detailPill(icon, color, label, value, note) {
     return (
-      '<div class="bg-surface border border-border rounded-control p-3.5 flex items-start gap-3">' +
-      '<span class="material-symbols-outlined text-[20px] mt-0.5" style="color:' + color + '">' + icon + '</span>' +
-      '<div><div class="text-caption text-muted font-medium">' + label + '</div>' +
-      '<div class="text-label-md font-semibold text-ink num">' + value +
+      '<div class="bg-surface border border-border rounded-control p-3.5 flex items-start gap-3 min-w-0">' +
+      '<span class="material-symbols-outlined text-[20px] mt-0.5 shrink-0" style="color:' + color + '">' + icon + '</span>' +
+      '<div class="min-w-0 flex-1">' +
+      '<div class="text-caption text-muted font-medium break-words">' + label + '</div>' +
+      '<div class="text-label-md font-semibold text-ink num break-words">' + value +
       (note ? ' <span class="text-caption font-normal text-muted">(' + note + ')</span>' : '') +
       '</div></div></div>'
     );
@@ -852,8 +853,8 @@
       '<div class="group bg-surface border border-border hover:border-primary/40 rounded-card p-5 shadow-rest hover:shadow-hover transition-all flex flex-col justify-between">' +
       '<div><div class="flex items-center justify-between gap-2 pb-3 border-b border-border-subtle">' +
       '<a href="' + href + '" class="flex items-center gap-2 min-w-0">' +
-      '<span class="material-symbols-outlined text-[20px]" style="color:' + iconColor + '">' + icon + '</span>' +
-      '<h3 class="text-title-md font-bold text-ink group-hover:text-primary transition-colors">' + title + '</h3></a>' +
+      '<span class="material-symbols-outlined text-[20px] shrink-0" style="color:' + iconColor + '">' + icon + '</span>' +
+      '<h3 class="text-title-md font-bold text-ink group-hover:text-primary transition-colors truncate">' + title + '</h3></a>' +
       '<a href="' + href + '" class="flex items-center gap-1 text-muted hover:text-primary transition-colors shrink-0" aria-label="' +
       escHtml(title) + '">' +
       '<span class="text-caption hidden sm:inline">' + t('card.details') + '</span>' +

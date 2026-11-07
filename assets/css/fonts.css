@@ -1,16 +1,32 @@
 /* MMU BeeBoard — self-hosted fonts. 外部 CDN に依存しない。
    Plus Jakarta Sans: 可変フォント (wght 400–800)、Google Fonts のサブセットをそのまま同梱。
-   Material Symbols Outlined: 実際に使う 56 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
-   アイコンを増やすときは下の ICON_NAMES に足して再取得すること。
-   取得元: https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=<ICON_NAMES>&display=block
+   Material Symbols Outlined: 実際に使う 59 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
+
+   ■ アイコン名の洗い出し方（手で数えない）
+     1. node tools/collect-icons.js          使用アイコン名を全量で出力する
+     2. node tools/collect-icons.js --check  下の ICON_NAMES と照合し、不足があれば exit 1
+   収集対象は静的 HTML のマークアップだけではない。JS のテンプレート文字列、
+   三項演算子（例: atRisk ? 'warning' : 'check_circle'）、アイコンを引数に取る
+   ヘルパー呼び出し（detailPill / section / cardShell）も走査する。
+   ヘルパーを増やしたら tools/collect-icons.js の ICON_ARG に追記すること。
+
+   ■ フォントの取り直し
+     1. node tools/collect-icons.js の出力（カンマ区切り・アルファベット順）を
+        下の ICON_NAMES に貼り替える
+     2. 次の URL を Chrome の UA で取得し、woff2 を assets/fonts/ に保存する
+        https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=<ICON_NAMES>&display=block
+     3. 取得した CSS の fonts.gstatic.com の URL から woff2 をダウンロードする
+     4. グリフ数が「アイコン数 + 26（a–z のリガチャ用）」であることを確認する
+
    ICON_NAMES（アルファベット順・この並びでないと 400 が返る）:
-   add,add_link,add_task,alarm,arrow_back,arrow_forward,badge,bar_chart,calculate,
-   calendar_month,calendar_today,check,check_circle,chevron_right,close,dark_mode,database,
-   delete,desktop_windows,download,edit,edit_note,event,event_available,event_busy,
-   event_repeat,event_upcoming,flag,gavel,grading,history,history_toggle_off,hourglass_empty,
-   info,light_mode,link,menu_book,military_tech,note_add,palette,person,play_arrow,room,rule,
-   save,schedule,search_off,settings,stop,swap_horiz,task_alt,timer,translate,upload,
-   verified_user,warning */
+   add,add_link,add_task,alarm,arrow_back,arrow_forward,assignment_late,badge,bar_chart,
+   calculate,calendar_month,calendar_today,check,check_circle,chevron_right,close,dark_mode,
+   database,delete,desktop_windows,download,edit,edit_note,event,event_available,event_busy,
+   event_repeat,event_upcoming,flag,gavel,grade,grading,history,history_toggle_off,
+   hourglass_empty,info,light_mode,link,menu_book,military_tech,note_add,palette,person,
+   play_arrow,room,rule,save,schedule,search_off,settings,stop,swap_horiz,task_alt,timer,
+   translate,upload,verified,verified_user,warning */
+
 
 /* ---------- Plus Jakarta Sans ---------- */
 
