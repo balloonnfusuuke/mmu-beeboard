@@ -1,9 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="MMU BeeBoard">
-  <rect width="32" height="32" rx="8" fill="#003DA5"/>
-  <g transform="translate(17.46 13.49) rotate(-32) scale(8.6)">
-    <path d="M1 0 L-0.95 -0.72 L-0.42 0 Z" fill="#FFFFFF"/>
-    <path d="M1 0 L-0.42 0 L-0.95 0.72 Z" fill="#FFFFFF" fill-opacity="0.75"/>
-    <path d="M-0.42 0 L-0.95 0.72 L-0.55 0.24 Z" fill="#FFFFFF" fill-opacity="0.55"/>
-    <path d="M1 0 L0.55 -0.13 L0.55 0.13 Z" fill="#C8102E"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480" role="img" aria-label="MMU BeeBoard">
+  <title>MMU BeeBoard</title>
+  <rect width="480" height="480" rx="104" fill="#003DA5"/>
+  <g transform="translate(0,42)">
+    <!-- rear wing -->
+    <polygon points="168,202 326,38 272,112" fill="#FFFFFF"/>
+    <polygon points="272,112 326,38 300,130 232,178" fill="#D7DEE7"/>
+    <!-- front wing -->
+    <polygon points="158,216 418,82 336,197" fill="#FFFFFF"/>
+    <polygon points="200,208 336,197 216,221 185,220" fill="#D7DEE7"/>
+    <!-- abdomen -->
+    <polygon points="250,230 287,272 240,350 190,305" fill="#FFFFFF"/>
+    <polygon points="287,272 320,258 318,352 240,350" fill="#D7DEE7"/>
+    <polygon points="320,258 350,250 355,330 318,352" fill="#FFFFFF"/>
+    <!-- stinger -->
+    <polygon points="345,278 452,344 350,306" fill="#FFFFFF"/>
+    <polygon points="350,306 452,344 352,328" fill="#D7DEE7"/>
+    <!-- thorax -->
+    <polygon points="149,209 250,228 170,236" fill="#D7DEE7"/>
+    <polygon points="149,209 170,236 185,315 128,296" fill="#FFFFFF"/>
+    <polygon points="170,236 250,228 185,315" fill="#FFFFFF"/>
+    <polygon points="128,296 185,315 161,338 115,302" fill="#D7DEE7"/>
+    <!-- red facet -->
+    <polygon points="77,223 149,209 122,278" fill="#C8102E"/>
+    <!-- head -->
+    <polygon points="77,223 48,274 122,278" fill="#FFFFFF"/>
+    <polygon points="48,274 96,296 74,343" fill="#FFFFFF"/>
+    <polygon points="96,296 122,278 74,343" fill="#C3CEDA"/>
+    <polygon points="48,274 122,278 96,296" fill="#D7DEE7"/>
   </g>
 </svg>
