@@ -71,6 +71,15 @@
     return exam;
   }
 
+  /* 保存済みデータに満点超えが残っていても確保点を水増ししない。 */
+  function scoreOf(subject, assessment) {
+    var score = subject.marks ? subject.marks[assessment.id] : undefined;
+    if (typeof score !== 'number' || isNaN(score)) return null;
+    var max = Number(assessment.max);
+    if (!isFinite(max) || max <= 0) return Math.max(0, score);
+    return Math.max(0, Math.min(max, score));
+  }
+
   function compute(subject) {
     var secured = 0;
     var possible = 0;
@@ -80,8 +89,8 @@
 
     subject.assessments.forEach(function (assessment) {
       possible += assessment.weight;
-      var score = subject.marks ? subject.marks[assessment.id] : undefined;
-      if (typeof score === 'number' && !isNaN(score)) {
+      var score = scoreOf(subject, assessment);
+      if (score !== null) {
         secured += (score / assessment.max) * assessment.weight;
         entered += 1;
         if (exam && assessment.id === exam.id) examScore = score;
@@ -200,8 +209,8 @@
   }
 
   function assessmentRow(subject, assessment, result) {
-    var score = subject.marks ? subject.marks[assessment.id] : undefined;
-    var hasScore = typeof score === 'number' && !isNaN(score);
+    var score = scoreOf(subject, assessment);
+    var hasScore = score !== null;
     var contribution = hasScore ? ((score / assessment.max) * assessment.weight).toFixed(1) : '—';
     var isExam = result.exam && assessment.id === result.exam.id;
 
@@ -221,31 +230,34 @@
       ' min="1" step="1" value="' + assessment.max + '" title="Full marks for this component"' +
       ' aria-label="Full marks for ' + assessment.name + '"' +
       ' data-max="' + assessment.id + '" data-subject="' + subject.id + '"></div></td>' +
-      '<td class="py-3 px-4 font-semibold text-ink num">' + contribution + '</td>' +
+      '<td class="py-3 px-4 font-semibold text-ink num" data-weighted="' + assessment.id + '">' + contribution + '</td>' +
       '<td class="py-3 pl-4 text-right">' +
-      '<span class="bb-chip" style="background:' + (hasScore ? 'var(--bb-success-surface)' : 'var(--bb-surface-subtle)') +
+      '<span class="bb-chip" data-status="' + assessment.id + '" style="background:' + (hasScore ? 'var(--bb-success-surface)' : 'var(--bb-surface-subtle)') +
       ';color:' + (hasScore ? 'var(--bb-success)' : 'var(--bb-text-muted)') + '">' +
       (hasScore ? 'Graded' : 'Pending') + '</span></td></tr>'
     );
   }
 
+  /* 目標に必要な Final 点の表示。科目編集で Type を Final exam にしないと
+     ここが空のままになるので、その導線を文言で示す。 */
+  function neededHtml(result) {
+    var needed = result.needed;
+    if (!result.published) {
+      return '<span class="text-muted">Assessment structure not published yet.</span>';
+    }
+    if (!needed) {
+      return '<span class="text-muted">No final exam component — set one component\'s Type to ' +
+        '&ldquo;Final exam&rdquo; in the Subject Editor.</span>';
+    }
+    if (needed.secured) return '<span class="text-success font-bold">Already secured</span>';
+    if (!needed.reachable) return '<span class="text-alert font-bold">Not reachable</span>';
+    return '<span class="text-primary font-bold num">' + needed.marks.toFixed(1) + ' / ' + needed.max + '</span>';
+  }
+
   function expandedCard(subject) {
     var result = compute(subject);
     var chip = BB.color.chip(subject.color);
-    var needed = result.needed;
-
-    var neededText;
-    if (!result.published) {
-      neededText = '<span class="text-muted">Assessment structure not published yet.</span>';
-    } else if (!needed) {
-      neededText = '<span class="text-muted">No final exam component.</span>';
-    } else if (needed.secured) {
-      neededText = '<span class="text-success font-bold">Already secured</span>';
-    } else if (!needed.reachable) {
-      neededText = '<span class="text-alert font-bold">Not reachable</span>';
-    } else {
-      neededText = '<span class="text-primary font-bold num">' + needed.marks.toFixed(1) + ' / ' + needed.max + '</span>';
-    }
+    var neededText = neededHtml(result);
 
     var rows = subject.assessments
       .map(function (assessment) {
@@ -264,11 +276,11 @@
       '<h3 class="text-headline-sm font-bold text-ink">' + subject.name + '</h3></div>' +
       '<div class="flex items-center gap-4 bg-canvas px-4 py-2.5 rounded-control border border-border">' +
       '<div><span class="text-caption text-muted block">Current Secured</span>' +
-      '<span class="text-label-md font-bold text-ink num">' + result.secured.toFixed(1) + ' / ' +
+      '<span class="text-label-md font-bold text-ink num" data-secured="' + subject.id + '">' + result.secured.toFixed(1) + ' / ' +
       result.possible + ' (' + (result.possible ? ((result.secured / result.possible) * 100).toFixed(1) : '0.0') + '%)</span></div>' +
       '<div class="h-8 w-px bg-border"></div>' +
       '<div><span class="text-caption text-muted block">Predicted Grade</span>' +
-      '<span class="text-label-md font-bold num" style="color:' + (result.predicted ? subject.color : 'var(--bb-text-muted)') + '">' +
+      '<span class="text-label-md font-bold num" data-predicted="' + subject.id + '" style="color:' + (result.predicted ? subject.color : 'var(--bb-text-muted)') + '">' +
       (result.predicted ? result.predicted.grade : '—') + '</span></div></div></div></div>' +
       '<div class="p-6 space-y-5">' +
       '<h4 class="text-title-md font-semibold text-ink">Continuous Assessments &amp; Weighted Components</h4>' +
@@ -290,8 +302,8 @@
       '<div class="flex flex-wrap items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">calculate</span>' +
       '<span class="text-title-md font-bold text-ink">Final exam score needed for ' + target + '%:</span>' +
-      neededText + '</div>' +
-      '<p class="text-body-sm text-muted">Current coursework secured: ' + result.secured.toFixed(2) + ' / ' +
+      '<span data-needed="' + subject.id + '">' + neededText + '</span></div>' +
+      '<p class="text-body-sm text-muted" data-secured-line="' + subject.id + '">Current coursework secured: ' + result.secured.toFixed(2) + ' / ' +
       result.possible + '%. Enter marks above to recompute the target buffer.</p></div>' +
       '<div class="flex items-center gap-2 shrink-0">' +
       TARGETS.map(function (option) {
@@ -392,42 +404,87 @@
     });
   }
 
+  /* 満点を超える点数は確保点を水増しするので、保存時に 0〜満点へ丸める。
+     丸めた場合は丸めた値を返す（呼び出し側が入力欄を直す）。 */
   function saveMark(subjectId, assessmentId, raw) {
+    var clamped = null;
     BB.store.update(function (data) {
       data.subjects.forEach(function (subject) {
         if (subject.id !== subjectId) return;
         subject.marks = subject.marks || {};
-        if (raw === '') delete subject.marks[assessmentId];
-        else subject.marks[assessmentId] = Number(raw);
+        if (raw === '') {
+          delete subject.marks[assessmentId];
+          return;
+        }
+        var value = Number(raw);
+        if (!isFinite(value)) {
+          delete subject.marks[assessmentId];
+          return;
+        }
+        var max = NaN;
+        subject.assessments.forEach(function (assessment) {
+          if (assessment.id === assessmentId) max = Number(assessment.max);
+        });
+        var upper = isFinite(max) && max > 0 ? max : Infinity;
+        var bounded = Math.max(0, Math.min(upper, value));
+        if (bounded !== value) clamped = bounded;
+        subject.marks[assessmentId] = bounded;
       });
     });
+    return clamped;
   }
 
-  /* 入力中に再描画するとフォーカスが飛ぶため、少し待ってから同じ欄へ戻す。
-     これがないと「Enter を押すまで反映されない」ように見える。 */
-  var renderTimer = null;
-  function renderSoon(selector) {
-    if (renderTimer) clearTimeout(renderTimer);
-    renderTimer = setTimeout(function () {
-      renderTimer = null;
-      render();
-      if (!selector) return;
-      var node = document.querySelector(selector);
-      if (!node) return;
-      node.focus();
-      try {
-        node.setSelectionRange(node.value.length, node.value.length);
-      } catch (e) {
-        /* type=number では選択範囲を扱えないブラウザがある */
+  /* 入力中は入力欄を作り直さず、依存する数字だけを差し替える。
+     全体を描き直すとフォーカスが飛び、打っている途中の値が古いまま見える。 */
+  function refreshLive(subjectId) {
+    var subject = BB.store.subject(subjectId);
+    if (!subject) return;
+    var result = compute(subject);
+
+    subject.assessments.forEach(function (assessment) {
+      var score = scoreOf(subject, assessment);
+      var hasScore = score !== null;
+
+      var weighted = document.querySelector('[data-weighted="' + assessment.id + '"]');
+      if (weighted) {
+        weighted.textContent = hasScore ? ((score / assessment.max) * assessment.weight).toFixed(1) : '—';
       }
-    }, 450);
-  }
 
-  function fieldSelector(input) {
-    var subjectId = input.getAttribute('data-subject');
-    var assessmentId = input.getAttribute('data-assessment') || input.getAttribute('data-max');
-    var attribute = input.hasAttribute('data-max') ? 'data-max' : 'data-assessment';
-    return '[' + attribute + '="' + assessmentId + '"][data-subject="' + subjectId + '"]';
+      var status = document.querySelector('[data-status="' + assessment.id + '"]');
+      if (status) {
+        status.textContent = hasScore ? 'Graded' : 'Pending';
+        status.style.background = hasScore ? 'var(--bb-success-surface)' : 'var(--bb-surface-subtle)';
+        status.style.color = hasScore ? 'var(--bb-success)' : 'var(--bb-text-muted)';
+      }
+
+      var scoreInput = document.querySelector(
+        '[data-assessment="' + assessment.id + '"][data-subject="' + subjectId + '"]'
+      );
+      if (scoreInput) scoreInput.setAttribute('max', assessment.max);
+    });
+
+    var secured = document.querySelector('[data-secured="' + subjectId + '"]');
+    if (secured) {
+      secured.textContent = result.secured.toFixed(1) + ' / ' + result.possible + ' (' +
+        (result.possible ? ((result.secured / result.possible) * 100).toFixed(1) : '0.0') + '%)';
+    }
+
+    var predicted = document.querySelector('[data-predicted="' + subjectId + '"]');
+    if (predicted) {
+      predicted.textContent = result.predicted ? result.predicted.grade : '—';
+      predicted.style.color = result.predicted ? subject.color : 'var(--bb-text-muted)';
+    }
+
+    var needed = document.querySelector('[data-needed="' + subjectId + '"]');
+    if (needed) needed.innerHTML = neededHtml(result);
+
+    var line = document.querySelector('[data-secured-line="' + subjectId + '"]');
+    if (line) {
+      line.textContent = 'Current coursework secured: ' + result.secured.toFixed(2) + ' / ' +
+        result.possible + '%. Enter marks above to recompute the target buffer.';
+    }
+
+    renderMetrics();
   }
 
   document.addEventListener('input', function (event) {
@@ -436,18 +493,16 @@
       var maxValue = Number(maxInput.value);
       if (!isFinite(maxValue) || maxValue <= 0) return;
       saveMax(maxInput.getAttribute('data-subject'), maxInput.getAttribute('data-max'), maxValue);
-      renderSoon(fieldSelector(maxInput));
+      refreshLive(maxInput.getAttribute('data-subject'));
       return;
     }
 
     var input = event.target.closest('[data-assessment]');
     if (!input) return;
-    saveMark(
-      input.getAttribute('data-subject'),
-      input.getAttribute('data-assessment'),
-      input.value.trim()
-    );
-    renderSoon(fieldSelector(input));
+    var subjectId = input.getAttribute('data-subject');
+    var clamped = saveMark(subjectId, input.getAttribute('data-assessment'), input.value.trim());
+    if (clamped !== null) input.value = clamped;
+    refreshLive(subjectId);
   });
 
   document.addEventListener('change', function (event) {
@@ -467,12 +522,13 @@
 
     var input = event.target.closest('[data-assessment]');
     if (input) {
-      saveMark(
-        input.getAttribute('data-subject'),
-        input.getAttribute('data-assessment'),
-        input.value.trim()
-      );
-      render();
+      var subjectId = input.getAttribute('data-subject');
+      var clamped = saveMark(subjectId, input.getAttribute('data-assessment'), input.value.trim());
+      if (clamped !== null) {
+        input.value = clamped;
+        BB.ui.toast('Score capped at the full marks for this component');
+      }
+      refreshLive(subjectId);
       return;
     }
 

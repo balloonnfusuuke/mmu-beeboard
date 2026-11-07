@@ -158,11 +158,18 @@
       })
       .map(function (week) {
         var entries = weeks[week];
-        var total = entries.reduce(function (sum, item) {
-          return sum + item.assessment.weight;
-        }, 0);
+        /* 配点は科目ごとに 100% が上限。週でまとめて足すと別科目の締切が
+           同じ週に重なっただけで 110% の誤警告になる。 */
+        var bySubject = {};
+        entries.forEach(function (item) {
+          var key = item.subject.id;
+          if (!bySubject[key]) bySubject[key] = { subject: item.subject, total: 0 };
+          bySubject[key].total += item.assessment.weight;
+        });
+        var groups = Object.keys(bySubject).map(function (key) {
+          return bySubject[key];
+        });
         var isExam = week >= BB.store.get().term.examWeek;
-        var highStakes = total >= HIGH_STAKES_WEIGHT;
         var range = BB.date.weekLabel(week);
 
         var rows = entries
@@ -189,10 +196,20 @@
           })
           .join('');
 
-        var overWeighted = total > 100
-          ? '<div class="px-5 py-2.5 border-b border-border bg-alert-surface text-caption font-semibold text-alert">' +
-            'This week adds up to ' + total + '% — more than a module can carry. Check the weightings in the Subject Editor.</div>'
-          : '';
+        var overWeighted = groups
+          .filter(function (group) {
+            return group.total > 100;
+          })
+          .map(function (group) {
+            return '<div class="px-5 py-2.5 border-b border-border bg-alert-surface text-caption font-semibold text-alert">' +
+              group.subject.id + ' adds up to ' + group.total + '% this week — more than a module can carry. ' +
+              'Check the weightings in the Subject Editor.</div>';
+          })
+          .join('');
+
+        var highStakes = groups.filter(function (group) {
+          return group.total >= HIGH_STAKES_WEIGHT;
+        });
 
         return (
           '<div class="bb-card overflow-hidden">' +
@@ -201,12 +218,21 @@
           '<span class="text-label-sm font-bold text-primary uppercase tracking-wider">' +
           (isExam ? 'Week ' + week + ' (Exam Week)' : 'Week ' + week) + '</span>' +
           '<span class="text-caption text-muted">' + (range || 'Dates not set') + '</span>' +
-          (highStakes
-            ? '<span class="bb-chip" style="background:var(--bb-alert-surface);color:var(--bb-alert)" title="' +
-              HIGH_STAKES_WEIGHT + '% or more of the module grade is due this week">High Stakes</span>'
-            : '') +
+          highStakes
+            .map(function (group) {
+              return '<span class="bb-chip" style="background:var(--bb-alert-surface);color:var(--bb-alert)" title="' +
+                HIGH_STAKES_WEIGHT + '% or more of ' + group.subject.id + '\'s grade is due this week">High Stakes · ' +
+                group.subject.id + '</span>';
+            })
+            .join('') +
           '</div>' +
-          '<span class="text-caption text-muted">Total Weight: <strong class="text-ink num">' + total + '%</strong></span>' +
+          '<span class="text-caption text-muted">Total Weight: <strong class="text-ink num">' +
+          groups
+            .map(function (group) {
+              return group.subject.id + ' ' + group.total + '%';
+            })
+            .join(' · ') +
+          '</strong></span>' +
           '</div>' + overWeighted + rows + '</div>'
         );
       })

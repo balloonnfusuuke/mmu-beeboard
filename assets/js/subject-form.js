@@ -126,18 +126,24 @@
   }
 
   function assessmentRow(assessment, index) {
+    var kind = assessment.kind === 'exam' ? 'exam' : 'coursework';
     return (
       '<div class="grid grid-cols-12 gap-2 items-end pb-3 border-b border-border-subtle last:border-0"' +
-      ' data-assessment="' + index + '" data-id="' + esc(assessment.id) + '" data-kind="' + esc(assessment.kind || 'coursework') + '">' +
-      '<div class="col-span-12 sm:col-span-4"><label class="bb-label">Component</label>' +
+      ' data-assessment="' + index + '" data-id="' + esc(assessment.id) + '" data-kind="' + esc(kind) + '">' +
+      '<div class="col-span-12 sm:col-span-3"><label class="bb-label">Component</label>' +
       '<input class="bb-input" type="text" value="' + esc(assessment.name) + '" data-field="name"></div>' +
       '<div class="col-span-4 sm:col-span-2"><label class="bb-label">Weight %</label>' +
       '<input class="bb-input num" type="number" min="0" max="100" step="1" value="' + esc(assessment.weight) + '" data-field="weight"></div>' +
       '<div class="col-span-4 sm:col-span-2"><label class="bb-label">Max marks</label>' +
       '<input class="bb-input num" type="number" min="1" step="1" value="' + esc(assessment.max) + '" data-field="max"></div>' +
-      '<div class="col-span-3 sm:col-span-2"><label class="bb-label">Week</label>' +
+      '<div class="col-span-4 sm:col-span-1"><label class="bb-label">Week</label>' +
       '<input class="bb-input num" type="number" min="1" max="20" step="1" value="' + esc(assessment.week) + '" data-field="week"></div>' +
-      '<div class="col-span-1 flex justify-end">' +
+      '<div class="col-span-10 sm:col-span-3"><label class="bb-label">Type</label>' +
+      '<select class="bb-input" data-field="kind">' +
+      '<option value="coursework"' + (kind === 'coursework' ? ' selected' : '') + '>Coursework</option>' +
+      '<option value="exam"' + (kind === 'exam' ? ' selected' : '') + '>Final exam</option>' +
+      '</select></div>' +
+      '<div class="col-span-2 sm:col-span-1 flex justify-end">' +
       '<button type="button" class="bb-btn bb-btn-ghost" style="width:40px;padding:0" data-remove-assessment="' + index + '" title="Remove component">' +
       '<span class="material-symbols-outlined text-[18px]">delete</span></button></div></div>'
     );
@@ -235,13 +241,14 @@
     });
 
     draft.assessments = Array.prototype.slice.call(host.querySelectorAll('[data-assessment]')).map(function (row) {
+      var kindField = row.querySelector('[data-field="kind"]');
       return {
         id: row.getAttribute('data-id'),
         name: row.querySelector('[data-field="name"]').value.trim(),
         weight: Number(row.querySelector('[data-field="weight"]').value),
         max: Number(row.querySelector('[data-field="max"]').value),
         week: Number(row.querySelector('[data-field="week"]').value),
-        kind: row.getAttribute('data-kind') || 'coursework'
+        kind: kindField ? kindField.value : (row.getAttribute('data-kind') || 'coursework')
       };
     });
 

@@ -175,6 +175,8 @@
         state.term = clone(term);
         state.subjects = state.subjects.map(function (subject) {
           subject.marks = {};
+          /* 出席も前学期の記録。残すと「no sessions held yet」と出席率が同居する。 */
+          subject.attendance = { held: 0, attended: 0, absences: 0, log: [] };
           return subject;
         });
         state.studySessions = [];
