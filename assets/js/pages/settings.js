@@ -42,14 +42,14 @@
     BB.theme.apply(theme);
   }
 
-  function section(icon, title, subtitle, body) {
+  function section(icon, title, subtitle, body, compact) {
     return (
       '<section class="bb-card overflow-hidden">' +
       '<div class="px-6 py-4 border-b border-border flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">' + icon + '</span>' +
       '<div><h2 class="text-title-md font-bold text-ink">' + title + '</h2>' +
       '<p class="text-body-sm text-muted">' + subtitle + '</p></div></div>' +
-      '<div class="p-6">' + body + '</div></section>'
+      '<div class="' + (compact ? 'px-6 py-4' : 'p-6') + '">' + body + '</div></section>'
     );
   }
 
@@ -187,9 +187,11 @@
       'translate',
       t('settings.language.title'),
       t('settings.language.subtitle'),
-      '<div class="max-w-sm"><label class="bb-label" for="s-lang">' + t('settings.language.label') + '</label>' +
-        '<select id="s-lang" class="bb-input" data-lang-select>' + options + '</select>' +
-        '<p class="text-caption text-muted mt-1.5">' + t('settings.language.hint') + '</p></div>'
+      '<div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">' +
+        '<label class="bb-label sm:mb-0 sm:w-40 shrink-0" for="s-lang">' + t('settings.language.label') + '</label>' +
+        '<select id="s-lang" class="bb-input sm:max-w-xs" data-lang-select>' + options + '</select>' +
+        '<p class="text-caption text-muted">' + t('settings.language.hint') + '</p></div>',
+      true
     );
   }
 
@@ -226,7 +228,11 @@
         '<div><label class="bb-label" for="s-start">' + t('settings.timetable.startDate') + '</label>' +
         '<input id="s-start" class="bb-input" type="date" value="' + esc(data.term.startDate) +
         '" data-setting="term.startDate">' +
-        '<p class="text-caption text-muted mt-1.5">' + t('settings.timetable.startDateHint') + '</p></div>' +
+        '<p class="text-caption text-muted mt-1.5">' + t('settings.timetable.startDateHint') + '</p>' +
+        (data.term.startDate
+          ? ''
+          : '<p class="text-caption text-alert mt-1">' + t('settings.timetable.startDateMissing') + '</p>') +
+        '</div>' +
         '<div><label class="bb-label" for="s-weeks">' + t('settings.timetable.weeks') + '</label>' +
         '<input id="s-weeks" class="bb-input num" type="number" min="1" max="30" value="' + (data.term.weeks || 14) +
         '" data-setting="term.weeks">' +
@@ -295,6 +301,7 @@
         }) +
         '</div></div>' +
         '<div><div class="bb-label">' + t('settings.term.startNext') + '</div>' +
+        '<p class="text-caption text-muted mb-2">' + t('settings.term.scopeHint') + '</p>' +
         '<form id="term-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
         '<div class="sm:col-span-2"><label class="bb-label" for="t-label">' + t('settings.term.label') + '</label>' +
         '<input id="t-label" name="termLabel" class="bb-input" type="text" placeholder="' +

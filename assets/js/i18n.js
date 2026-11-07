@@ -186,7 +186,9 @@
           nextUpcoming: 'Next Upcoming',
           scheduled: '{n} assessments scheduled this trimester',
           allTracked: 'All modules tracked',
-          viewItems: 'View {n} items'
+          viewItems: 'View {n} items',
+          empty: 'No deadlines yet. Add one on the Deadlines page.',
+          emptyHint: 'Assessments from your subjects appear here automatically.'
         },
         attendance: {
           title: 'Attendance',
@@ -345,7 +347,7 @@
           fullName: 'Full Name',
           fullNameHint: 'The avatar initials follow this name.',
           programme: 'Programme',
-          programmeHint: 'Fixed placeholder — edit STUDENT in assets/js/data.js to change it.',
+          programmeHint: 'Fixed for this build — not editable here.',
           studentId: 'Student ID',
           studentIdHint: 'Optional. Shown in the footer when filled in.',
           activeTrimester: 'Active Trimester',
@@ -397,10 +399,11 @@
           studyHint: 'Used by the Study Log and the dashboard summary.'
         },
         timetable: {
-          title: 'Timetable',
-          subtitle: 'Schedule boundaries and calendar configuration.',
+          title: 'Current Term Timetable',
+          subtitle: 'Start date and length of the term you are in now.',
           startDate: 'Term Start Date',
           startDateHint: 'Week 1 Monday. Leave empty to keep every week number at Week 1.',
+          startDateMissing: 'Not set — week numbers and dates stay at Week 1 until you pick a date.',
           weeks: 'Number of Weeks',
           weeksHint: 'Teaching weeks before the exam week.'
         },
@@ -412,11 +415,14 @@
           startNotSet: 'Start date not set',
           weeksExam: '{weeks} weeks • exam week {exam}',
           startNext: 'Start next trimester',
+          scopeHint:
+            "These fields describe the new trimester. The current trimester's start date and length are in " +
+            'the Timetable section above.',
           label: 'Trimester label',
           labelPlaceholder: 'Trimester Feb/Mar 2027',
-          week1: 'Week 1 starts (Monday)',
-          weeks: 'Number of weeks',
-          examWeek: 'Exam week',
+          week1: 'New term — Week 1 starts (Monday)',
+          weeks: 'New term — number of weeks',
+          examWeek: 'New term — exam week',
           whatHappens: 'What happens on switch',
           kept: {
             one: 'Kept: {n} module with its sessions, colours and assessment weightings.',
@@ -623,6 +629,10 @@
         duePlaceholder: 'Sun 6 Dec, 23:59',
         dateField: 'Date & time',
         dateHint: 'Optional — the week is filled in from the date',
+        dateExample: 'Example: 2026-11-30 23:59',
+        memoField: 'Memo (optional)',
+        memoPlaceholder: 'What to prepare, where to submit…',
+        memoHint: 'Saved with the deadline and shown on its detail page.',
         kindField: 'Type',
         kind: {
           homework: 'Homework',
@@ -639,6 +649,8 @@
         inDays: 'In {n} days',
         milestone: 'Upcoming Milestone',
         nextDeadline: 'Next deadline: {code} {name} — Week {n} ({range})',
+        nextDeadlineNoRange: 'Next deadline: {code} {name} — Week {n}',
+        noWeight: 'No weight',
         noAssessments: 'No assessments for this filter.',
         dueInWeek: 'Due in the week of {range}',
         custom: '(custom)',
@@ -731,6 +743,9 @@
         nameRequired: 'Title is required',
         dateInvalid: 'Enter a valid date and time',
         hasDetail: 'Has links or notes',
+        chipLinksTitle: '{n} link(s) attached',
+        chipMemo: 'Note',
+        chipMemoTitle: 'Has a note',
         noLinks: 'No links yet.',
         noMemo: 'No notes yet.',
         openLink: 'Open link'
@@ -1056,7 +1071,9 @@
           nextUpcoming: '直近の締切',
           scheduled: 'この学期の評価は{n}件',
           allTracked: '全科目を追跡中',
-          viewItems: '{n}件を表示'
+          viewItems: '{n}件を表示',
+          empty: '締切はまだありません。締切ページから追加できます。',
+          emptyHint: '科目の評価課題は自動でここに並びます。'
         },
         attendance: {
           title: '出席',
@@ -1212,7 +1229,7 @@
           fullName: '氏名',
           fullNameHint: 'アバターのイニシャルはこの名前から作られます。',
           programme: 'プログラム',
-          programmeHint: '固定値です。変更するには assets/js/data.js の STUDENT を編集してください。',
+          programmeHint: 'このビルドでは固定です（ここでは変更できません）。',
           studentId: '学籍番号',
           studentIdHint: '任意です。入力するとフッターに表示されます。',
           activeTrimester: '現在の学期',
@@ -1263,10 +1280,11 @@
           studyHint: '学習ログとダッシュボードのサマリーで使われます。'
         },
         timetable: {
-          title: '時間割',
-          subtitle: '学期の期間とカレンダーの設定です。',
+          title: '現在の学期の時間割',
+          subtitle: 'いま履修している学期の開始日と週数です。',
           startDate: '学期開始日',
           startDateHint: '第1週の月曜日です。空のままにすると週番号は第1週のままになります。',
+          startDateMissing: '未設定です。日付を選ぶまで週番号と日付は第1週のままになります。',
           weeks: '週数',
           weeksHint: '試験週の前までの授業週数です。'
         },
@@ -1278,11 +1296,12 @@
           startNotSet: '開始日が未設定です',
           weeksExam: '{weeks}週 • 試験週 {exam}',
           startNext: '次の学期を開始',
+          scopeHint: 'ここは新しい学期の設定です。いまの学期の開始日と週数は上の「時間割」にあります。',
           label: '学期名',
           labelPlaceholder: '2027年2/3月学期',
-          week1: '第1週の開始日（月曜）',
-          weeks: '週数',
-          examWeek: '試験週',
+          week1: '新学期の第1週開始日（月曜）',
+          weeks: '新学期の週数',
+          examWeek: '新学期の試験週',
           whatHappens: '切り替えるとどうなるか',
           kept: {
             one: '引き継ぐ: {n}科目（コマ・色・配点を含む）。',
@@ -1480,6 +1499,10 @@
         duePlaceholder: '12月6日(日) 23:59',
         dateField: '日付・時刻',
         dateHint: '任意 — 入力すると週が自動で決まります',
+        dateExample: '例: 2026-11-30 23:59',
+        memoField: 'メモ（任意）',
+        memoPlaceholder: '何を準備するか、どこに提出するか…',
+        memoHint: '締切と一緒に保存され、詳細ページに表示されます。',
         kindField: '種別',
         kind: {
           homework: '宿題',
@@ -1496,6 +1519,8 @@
         inDays: 'あと{n}日',
         milestone: '直近のマイルストーン',
         nextDeadline: '次の締切: {code} {name} — 第{n}週（{range}）',
+        nextDeadlineNoRange: '次の締切: {code} {name} — 第{n}週',
+        noWeight: '配点なし',
         noAssessments: 'この絞り込みに該当する評価はありません。',
         dueInWeek: '{range} の週が期限',
         custom: '（カスタム）',
@@ -1588,6 +1613,9 @@
         nameRequired: 'タイトルは必須です',
         dateInvalid: '日付と時刻を正しく入力してください',
         hasDetail: 'リンクまたはメモあり',
+        chipLinksTitle: 'リンク{n}件',
+        chipMemo: 'メモ',
+        chipMemoTitle: 'メモあり',
         noLinks: 'リンクはまだありません。',
         noMemo: 'メモはまだありません。',
         openLink: 'リンクを開く'

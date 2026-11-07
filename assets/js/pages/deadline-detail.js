@@ -68,8 +68,7 @@
       '<div class="bb-card p-8 text-center">' +
       '<span class="material-symbols-outlined text-[28px] text-placeholder">search_off</span>' +
       '<p class="text-body-md font-semibold text-ink mt-2">' + t('dd.notFound') + '</p>' +
-      '<p class="text-body-sm text-muted mt-1">' + t('dd.notFoundHint') + '</p>' +
-      '<a href="deadlines.html" class="bb-btn bb-btn-primary mt-4">' + t('dd.back') + '</a></div>'
+      '<p class="text-body-sm text-muted mt-1">' + t('dd.notFoundHint') + '</p></div>'
     );
   }
 
@@ -96,8 +95,7 @@
       '<div class="flex flex-wrap items-center gap-2">' + BB.ui.solidChip(found.subject.color, found.subject.id) +
       (found.subject.name ? '<span class="text-body-sm text-muted">' + esc(found.subject.name) + '</span>' : '') +
       '</div>' +
-      '<h2 class="text-headline-sm font-bold text-ink mt-2">' + esc(assessment.name) + '</h2>' +
-      '<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border-subtle">' +
+      '<div class="flex flex-wrap gap-x-8 gap-y-3 mt-3 pt-3 border-t border-border-subtle">' +
       metaRow(t('dd.week'), t('common.week', { n: found.week })) +
       metaRow(t('dd.due'), esc(due)) +
       metaRow(t('dd.weight'), weight) +
@@ -117,7 +115,8 @@
       '" placeholder="' + esc(t('dd.linkUrlPlaceholder')) + '"></div>' +
       '<button type="button" class="bb-btn bb-btn-ghost" data-link-remove="' + index + '" title="' +
       esc(t('dd.removeLink')) + '" aria-label="' + esc(t('dd.removeLink')) + '">' +
-      '<span class="material-symbols-outlined text-[18px]">delete</span></button></div>'
+      '<span class="material-symbols-outlined text-[18px]">delete</span>' +
+      '<span class="hidden sm:inline">' + t('dd.removeLink') + '</span></button></div>'
     );
   }
 
@@ -142,7 +141,7 @@
     return (
       '<div class="bb-card p-5">' +
       '<h3 class="text-title-md font-bold text-ink">' + t('dd.memo') + '</h3>' +
-      '<textarea id="dd-memo" class="bb-input mt-3" rows="5" placeholder="' +
+      '<textarea id="dd-memo" class="bb-input mt-3" rows="3" placeholder="' +
       esc(t('dd.memoPlaceholder')) + '">' + esc(current.memo) + '</textarea></div>'
     );
   }

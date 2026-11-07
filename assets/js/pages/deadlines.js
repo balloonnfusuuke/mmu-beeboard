@@ -28,6 +28,19 @@
   /* 締切の種別。辞書キーは dl.kind.<id>。 */
   var KINDS = ['homework', 'assignment', 'testPrep', 'other'];
 
+  /* 'YYYY-MM-DD' → 'Mon 30 Nov'。週の日付が引けないときの見出し用。 */
+  function shortDay(iso) {
+    var day = BB.date.parse(String(iso || '').slice(0, 10));
+    if (!day) return '';
+    var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    var months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    return t('date.short', {
+      day: t('day.' + days[day.getDay()]),
+      d: day.getDate(),
+      mon: t('month.' + months[day.getMonth()])
+    });
+  }
+
   function items() {
     var all = BB.dash.deadlineItems();
     return filter === 'all'
@@ -82,16 +95,18 @@
       }).join('') +
       '</select></div>' +
       '<div><label class="bb-label" for="d-date">' + t('dl.dateField') + '</label>' +
-      '<input id="d-date" name="date" class="bb-input" type="datetime-local">' +
-      '<p class="text-caption text-muted mt-1">' + t('dl.dateHint') + '</p></div>' +
+      '<input id="d-date" name="date" class="bb-input num" type="datetime-local">' +
+      '<p class="text-caption text-muted mt-1">' + t('dl.dateHint') + '</p>' +
+      '<p class="text-caption text-muted num mt-0.5">' + t('dl.dateExample') + '</p></div>' +
       '<div><label class="bb-label" for="d-week">' + t('dl.week') + '</label>' +
       '<input id="d-week" name="week" class="bb-input num" type="number" min="1" max="' +
       state.term.examWeek + '" step="1" value="' + BB.dash.currentWeek(new Date()) + '"></div>' +
       '<div><label class="bb-label" for="d-weight">' + t('dl.weight') + '</label>' +
       '<input id="d-weight" name="weight" class="bb-input num" type="number" min="0" max="100" step="1" value="0"></div>' +
-      '<div><label class="bb-label" for="d-note">' + t('dl.due') + '</label>' +
-      '<input id="d-note" name="note" class="bb-input" type="text" placeholder="' +
-      esc(t('dl.duePlaceholder')) + '"></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="d-memo">' + t('dl.memoField') + '</label>' +
+      '<textarea id="d-memo" name="memo" class="bb-input" rows="2" placeholder="' +
+      esc(t('dl.memoPlaceholder')) + '"></textarea>' +
+      '<p class="text-caption text-muted mt-1">' + t('dl.memoHint') + '</p></div>' +
       '<div class="sm:col-span-2 flex justify-end">' +
       '<button type="submit" class="bb-btn bb-btn-primary">' +
       '<span class="material-symbols-outlined text-[18px]">check</span>' + t('dl.submit') + '</button></div>' +
@@ -154,12 +169,18 @@
       '<span class="material-symbols-outlined text-[22px] text-primary">alarm</span>' +
       '<div><div class="text-caption uppercase tracking-wider text-muted">' + t('dl.milestone') + '</div>' +
       '<div class="text-body-md font-semibold text-ink">' +
-      t('dl.nextDeadline', {
-        code: next.subject.id,
-        name: next.assessment.name,
-        n: next.week,
-        range: BB.date.weekLabel(next.week)
-      }) + '</div></div></div>' +
+      (BB.date.weekLabel(next.week)
+        ? t('dl.nextDeadline', {
+            code: next.subject.id,
+            name: next.assessment.name,
+            n: next.week,
+            range: BB.date.weekLabel(next.week)
+          })
+        : t('dl.nextDeadlineNoRange', {
+            code: next.subject.id,
+            name: next.assessment.name,
+            n: next.week
+          })) + '</div></div></div>' +
       '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' + when + '</span></div>';
   }
 
@@ -199,6 +220,19 @@
         });
         var isExam = week >= BB.store.get().term.examWeek;
         var range = BB.date.weekLabel(week);
+        if (!range) {
+          var known = entries
+            .map(function (item) {
+              return item.sortDue ? String(item.sortDue).slice(0, 10) : '';
+            })
+            .filter(Boolean)
+            .sort();
+          if (known.length) {
+            var first = shortDay(known[0]);
+            var last = shortDay(known[known.length - 1]);
+            range = first === last ? first : first + ' – ' + last;
+          }
+        }
 
         var rows = entries
           .map(function (item) {
@@ -206,9 +240,25 @@
             /* 具体的な日付・時刻が無い項目は、その週の実日付範囲を必ず併記する。 */
             var meta = assessment.dueLabel || assessment.location ||
               (range ? t('dl.dueInWeek', { range: range }) : '');
-            var weight = assessment.weight > 0 ? assessment.weight + '%' : '—';
+            var weight = assessment.weight > 0
+              ? '<span class="text-label-md font-bold text-ink num">' + assessment.weight + '%</span>'
+              : '<span class="text-caption text-muted">' + t('dl.noWeight') + '</span>';
             var detailHref = 'deadline-detail.html?id=' + encodeURIComponent(item.key || '');
-            var hasDetail = item.key ? BB.dash.hasDeadlineDetail(item.key) : false;
+            var detail = item.key ? BB.dash.deadlineDetail(item.key) : { links: [], memo: '' };
+            /* リンクとメモは別の印にする。「何が付いているか」が一目で分かるように。 */
+            var marks =
+              (detail.links.length
+                ? '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)" title="' +
+                  esc(t('dd.chipLinksTitle', { n: detail.links.length })) + '">' +
+                  '<span class="material-symbols-outlined text-[12px] align-middle">link</span>' +
+                  detail.links.length + '</span>'
+                : '') +
+              (detail.memo
+                ? '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)" title="' +
+                  esc(t('dd.chipMemoTitle')) + '">' +
+                  '<span class="material-symbols-outlined text-[12px] align-middle">edit_note</span>' +
+                  esc(t('dd.chipMemo')) + '</span>'
+                : '');
             var remove = item.custom
               ? '<button type="button" data-remove="' + item.custom.id + '" class="text-muted hover:text-alert transition-colors" title="' +
                 esc(t('dl.removeCustom')) + '">' +
@@ -219,10 +269,7 @@
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
               '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' +
               '<a href="' + detailHref + '" class="hover:text-primary transition-colors">' + esc(assessment.name) + '</a>' +
-              (hasDetail
-                ? ' <span class="material-symbols-outlined text-[14px] align-middle text-primary" title="' +
-                  esc(t('dd.hasDetail')) + '" aria-label="' + esc(t('dd.hasDetail')) + '">link</span>'
-                : '') +
+              (marks ? ' ' + marks : '') +
               (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') +
               (item.custom && assessment.customKind
                 ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +
@@ -234,7 +281,7 @@
                 : '') + '</div>' +
               (meta ? '<div class="text-caption text-muted truncate">' + meta + '</div>' : '') + '</div></div>' +
               '<div class="flex items-center gap-3 shrink-0">' +
-              '<span class="text-label-md font-bold text-ink num">' + weight + '</span>' + remove +
+              weight + remove +
               '<a href="simulator.html?subject=' + item.subject.id + '" class="text-muted hover:text-primary transition-colors" title="' +
               esc(t('dl.openSim')) + '">' +
               '<span class="material-symbols-outlined text-[18px]">chevron_right</span></a></div></div>'
@@ -320,20 +367,24 @@
       BB.ui.toast(t('dl.toast.week'));
       return;
     }
+    var newId = 'cd-' + Date.now();
+    var memo = form.elements.memo ? form.elements.memo.value.trim() : '';
     BB.store.update(function (data) {
       data.customDeadlines = data.customDeadlines || [];
       data.customDeadlines.push({
-        id: 'cd-' + Date.now(),
+        id: newId,
         subjectId: form.elements.subjectId.value,
         name: name,
         week: week,
         date: dateValue,
         kind: form.elements.kind.value,
         weight: Number(form.elements.weight.value) || 0,
-        note: form.elements.note.value.trim(),
+        note: '',
         createdAt: new Date().toISOString()
       });
     });
+    /* フォームで書いたメモは詳細画面のメモとして引き継ぐ。 */
+    if (memo) BB.dash.setDeadlineDetail('c:' + newId, { links: [], memo: memo });
     formOpen = false;
     BB.ui.toast(t('dl.toast.added'));
     render();

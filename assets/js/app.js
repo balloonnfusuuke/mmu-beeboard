@@ -588,14 +588,25 @@
   function renderLegend(state) {
     var host = $('#legend');
     if (!host) return;
-    host.innerHTML = state.subjects
-      .map(function (subject) {
-        return (
-          '<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:' +
-          subject.color + '"></span><span class="text-muted">' + subject.id + ' ' + shortName(subject) + '</span></div>'
-        );
-      })
-      .join('');
+    var items = state.subjects.map(function (subject) {
+      return (
+        '<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:' +
+        subject.color + '"></span><span class="text-muted">' + subject.id + ' ' + shortName(subject) + '</span></div>'
+      );
+    });
+    if (personalEventsOf(state).length) {
+      items.push(
+        '<div class="flex items-center gap-1.5"><span class="tt-legend-event"></span>' +
+        '<span class="text-muted">' + t('pe.legend') + '</span></div>'
+      );
+    }
+    if (overridesOf(state).length) {
+      items.push(
+        '<div class="flex items-center gap-1.5"><span class="tt-legend-off"></span>' +
+        '<span class="text-muted">' + t('tt.noClass') + '</span></div>'
+      );
+    }
+    host.innerHTML = items.join('');
   }
 
   /* 教室コードの下に出す人間可読な場所。表示専用で、保存値はコードのまま。 */
@@ -675,14 +686,15 @@
                 ' title="' + subject.id + ' ' + session.type + ' ' + session.start + '–' + session.end + ' · ' + session.room +
                 (roomText ? ' — ' + roomText : '') + '">' +
                 '<span class="tt-block-code">' + subject.id + '</span>' +
-                '<span class="tt-block-meta">' + session.type + ' · ' + session.room + '</span>' +
-                (roomText ? '<span class="tt-block-room">' + roomText + '</span>' : '') +
+                '<span class="tt-block-meta">' + session.type +
+                (session.room ? ' · ' + escHtml(session.room) : '') + '</span>' +
+                (roomText ? '<span class="tt-block-room" title="' + escHtml(roomText) + '">' + roomText + '</span>' : '') +
               '</a>' +
               '<button type="button" class="tt-note" style="top:' + (blockTop + 3) + 'px"' +
                 ' data-note-for="' + subject.id + '" data-note-date="' + dateOfWeekday(day) + '"' +
                 ' title="' + escHtml(t('notes.addFromClass')) + '"' +
                 ' aria-label="' + escHtml(t('notes.addFromClass')) + '">' +
-                '<span class="material-symbols-outlined text-[13px]">note_add</span></button>'
+                '<span class="material-symbols-outlined text-[12px]">note_add</span></button>'
             );
           });
         });
@@ -699,8 +711,9 @@
               ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + extra.subject.color + '"' +
               ' title="' + escHtml(extra.subject.id + ' · ' + t('tt.transfer') + ' · ' + extra.start + '–' + extra.end) + '">' +
               '<span class="tt-block-code">' + extra.subject.id + '</span>' +
-              '<span class="tt-block-meta">' + t('tt.transfer') + ' · ' + (extra.room || t('att.transferRoomTbd')) + '</span>' +
-              (roomText ? '<span class="tt-block-room">' + roomText + '</span>' : '') +
+              '<span class="tt-block-meta">' + t('tt.transfer') + ' · ' +
+              escHtml(extra.room || t('att.transferRoomTbd')) + '</span>' +
+              (roomText ? '<span class="tt-block-room" title="' + escHtml(roomText) + '">' + roomText + '</span>' : '') +
             '</a>'
           );
         });
@@ -827,20 +840,25 @@
   function renderSummaries(state, now, next) {
     var host = $('#summaries');
     if (!host) return;
-    host.innerHTML = deadlinesCard(state, now) + attendanceCard(state) + studyLogCard(state, now, next);
+    host.innerHTML = [deadlinesCard(state, now), attendanceCard(state), studyLogCard(state, now, next)]
+      .filter(function (html) {
+        return !!html;
+      })
+      .join('');
   }
 
   function cardShell(href, title, icon, iconColor, body, footer) {
     return (
-      '<a href="' + href + '" class="group bg-surface border border-border hover:border-primary/40 rounded-card p-5 shadow-rest hover:shadow-hover transition-all flex flex-col justify-between">' +
-      '<div><div class="flex items-center justify-between pb-3 border-b border-border-subtle">' +
-      '<div class="flex items-center gap-2">' +
+      '<div class="group bg-surface border border-border hover:border-primary/40 rounded-card p-5 shadow-rest hover:shadow-hover transition-all flex flex-col justify-between">' +
+      '<div><div class="flex items-center justify-between gap-2 pb-3 border-b border-border-subtle">' +
+      '<a href="' + href + '" class="flex items-center gap-2 min-w-0">' +
       '<span class="material-symbols-outlined text-[20px]" style="color:' + iconColor + '">' + icon + '</span>' +
-      '<h3 class="text-title-md font-bold text-ink group-hover:text-primary transition-colors">' + title + '</h3></div>' +
-      '<div class="flex items-center gap-1 text-muted group-hover:text-primary transition-colors">' +
-      '<span class="text-caption hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity">' + t('card.details') + '</span>' +
-      '<span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">chevron_right</span>' +
-      '</div></div>' + body + '</div>' + footer + '</a>'
+      '<h3 class="text-title-md font-bold text-ink group-hover:text-primary transition-colors">' + title + '</h3></a>' +
+      '<a href="' + href + '" class="flex items-center gap-1 text-muted hover:text-primary transition-colors shrink-0" aria-label="' +
+      escHtml(title) + '">' +
+      '<span class="text-caption hidden sm:inline">' + t('card.details') + '</span>' +
+      '<span class="material-symbols-outlined text-[20px]">chevron_right</span></a>' +
+      '</div>' + body + '</div>' + footer + '</div>'
     );
   }
 
@@ -857,6 +875,17 @@
       })
       .join('');
 
+    if (!items.length) {
+      return cardShell(
+        'deadlines.html',
+        t('card.deadlines.title'),
+        'assignment_late',
+        'var(--bb-primary)',
+        '<p class="py-4 text-body-sm text-muted">' + t('card.deadlines.empty') + '</p>',
+        '<div class="pt-3 border-t border-border-subtle text-caption text-muted">' + t('card.deadlines.emptyHint') + '</div>'
+      );
+    }
+
     var body =
       '<div class="py-3 space-y-1.5">' +
       '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.deadlines.nextUpcoming') + '</div>' +
@@ -868,6 +897,12 @@
       (nextItem ? '<span class="text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">' +
         t('common.week', { n: nextItem.week }) + '</span>' : '') +
       '</div>' +
+      (nextItem
+        ? (function () {
+            var when = nextItem.assessment.dueLabel || BB.date.weekLabel(nextItem.week);
+            return when ? '<p class="text-caption text-muted num">' + escHtml(when) + '</p>' : '';
+          })()
+        : '') +
       '<p class="text-body-sm text-muted">' + t('card.deadlines.scheduled', { n: items.length }) + '</p>' +
       '</div>';
 
@@ -875,14 +910,15 @@
       '<div class="pt-3 border-t border-border-subtle flex items-center justify-between text-caption text-muted">' +
       '<div class="flex items-center gap-1.5">' + dots +
       '<span class="pl-1">' + t('card.deadlines.allTracked') + '</span></div>' +
-      '<span class="font-semibold text-primary group-hover:underline flex items-center gap-0.5">' +
+      '<a href="deadlines.html" class="font-semibold text-primary hover:underline flex items-center gap-0.5">' +
       '<span>' + t('card.deadlines.viewItems', { n: items.length }) + '</span>' +
-      '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></span></div>';
+      '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></a></div>';
 
     return cardShell('deadlines.html', t('card.deadlines.title'), 'assignment_late', 'var(--bb-primary)', body, footer);
   }
 
   function attendanceCard(state) {
+    if (!state.subjects.length) return '';
     var totals = { held: 0, attended: 0 };
     var rows = state.subjects
       .map(function (subject) {
@@ -925,14 +961,15 @@
     var footer =
       '<div class="pt-3 border-t border-border-subtle text-caption text-muted flex items-center justify-between">' +
       '<span>' + t('card.attendance.barred', { n: state.settings.attendanceThreshold }) + '</span>' +
-      '<span class="font-semibold text-primary group-hover:underline flex items-center gap-0.5">' +
+      '<a href="attendance.html" class="font-semibold text-primary hover:underline flex items-center gap-0.5">' +
       '<span>' + t('card.attendance.detail') + '</span>' +
-      '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></span></div>';
+      '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></a></div>';
 
     return cardShell('attendance.html', t('card.attendance.title'), 'rule', 'var(--bb-success)', body, footer);
   }
 
   function studyLogCard(state, now, next) {
+    if (!state.subjects.length) return '';
     var minutes = studyMinutesThisWeek(now);
     var target = state.settings.weeklyStudyTarget;
     var targetSubject = next ? next.subject : state.subjects[0];
@@ -1835,7 +1872,10 @@
         id: 'at' + Date.now(),
         date: meta.date || new Date().toISOString().slice(0, 10),
         status: status,
-        session: meta.session || ''
+        session: meta.session || '',
+        /* 表示用の文字列は言語に依存する。言語を切り替えても作り直せるよう、
+           元のコマ情報も残しておく。 */
+        sessionMeta: meta.sessionMeta || null
       });
       index = subject.attendance.log.length - 1;
     });

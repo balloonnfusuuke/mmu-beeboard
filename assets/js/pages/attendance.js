@@ -20,6 +20,35 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  function isoOf(date) {
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getDate()).padStart(2, '0');
+  }
+
+  function addDays(date, days) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+  }
+
+  /* そのコマの「今週の実施日」。休講を押したときに学期外の日付へ記録して
+     時間割に出ない、という取り違えを防ぐ。 */
+  function defaultDateFor(subject, index) {
+    var session = subject.sessions[index];
+    var range = BB.date.weekRange(BB.dash.currentWeek(new Date()));
+    if (!session || !range) return today();
+    var day = Number(session.day);
+    if (!day) return today();
+    return isoOf(addDays(range.start, day - 1));
+  }
+
+  /* 学期の範囲。日付欄が学期外へ飛ばないようにする。 */
+  function termBounds() {
+    var data = state();
+    var start = BB.date.parse(data.term.startDate);
+    if (!start) return { min: '', max: '' };
+    var weeks = data.term.weeks || 14;
+    return { min: isoOf(start), max: isoOf(addDays(start, weeks * 7 - 1)) };
+  }
+
   function esc(value) {
     return String(value === undefined || value === null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -43,8 +72,17 @@
   BB.ui.mount({ title: t('att.title'), head: headOptions() });
 
   function sessionLabel(session) {
-    return t(DAY_KEYS[session.day]) + ' ' + session.start + '–' + session.end + ' ' + session.type +
+    if (!session) return '';
+    var day = session.day === undefined || session.day === null ? '' : t(DAY_KEYS[session.day]) + ' ';
+    return day + session.start + '–' + session.end + ' ' + session.type +
       (session.room ? ' · ' + session.room : '');
+  }
+
+  /* 記録済みの行は、保存済みの文字列ではなく元のコマ情報から組み立て直す。
+     言語を切り替えても英語の曜日が残らない。 */
+  function entryLabel(entry) {
+    if (entry.sessionMeta) return sessionLabel(entry.sessionMeta);
+    return entry.session || '';
   }
 
   function render() {
@@ -155,7 +193,7 @@
       extra: null,
       index: index,
       session: subject.sessions[index],
-      date: pickedDate[subject.id] || today()
+      date: pickedDate[subject.id] || defaultDateFor(subject, index)
     };
   }
 
@@ -188,60 +226,51 @@
     );
   }
 
-  /* 休講・振替の一覧。振替は後から編集も取消もできる。 */
-  function overrideSection(subject) {
-    var list = BB.dash.overridesOf(state()).filter(function (entry) {
-      return entry.subjectId === subject.id;
-    });
-    var draft = transferDraft && transferDraft.subjectId === subject.id ? transferDraft : null;
-    if (!list.length && !draft) return '';
-
-    var rows = list
-      .map(function (entry) {
-        var session = subject.sessions[entry.sessionIndex];
-        var isTransfer = entry.kind === 'transfer' && entry.target;
-        var detail = isTransfer
-          ? t('att.transferTo', {
-              date: entry.target.date,
-              start: entry.target.start,
-              end: entry.target.end
-            }) + ' · ' + (entry.target.room || t('att.transferRoomTbd'))
-          : t('att.noClassHint');
-        return (
-          '<div class="flex items-start justify-between gap-3 py-2 border-b border-border-subtle last:border-0">' +
-          '<div class="min-w-0">' +
-          '<div class="flex flex-wrap items-center gap-2 text-body-sm text-ink">' +
-          '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +
-          (isTransfer ? t('att.transferBadge') : t('att.noClassBadge')) + '</span>' +
-          '<span class="num">' + esc(entry.date) + '</span></div>' +
-          (session ? '<div class="text-caption text-muted truncate">' + esc(sessionLabel(session)) + '</div>' : '') +
-          '<div class="text-caption text-muted">' + esc(detail) + '</div></div>' +
-          '<div class="flex items-center gap-1 shrink-0">' +
-          '<button type="button" class="p-1.5 rounded text-muted hover:text-primary" data-override-edit="' +
-          entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferEdit')) +
-          '" aria-label="' + esc(t('att.transferEdit')) + '">' +
-          '<span class="material-symbols-outlined text-[16px]">edit</span></button>' +
-          '<button type="button" class="p-1.5 rounded text-muted hover:text-alert" data-override-remove="' +
-          entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferRemove')) +
-          '" aria-label="' + esc(t('att.transferRemove')) + '">' +
-          '<span class="material-symbols-outlined text-[16px]">delete</span></button>' +
-          '</div></div>'
-        );
-      })
-      .join('');
-
+  /* 休講・振替の1行。出席ログと同じ場所に並べ、元の回→振替先が1行で分かるようにする。 */
+  function overrideRow(entry, subject) {
+    var session = subject.sessions[entry.sessionIndex];
+    var isTransfer = entry.kind === 'transfer' && entry.target;
+    var detail = isTransfer
+      ? t('att.transferTo', {
+          date: entry.target.date,
+          start: entry.target.start,
+          end: entry.target.end
+        }) + ' · ' + (entry.target.room || t('att.transferRoomTbd'))
+      : t('att.noClassHint');
     return (
-      '<div class="mt-3 pt-3 border-t border-border-subtle">' +
-      '<div class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
-      t('att.overridesTitle') + '</div>' +
-      rows +
-      (draft ? transferFormHtml(subject, draft) : '') +
-      '</div>'
+      '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
+      '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(subject.color, subject.id) +
+      '<div class="min-w-0">' +
+      '<div class="flex flex-wrap items-center gap-2">' +
+      '<span class="text-body-sm text-body truncate">' + subject.name + '</span>' +
+      '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +
+      (isTransfer ? t('att.transferBadge') : t('att.noClassBadge')) + '</span></div>' +
+      (session ? '<div class="text-caption text-muted truncate">' + esc(sessionLabel(session)) + '</div>' : '') +
+      '<div class="text-caption text-muted">' + esc(detail) + '</div></div></div>' +
+      '<div class="flex items-center gap-3 shrink-0">' +
+      '<span class="text-caption text-muted num">' + esc(entry.date) + '</span>' +
+      '<button type="button" class="text-muted hover:text-primary transition-colors" data-override-edit="' +
+      entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferEdit')) +
+      '" aria-label="' + esc(t('att.transferEdit')) + '">' +
+      '<span class="material-symbols-outlined text-[18px]">edit</span></button>' +
+      '<button type="button" class="text-muted hover:text-alert transition-colors" data-override-remove="' +
+      entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferRemove')) +
+      '" aria-label="' + esc(t('att.transferRemove')) + '">' +
+      '<span class="material-symbols-outlined text-[18px]">delete</span></button>' +
+      '</div></div>'
     );
+  }
+
+  /* 振替フォーム。科目カード側に出し、保存するとログ側の行が更新される。 */
+  function transferFormSection(subject) {
+    var draft = transferDraft && transferDraft.subjectId === subject.id ? transferDraft : null;
+    if (!draft) return '';
+    return '<div class="mt-3 pt-3 border-t border-border-subtle">' + transferFormHtml(subject, draft) + '</div>';
   }
 
   function renderSubjects(stats, threshold) {
     var host = document.getElementById('subjects');
+    var bounds = termBounds();
     if (!stats.length) {
       host.innerHTML =
         '<div class="bb-card p-8 text-center lg:col-span-2">' +
@@ -260,9 +289,11 @@
         var rateColor = rate === null ? 'var(--bb-text-muted)' : attendance.atRisk ? 'var(--bb-alert)' : 'var(--bb-success)';
         var noteIcon = attendance.atRisk ? 'warning' : 'check_circle';
         var noteColor = attendance.atRisk ? 'var(--bb-alert)' : 'var(--bb-success)';
-        var note = attendance.atRisk
-          ? t('att.belowNote', { t: threshold })
-          : tn('att.canMiss', attendance.allowed, { n: attendance.allowed, t: threshold });
+        var note = attendance.held === 0
+          ? ''
+          : attendance.atRisk
+            ? t('att.belowNote', { t: threshold })
+            : tn('att.canMiss', attendance.allowed, { n: attendance.allowed, t: threshold });
         var lastEntry = (subject.attendance && subject.attendance.log && subject.attendance.log.length)
           ? subject.attendance.log[subject.attendance.log.length - 1]
           : null;
@@ -287,36 +318,39 @@
           '<div class="bg-canvas rounded-control p-3 border border-border-subtle">' +
           '<div class="text-caption text-muted">' + t('att.absences') + '</div>' +
           '<div class="text-title-md font-bold text-ink num">' + attendance.absences + '</div></div></div>' +
-          '<div class="mt-3 flex items-start gap-2 text-body-sm text-body">' +
-          '<span class="material-symbols-outlined text-[18px]" style="color:' + noteColor + '">' + noteIcon + '</span>' +
-          '<span>' + note + '</span></div>' +
+          (note
+            ? '<div class="mt-3 flex items-start gap-2 text-body-sm text-body">' +
+              '<span class="material-symbols-outlined text-[18px]" style="color:' + noteColor + '">' + noteIcon + '</span>' +
+              '<span>' + note + '</span></div>'
+            : '') +
           '<div class="mt-3 pt-3 border-t border-border-subtle space-y-2.5">' +
           '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
           sessionPicker(subject) +
           '<div><label class="bb-label">' + t('att.date') + '</label>' +
           '<input class="bb-input num" type="date" data-session-date="' + subject.id + '" value="' +
-          (pickedDate[subject.id] || today()) + '"></div>' +
+          (pickedDate[subject.id] || defaultDateFor(subject, resolvePick(subject).index)) + '"' +
+          (bounds.min ? ' min="' + bounds.min + '" max="' + bounds.max + '"' : '') + '></div>' +
           '</div>' +
-          '<div class="flex flex-wrap items-center justify-between gap-2">' +
-          '<span class="text-caption text-muted">' +
+          '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">' +
+          '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-mark="present" data-subject="' + subject.id + '">' +
+          '<span class="material-symbols-outlined text-[16px]">check</span>' + t('att.markPresent') + '</button>' +
+          '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-mark="absent" data-subject="' + subject.id + '">' +
+          '<span class="material-symbols-outlined text-[16px]">event_busy</span>' + t('att.markAbsent') + '</button>' +
+          '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-mark="nocancel" data-subject="' + subject.id + '"' +
+          (subject.sessions.length ? '' : ' disabled') + '>' +
+          '<span class="material-symbols-outlined text-[16px]">event_available</span>' + t('att.markNoClass') +
+          '</button>' +
+          '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-transfer-open="' + subject.id + '"' +
+          (subject.sessions.length ? '' : ' disabled') + '>' +
+          '<span class="material-symbols-outlined text-[16px]">swap_horiz</span>' + t('att.transferBadge') +
+          '</button></div>' +
+          '<div class="text-caption text-muted">' +
           t('att.lastSession', {
-            value: lastEntry ? lastEntry.date + (lastEntry.session ? ' · ' + lastEntry.session : '') : '—'
-          }) + '</span>' +
-          '<div class="flex flex-wrap items-center gap-2">' +
-          '<button type="button" class="bb-btn bb-btn-ghost" data-mark="present" data-subject="' + subject.id + '">' +
-          '<span class="material-symbols-outlined text-[18px]">check</span>' + t('att.markPresent') + '</button>' +
-          '<button type="button" class="bb-btn bb-btn-ghost" data-mark="absent" data-subject="' + subject.id + '">' +
-          '<span class="material-symbols-outlined text-[18px]">event_busy</span>' + t('att.markAbsent') + '</button>' +
-          '<button type="button" class="bb-btn bb-btn-ghost" data-mark="nocancel" data-subject="' + subject.id + '"' +
-          (subject.sessions.length ? '' : ' disabled') + '>' +
-          '<span class="material-symbols-outlined text-[18px]">event_available</span>' + t('att.markNoClass') +
-          '</button>' +
-          '<button type="button" class="bb-btn bb-btn-ghost" data-transfer-open="' + subject.id + '"' +
-          (subject.sessions.length ? '' : ' disabled') + '>' +
-          '<span class="material-symbols-outlined text-[18px]">swap_horiz</span>' + t('att.transferBadge') +
-          '</button>' +
-          '</div></div>' +
-          overrideSection(subject) +
+            value: lastEntry
+              ? lastEntry.date + (entryLabel(lastEntry) ? ' · ' + entryLabel(lastEntry) : '')
+              : '—'
+          }) + '</div>' +
+          transferFormSection(subject) +
           '</div></div>'
         );
       })
@@ -328,8 +362,17 @@
     data.subjects.forEach(function (subject) {
       var log = (subject.attendance && subject.attendance.log) || [];
       log.forEach(function (entry, index) {
-        entries.push({ subject: subject, index: index, entry: entry });
+        entries.push({ kind: 'log', subject: subject, index: index, entry: entry });
       });
+    });
+    /* 休講・振替も同じ一覧に並べる。押した記録が消えたように見えないように。 */
+    BB.dash.overridesOf(data).forEach(function (entry) {
+      var subject = null;
+      data.subjects.forEach(function (candidate) {
+        if (candidate.id === entry.subjectId) subject = candidate;
+      });
+      if (!subject) return;
+      entries.push({ kind: 'override', subject: subject, entry: entry });
     });
     entries.sort(function (a, b) {
       return a.entry.date < b.entry.date ? 1 : -1;
@@ -338,13 +381,14 @@
     var body = entries.length
       ? entries
           .map(function (item) {
+            if (item.kind === 'override') return overrideRow(item.entry, item.subject);
             var present = item.entry.status === 'present';
             return (
               '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
               '<div class="min-w-0"><div class="text-body-sm text-body truncate">' + item.subject.name + '</div>' +
-              (item.entry.session
-                ? '<div class="text-caption text-muted truncate">' + item.entry.session + '</div>'
+              (entryLabel(item.entry)
+                ? '<div class="text-caption text-muted truncate">' + esc(entryLabel(item.entry)) + '</div>'
                 : '') + '</div></div>' +
               '<div class="flex items-center gap-3 shrink-0">' +
               '<span class="text-caption text-muted num">' + item.entry.date + '</span>' +
@@ -388,6 +432,29 @@
       pickedDate[dateField.getAttribute('data-session-date')] = dateField.value;
     }
   });
+
+  /* 休講・振替の取消。Undo 付き。 */
+  function removeOverride(removeId) {
+    var removed = null;
+    BB.dash.overridesOf(state()).forEach(function (entry) {
+      if (entry.id === removeId) removed = JSON.parse(JSON.stringify(entry));
+    });
+    if (!removed) return;
+    BB.attendance.removeOverride(removeId);
+    if (transferDraft && transferDraft.overrideId === removeId) transferDraft = null;
+    render();
+    BB.ui.toast(t('att.toast.transferRemoved'), {
+      actionLabel: t('common.undo'),
+      onAction: function () {
+        BB.store.update(function (data) {
+          data.sessionOverrides = data.sessionOverrides || [];
+          data.sessionOverrides.push(removed);
+        });
+        render();
+        BB.ui.toast(t('att.toast.restored'));
+      }
+    });
+  }
 
   /* 振替フォームを開く。既存の休講・振替を編集するときはその内容を引き継ぐ。 */
   function openTransfer(subjectId, overrideId) {
@@ -476,27 +543,7 @@
     }
     var overrideRemove = event.target.closest('[data-override-remove]');
     if (overrideRemove) {
-      var removeId = overrideRemove.getAttribute('data-override-remove');
-      var removeSubject = overrideRemove.getAttribute('data-subject');
-      var removed = null;
-      BB.dash.overridesOf(state()).forEach(function (entry) {
-        if (entry.id === removeId) removed = JSON.parse(JSON.stringify(entry));
-      });
-      if (!removed) return;
-      BB.attendance.removeOverride(removeId);
-      if (transferDraft && transferDraft.overrideId === removeId) transferDraft = null;
-      render();
-      BB.ui.toast(t('att.toast.transferRemoved'), {
-        actionLabel: t('common.undo'),
-        onAction: function () {
-          BB.store.update(function (data) {
-            data.sessionOverrides = data.sessionOverrides || [];
-            data.sessionOverrides.push(removed);
-          });
-          render();
-          BB.ui.toast(t('att.toast.restored'));
-        }
-      });
+      removeOverride(overrideRemove.getAttribute('data-override-remove'));
       return;
     }
 
@@ -540,7 +587,13 @@
       return;
     }
 
-    var entryIndex = BB.attendance.mark(subjectId, status, { date: date, session: label });
+    var entryIndex = BB.attendance.mark(subjectId, status, {
+      date: date,
+      session: label,
+      sessionMeta: session
+        ? { day: session.day, start: session.start, end: session.end, type: session.type, room: session.room }
+        : null
+    });
     render();
 
     BB.ui.toast(
@@ -558,6 +611,16 @@
   });
 
   document.getElementById('absence-log').addEventListener('click', function (event) {
+    var overrideEdit = event.target.closest('[data-override-edit]');
+    if (overrideEdit) {
+      openTransfer(overrideEdit.getAttribute('data-subject'), overrideEdit.getAttribute('data-override-edit'));
+      return;
+    }
+    var overrideRemove = event.target.closest('[data-override-remove]');
+    if (overrideRemove) {
+      removeOverride(overrideRemove.getAttribute('data-override-remove'));
+      return;
+    }
     var button = event.target.closest('[data-remove-entry]');
     if (!button) return;
     var subjectId = button.getAttribute('data-remove-entry');
