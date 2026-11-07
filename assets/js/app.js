@@ -675,8 +675,19 @@
 
   /* ---------- shared page shell ---------- */
 
-  function header(opts) {
+  /* ウィザード中は保存前の入力を見せたいので、表示値だけ差し替えられるようにする。 */
+  function escHtml(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function header(opts, preview) {
     var state = BB.store.get();
+    var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : state.term.label;
+    var initials = preview && preview.initials !== undefined ? preview.initials : state.student.initials;
     var now = new Date();
     var weekText = isPreview(now)
       ? 'Starts ' + fmtDate(termStart())
@@ -696,11 +707,11 @@
       '<div class="hidden lg:block h-4 w-px bg-border"></div>' +
       '<div class="hidden lg:flex items-center gap-2 text-muted text-label-md">' +
       '<span class="material-symbols-outlined text-[18px] text-primary">calendar_today</span>' +
-      '<span>' + state.term.label + '</span><span class="text-border">•</span>' +
+      '<span>' + escHtml(termLabel) + '</span><span class="text-border">•</span>' +
       '<span class="font-medium text-ink">' + weekText + '</span></div>' +
       '</div>' +
       '<div class="flex items-center gap-3">' +
-      '<span class="w-8 h-8 rounded-full bg-primary text-on-primary text-label-sm font-bold flex items-center justify-center flex-shrink-0">' + state.student.initials + '</span>' +
+      '<span class="w-8 h-8 rounded-full bg-primary text-on-primary text-label-sm font-bold flex items-center justify-center flex-shrink-0">' + escHtml(initials) + '</span>' +
       '<a href="settings.html" class="p-2 text-muted hover:text-primary hover:bg-surface-subtle rounded-control border border-transparent hover:border-border transition-colors" aria-label="Settings" title="Settings">' +
       '<span class="material-symbols-outlined text-[20px]">settings</span></a>' +
       '</div></div></header>'
@@ -718,13 +729,14 @@
     );
   }
 
-  function footer() {
+  function footer(preview) {
     var state = BB.store.get();
+    var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : state.term.label;
     return (
       '<footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between text-caption text-muted gap-2 border-t border-border">' +
       '<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-success"></span>' +
       '<span>MMU BeeBoard — a personal study dashboard. Not an official MMU system.</span></div>' +
-      '<div class="num">' + state.term.label +
+      '<div class="num">' + escHtml(termLabel) +
       (state.student.studentId ? ' • Student ID: ' + state.student.studentId : '') + '</div></footer>'
     );
   }
@@ -750,11 +762,12 @@
     if (page && mountOptions.head) page.innerHTML = pageHead(mountOptions.head);
   }
 
-  /* ヘッダーとフッターだけ描き直す。氏名・イニシャルの変更を即座に反映する。 */
-  function refreshChrome() {
+  /* ヘッダーとフッターだけ描き直す。氏名・イニシャルの変更を即座に反映する。
+     preview を渡すと保存前の入力値で表示する（初回ウィザード用）。 */
+  function refreshChrome(preview) {
     if (!mountOptions) return;
-    replacePlaceholder('app-header', header(mountOptions));
-    replacePlaceholder('app-footer', footer());
+    replacePlaceholder('app-header', header(mountOptions, preview));
+    replacePlaceholder('app-footer', footer(preview));
   }
 
   /* ページ副題を現在の設定値で描き直す。しきい値などを追随させる。 */

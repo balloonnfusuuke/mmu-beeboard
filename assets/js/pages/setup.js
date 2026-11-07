@@ -18,6 +18,17 @@
   var justSaved = null;
   BB.ui.mount({ title: 'First-time setup' });
 
+  /* 学期ステップの入力は保存前なので、再描画で消えないようここに保持する。 */
+  var termDraft = (function () {
+    var data = BB.store.get();
+    return {
+      label: data.term.label || '',
+      startDate: data.term.startDate || '',
+      weeks: data.term.weeks || 14,
+      name: data.student.name || ''
+    };
+  })();
+
   var progressHost = document.getElementById('progress');
   var stepHost = document.getElementById('step');
 
@@ -142,7 +153,6 @@
   /* ---------- step 2: trimester ---------- */
 
   function termStep() {
-    var data = state();
     return (
       '<section class="bb-card overflow-hidden">' +
       '<div class="p-6 sm:p-8 border-b border-border">' +
@@ -151,17 +161,17 @@
       'and every week number in the app.</p></div>' +
       '<div class="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4">' +
       '<div class="sm:col-span-2"><label class="bb-label" for="w-label">Trimester label</label>' +
-      '<input id="w-label" class="bb-input" type="text" value="' + esc(data.term.label) + '" placeholder="My Trimester"></div>' +
-      '<div><label class="bb-label" for="w-start">Week 1 starts (Monday)</label>' +
-      '<input id="w-start" class="bb-input" type="date" value="' + esc(data.term.startDate) + '">' +
+      '<input id="w-label" class="bb-input" type="text" value="' + esc(termDraft.label) + '" placeholder="My Trimester"></div>' +
+      '<div><label class="bb-label" for="w-start-date">Week 1 starts (Monday)</label>' +
+      '<input id="w-start-date" class="bb-input" type="date" value="' + esc(termDraft.startDate) + '">' +
       '<p class="text-caption text-muted mt-1.5">Optional. Leave it empty and week numbers stay at Week 1 ' +
       'until you set a date in Settings.</p></div>' +
       '<div><label class="bb-label" for="w-weeks">Number of weeks</label>' +
       '<input id="w-weeks" class="bb-input num" type="number" min="1" max="30" step="1" value="' +
-      esc(data.term.weeks || 14) + '">' +
+      esc(termDraft.weeks) + '">' +
       '<p class="text-caption text-muted mt-1.5">Defaults to 14 teaching weeks.</p></div>' +
       '<div class="sm:col-span-2"><label class="bb-label" for="w-name">Your name (optional)</label>' +
-      '<input id="w-name" class="bb-input" type="text" value="' + esc(data.student.name) + '" placeholder="Student">' +
+      '<input id="w-name" class="bb-input" type="text" value="' + esc(termDraft.name) + '" placeholder="Student">' +
       '<p class="text-caption text-muted mt-1.5">Shown in the header and footer. You can change it any time in Settings.</p></div>' +
       '</div>' +
       '<div class="px-6 sm:px-8 py-4 border-t border-border flex flex-wrap items-center justify-between gap-3">' +
@@ -177,7 +187,7 @@
 
   function saveTerm() {
     var label = document.getElementById('w-label').value.trim() || 'My Trimester';
-    var startDate = document.getElementById('w-start').value;
+    var startDate = document.getElementById('w-start-date').value;
     var weeks = Number(document.getElementById('w-weeks').value);
     var name = document.getElementById('w-name').value.trim();
 
@@ -198,6 +208,8 @@
       }
     });
 
+    /* 保存済みになったので、ヘッダーのプレビュー表示を解除する。 */
+    BB.ui.refreshChrome();
     go(STEP_SUBJECT);
   }
 
@@ -371,6 +383,24 @@
   /* 科目フォームの行追加・削除・色選択は共有モジュールに任せる。 */
   form.bind(stepHost, draft, function () {
     form.render(document.getElementById('subject-form'), draft, { deleteButton: false });
+  });
+
+  /* 学期ステップの入力は termDraft に写し、ヘッダー・フッターの表示も追随させる。 */
+  stepHost.addEventListener('input', function (event) {
+    if (step !== STEP_TERM) return;
+    var id = event.target.id;
+    if (id === 'w-label') termDraft.label = event.target.value;
+    else if (id === 'w-start-date') termDraft.startDate = event.target.value;
+    else if (id === 'w-weeks') termDraft.weeks = event.target.value;
+    else if (id === 'w-name') termDraft.name = event.target.value;
+    else return;
+
+    if (id === 'w-label' || id === 'w-name') {
+      BB.ui.refreshChrome({
+        termLabel: termDraft.label.trim() || 'My Trimester',
+        initials: BB.ui.initials(termDraft.name)
+      });
+    }
   });
 
   document.addEventListener('click', function (event) {
