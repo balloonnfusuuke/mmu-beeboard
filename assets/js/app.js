@@ -100,6 +100,27 @@
     return Math.min(week, weeks + 1);
   }
 
+  /* 表示中の週の各曜日（1=月 … 5=金）の実日付。休講・振替の照合と、出席ページの
+     日付欄の初期値が同じ基準を使うように、ここへ集約する。
+     学期開始日が未設定だと weekRange は null を返すが、そこで諦めると
+     グリッドだけが休講・振替を落とす（凡例には「休講」が出たまま）ので、
+     今日を含む月曜はじまりの週へフォールバックする。 */
+  function weekDates(now) {
+    var range = BB.date.weekRange(currentWeek(now));
+    var monday;
+    if (range) {
+      monday = range.start;
+    } else {
+      var today = startOfDay(now);
+      monday = addDays(today, -((today.getDay() + 6) % 7));
+    }
+    var dates = {};
+    for (var day = 1; day <= 5; day++) {
+      dates[day] = isoDay(addDays(monday, day - 1));
+    }
+    return dates;
+  }
+
   /* ---------- pure logic ---------- */
 
   function nextClass(now) {
@@ -620,15 +641,14 @@
     var height = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
     host.style.setProperty('--tt-hour', HOUR_HEIGHT + 'px');
 
-    /* 表示中の週の各曜日の実日付。メモ追加の初期値に使う。 */
-    var range = BB.date.weekRange(currentWeek(now));
+    /* 表示中の週の各曜日の実日付。メモ追加と休講・振替の照合で同じ値を使う。 */
+    var weekDayDates = weekDates(now);
     function dateOfWeekday(day) {
-      if (!range) return isoDay(now);
-      return isoDay(addDays(range.start, day - 1));
+      return weekDayDates[day] || isoDay(now);
     }
-    /* 休講・振替の照合に使う日付。学期開始日が未設定なら照合しない。 */
+    /* 休講・振替の照合に使う日付。 */
     function weekDayIso(day) {
-      return range ? isoDay(addDays(range.start, day - 1)) : null;
+      return weekDayDates[day] || null;
     }
 
     var head =
@@ -2004,6 +2024,7 @@
     noClassCount: noClassCount,
     extraSessions: extraSessions,
     currentWeek: currentWeek,
+    weekDates: weekDates,
     weekOf: weekOfClamped,
     isPreview: isPreview,
     countBlocks: function () {

@@ -31,13 +31,16 @@
 
   /* そのコマの「今週の実施日」。休講を押したときに学期外の日付へ記録して
      時間割に出ない、という取り違えを防ぐ。 */
+  /* 日付欄の初期値。グリッドと同じ weekDates を使う。別々に組み立てると、
+     学期開始日が未設定のときに保存した日付とグリッドの列がずれて、
+     休講・振替がグリッドに出なくなる。 */
   function defaultDateFor(subject, index) {
     var session = subject.sessions[index];
-    var range = BB.date.weekRange(BB.dash.currentWeek(new Date()));
-    if (!session || !range) return today();
+    if (!session) return today();
     var day = Number(session.day);
     if (!day) return today();
-    return isoOf(addDays(range.start, day - 1));
+    var dates = BB.dash.weekDates(new Date());
+    return dates[day] || today();
   }
 
   /* 学期の範囲。日付欄が学期外へ飛ばないようにする。 */
