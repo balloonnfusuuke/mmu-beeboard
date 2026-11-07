@@ -15,6 +15,14 @@
     return BB.store.get();
   }
 
+  function esc(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function requestedSubject() {
     var code = new URLSearchParams(window.location.search).get('subject');
     var found = null;
@@ -215,7 +223,7 @@
 
     return (
       '<tr class="' + (isExam ? 'bg-surface-sunken/60' : 'hover:bg-canvas') + ' transition-colors">' +
-      '<td class="py-3 pr-4"><span class="font-semibold text-ink block">' + assessment.name + '</span>' +
+      '<td class="py-3 pr-4"><span class="font-semibold text-ink block">' + esc(assessment.name) + '</span>' +
       '<span class="text-caption text-muted">' + t('sim.week', { n: assessment.week }) + '</span></td>' +
       '<td class="py-3 px-4 text-muted text-label-md num">' + assessment.weight + '%</td>' +
       '<td class="py-3 px-4"><div class="flex items-center gap-2">' +

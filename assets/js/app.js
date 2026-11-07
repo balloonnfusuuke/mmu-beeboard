@@ -85,8 +85,10 @@
     return hours === 1 ? t('duration.hour') : t('duration.hours', { n: hours });
   }
 
-  function shortName(subject) {
-    return subject.name.split(' ')[0];
+  /* 科目名は切り詰めずに出す。入りきらない幅のときだけ CSS で省略し、
+     全文は title で読めるようにする（先頭語だけに化けるのを避ける）。 */
+  function subjectName(subject) {
+    return escHtml(subject.name);
   }
 
   function termStart() {
@@ -596,8 +598,8 @@
       '<span class="font-semibold text-ink num">' + session.start + ' – ' + session.end + '</span>' +
       '<span class="text-placeholder">(' + durationLabel(session) + ')</span></div>' +
       '<div class="flex items-start gap-1"><span class="material-symbols-outlined text-[18px] text-primary">room</span>' +
-      '<span>' + t('next.room', { room: '<strong class="text-ink font-semibold">' + session.room + '</strong>' }) +
-      (roomText ? '<span class="block text-caption text-muted">' + roomText + '</span>' : '') +
+      '<span>' + roomPrimary(session.room) +
+      (roomText ? '<span class="block text-caption text-muted">' + escHtml(roomText) + '</span>' : '') +
       '</span></div>' +
       (subject.lecturer ? '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-muted">person</span>' +
       '<span>' + subject.lecturer + '</span></div>' : '') +
@@ -620,8 +622,9 @@
     if (!host) return;
     var items = state.subjects.map(function (subject) {
       return (
-        '<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:' +
-        subject.color + '"></span><span class="text-muted">' + subject.id + ' ' + shortName(subject) + '</span></div>'
+        '<div class="flex items-center gap-1.5 min-w-0"><span class="w-3 h-3 rounded-sm shrink-0" style="background:' +
+        subject.color + '"></span><span class="text-muted truncate" style="max-width:12rem" title="' +
+        escHtml(subject.id + ' ' + subject.name) + '">' + subject.id + ' ' + subjectName(subject) + '</span></div>'
       );
     });
     if (personalEventsOf(state).length) {
@@ -642,6 +645,17 @@
   /* 教室コードの下に出す人間可読な場所。表示専用で、保存値はコードのまま。 */
   function roomLabel(code) {
     return BB.room ? BB.room.label(code) : null;
+  }
+
+  /* 教室名の主表示。値がすでに「Room」「教室」で始まるならラベルを重ねない
+     （Room Room A を避ける）。空なら未定と出す。 */
+  function roomPrimary(code) {
+    var value = String(code === undefined || code === null ? '' : code).trim();
+    if (!value) return '<span class="text-muted">' + escHtml(t('next.roomTbd')) + '</span>';
+    var strong = '<strong class="text-ink font-semibold">' + escHtml(value) + '</strong>';
+    var word = t('next.roomWord');
+    if (value.toLowerCase().indexOf(word.toLowerCase()) === 0) return strong;
+    return t('next.room', { room: strong });
   }
 
   function renderTimetable(state, now) {
@@ -709,11 +723,14 @@
               );
               return;
             }
+            /* 教室が空のときに区切り記号だけが残らないよう、要素を集めてから繋ぐ。 */
+            var blockTitle = [subject.id, session.type, session.start + '–' + session.end];
+            if (session.room) blockTitle.push(session.room);
+            if (roomText) blockTitle.push(roomText);
             blocks.push(
               '<a class="tt-block" href="simulator.html?subject=' + subject.id + '"' +
                 ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + subject.color + '"' +
-                ' title="' + subject.id + ' ' + session.type + ' ' + session.start + '–' + session.end + ' · ' + session.room +
-                (roomText ? ' — ' + roomText : '') + '">' +
+                ' title="' + escHtml(blockTitle.join(' · ')) + '">' +
                 '<span class="tt-block-code">' + subject.id + '</span>' +
                 '<span class="tt-block-meta">' + session.type +
                 (session.room ? ' · ' + escHtml(session.room) : '') + '</span>' +
@@ -799,8 +816,11 @@
     var attendanceValue = attendance.rate === null ? '—' : Math.round(attendance.rate) + '%';
     var attendanceNote = attendance.rate === null
       ? t('detail.noSessionsYet')
-      : t('detail.absences', { n: attendance.absences });
-    var securedValue = secured.entered > 0 ? secured.secured.toFixed(1) + ' / ' + secured.possible : '—';
+      : tn('detail.absences', attendance.absences);
+    /* 点数は「14.3 / 100」を 1 つの値として扱う。途中で折り返さない。 */
+    var securedValue = secured.entered > 0
+      ? secured.secured.toFixed(1) + '\u00A0/\u00A0' + secured.possible
+      : '—';
     var securedNote = secured.published ? t('detail.courseworkPending') : t('detail.notPublishedYet');
     var assessmentValue = upcoming ? upcoming.name : t('detail.notPublishedYet');
     var assessmentNote = upcoming ? t('common.week', { n: upcoming.week }) : '';
@@ -811,7 +831,7 @@
       '<span class="w-3.5 h-3.5 rounded-full" style="background:' + subject.color + ';box-shadow:0 0 0 4px ' + BB.color.alpha(subject.color, 0.2) + '"></span>' +
       '<div><h3 class="text-title-md font-bold text-ink">' +
       t('detail.nextClass', { code: subject.id, name: subject.name }) +
-      ' <span class="font-normal text-muted">(' + session.type + ' • ' + dayName(session.day) + ' ' + session.start + '–' + session.end + ')</span></h3>' +
+      '&nbsp;<span class="font-normal text-muted">(' + session.type + ' • ' + dayName(session.day) + ' ' + session.start + '–' + session.end + ')</span></h3>' +
       '<p class="text-caption text-muted">' + subject.faculty +
       (subject.lecturer ? ' • ' + t('detail.lecturer', { name: subject.lecturer }) : '') + '</p></div>' +
       '</div>' +
@@ -832,8 +852,10 @@
       '<span class="material-symbols-outlined text-[20px] mt-0.5 shrink-0" style="color:' + color + '">' + icon + '</span>' +
       '<div class="min-w-0 flex-1">' +
       '<div class="text-caption text-muted font-medium break-words">' + label + '</div>' +
-      '<div class="text-label-md font-semibold text-ink num break-words">' + value +
-      (note ? ' <span class="text-caption font-normal text-muted">(' + note + ')</span>' : '') +
+      /* 値は語の途中で折らず、補足は 1 かたまりとして折り返す。 */
+      '<div class="text-label-md font-semibold text-ink num flex flex-wrap items-baseline gap-1">' +
+      '<span class="min-w-0">' + escHtml(value) + '</span>' +
+      (note ? '<span class="text-caption font-normal text-muted whitespace-nowrap">(' + escHtml(note) + ')</span>' : '') +
       '</div></div></div>'
     );
   }
@@ -856,7 +878,8 @@
           '<span class="px-2 py-0.5 rounded text-[11px] font-bold" style="background:' + chip.background + ';color:' + chip.color + ';border:1px solid ' + chip.borderColor + '">' + subject.id + '</span>' +
           '<span class="text-caption text-muted">' + subject.topics.label + '</span>' +
           '</div>' +
-          '<div class="text-caption text-muted pt-1">' + shortName(subject) + '</div>' +
+          '<div class="text-caption text-muted pt-1 truncate" title="' + escHtml(subject.name) + '">' +
+          subjectName(subject) + '</div>' +
           '<div class="text-body-md font-bold text-ink truncate group-hover:text-primary transition-colors">' + subject.topics.title + '</div>' +
           '<div class="mt-2.5 pt-2 border-t border-border-subtle flex items-center justify-between text-caption text-muted">' +
           '<span>' + subject.topics.resource + '</span>' +
@@ -919,12 +942,13 @@
     var body =
       '<div class="py-3 space-y-1.5">' +
       '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.deadlines.nextUpcoming') + '</div>' +
-      '<div class="text-body-lg font-bold text-ink flex items-center gap-2">' +
+      '<div class="text-body-lg font-bold text-ink flex items-start gap-2">' +
       (nextItem
         ? '<a href="deadline-detail.html?id=' + encodeURIComponent(nextItem.key || '') +
-          '" class="hover:text-primary transition-colors">' + nextItem.subject.id + ' ' + escHtml(nextItem.assessment.name) + '</a>'
+          '" class="min-w-0 break-words hover:text-primary transition-colors">' +
+          escHtml(nextItem.subject.id + ' ' + nextItem.assessment.name) + '</a>'
         : '<span>—</span>') +
-      (nextItem ? '<span class="text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">' +
+      (nextItem ? '<span class="shrink-0 text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">' +
         t('common.week', { n: nextItem.week }) + '</span>' : '') +
       '</div>' +
       (nextItem
@@ -959,7 +983,8 @@
         var width = attendance.rate === null ? 0 : Math.max(0, Math.min(100, attendance.rate));
         return (
           '<div class="flex items-center justify-between text-[11px] text-muted">' +
-          '<span>' + subject.id + ' ' + shortName(subject) + '</span>' +
+          '<span class="min-w-0 truncate" title="' + escHtml(subject.id + ' ' + subject.name) + '">' +
+          subject.id + ' ' + subjectName(subject) + '</span>' +
           '<span class="font-semibold num" style="color:' + subject.color + '">' + value + '</span></div>' +
           '<div class="w-full bg-border h-1.5 rounded-full overflow-hidden">' +
           '<div class="h-full rounded-full" style="width:' + width + '%;background:' + subject.color + '"></div></div>'
@@ -1003,13 +1028,19 @@
     var minutes = studyMinutesThisWeek(now);
     var target = state.settings.weeklyStudyTarget;
     var targetSubject = next ? next.subject : state.subjects[0];
-    var targetLabel = targetSubject ? targetSubject.id + ' ' + shortName(targetSubject) : t('card.studyLog.noSubject');
+    var targetLabel = targetSubject
+      ? '<span class="font-semibold text-primary truncate" title="' +
+        escHtml(targetSubject.id + ' ' + targetSubject.name) + '">' +
+        targetSubject.id + ' ' + subjectName(targetSubject) + '</span>'
+      : '<span class="font-semibold text-primary">' + t('card.studyLog.noSubject') + '</span>';
 
     var body =
       '<div class="py-3 space-y-2">' +
       '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.studyLog.currentWeek') + '</div>' +
-      '<div class="text-headline-sm font-extrabold text-ink num">' + hoursLabel(minutes) +
-      ' <span class="text-body-sm font-normal text-muted">' + t('card.studyLog.target', { n: target }) + '</span></div>' +
+      '<div class="text-headline-sm font-extrabold text-ink num">' +
+      '<span class="whitespace-nowrap">' + hoursLabel(minutes) + ' /</span>' +
+      ' <span class="text-body-sm font-normal text-muted whitespace-nowrap">' +
+      t('card.studyLog.target', { n: target }) + '</span></div>' +
       '<p class="text-body-sm text-muted">' +
       (minutes === 0
         ? t('card.studyLog.justBegun', { n: currentWeek(now) })
@@ -1020,7 +1051,7 @@
       '<div class="pt-3 border-t border-border-subtle space-y-2.5">' +
       '<div class="flex items-center justify-between text-caption text-muted">' +
       '<span>' + t('card.studyLog.targetSubject') + '</span>' +
-      '<span class="font-semibold text-primary">' + targetLabel + '</span></div>' +
+      targetLabel + '</div>' +
       '<span class="w-full inline-flex items-center justify-center gap-2 py-2 px-3 rounded-control bg-primary text-on-primary text-label-md font-semibold hover:bg-primary-hover transition-colors shadow-rest">' +
       '<span class="material-symbols-outlined text-[18px]">play_arrow</span><span>' +
       t('card.studyLog.startTimer') + '</span></span></div>';

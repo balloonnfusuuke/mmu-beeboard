@@ -85,11 +85,12 @@
       .subjects.map(function (item) {
         var active = item.id === subject.id;
         return (
-          '<button type="button" data-subject="' + item.id + '" class="bb-chip" style="' +
+          '<button type="button" data-subject="' + item.id + '" class="bb-chip" title="' +
+          esc(item.id + ' ' + item.name) + '" style="' +
           (active
             ? 'background:' + item.color + ';color:#fff;border:1px solid ' + item.color
             : 'background:var(--bb-surface);color:var(--bb-text-muted);border:1px solid var(--bb-border)') +
-          '">' + item.id + ' ' + item.name.split(' ')[0] + '</button>'
+          '">' + item.id + ' ' + esc(item.name) + '</button>'
         );
       })
       .join('');
@@ -138,7 +139,8 @@
         return (
           '<div class="space-y-1">' +
           '<div class="flex items-center justify-between text-caption text-muted">' +
-          '<span>' + subject.id + ' ' + subject.name.split(' ')[0] + '</span>' +
+          '<span class="min-w-0 truncate" title="' + esc(subject.id + ' ' + subject.name) + '">' +
+          subject.id + ' ' + esc(subject.name) + '</span>' +
           '<span class="font-semibold num" style="color:' + subject.color + '">' +
           t('sl.hrs', { n: (minutes / 60).toFixed(1) }) + '</span></div>' +
           '<div class="w-full bg-border h-1.5 rounded-full overflow-hidden">' +
@@ -155,8 +157,9 @@
       '<div class="pt-3">' +
       '<div class="text-caption text-muted">' +
       t('sl.targetMeta', { n: state().settings.weeklyStudyTarget, w: BB.dash.currentWeek(new Date()) }) + '</div>' +
-      '<div class="text-headline-sm font-extrabold text-ink num mt-1">' + hoursLabel(total) +
-      ' <span class="text-body-sm font-normal text-muted">' +
+      '<div class="text-headline-sm font-extrabold text-ink num mt-1">' +
+      '<span class="whitespace-nowrap">' + hoursLabel(total) + ' /</span>' +
+      ' <span class="text-body-sm font-normal text-muted whitespace-nowrap">' +
       t('sl.target', { n: state().settings.weeklyStudyTarget }) + '</span></div>' +
       '<div class="w-full bg-border h-2 rounded-full overflow-hidden mt-2">' +
       '<div class="h-full rounded-full bg-primary" style="width:' +

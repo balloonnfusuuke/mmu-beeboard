@@ -168,17 +168,17 @@
       '<div class="flex items-center gap-3">' +
       '<span class="material-symbols-outlined text-[22px] text-primary">alarm</span>' +
       '<div><div class="text-caption uppercase tracking-wider text-muted">' + t('dl.milestone') + '</div>' +
-      '<div class="text-body-md font-semibold text-ink">' +
+      '<div class="text-body-md font-semibold text-ink break-words">' +
       (BB.date.weekLabel(next.week)
         ? t('dl.nextDeadline', {
-            code: next.subject.id,
-            name: next.assessment.name,
+            code: esc(next.subject.id),
+            name: esc(next.assessment.name),
             n: next.week,
             range: BB.date.weekLabel(next.week)
           })
         : t('dl.nextDeadlineNoRange', {
-            code: next.subject.id,
-            name: next.assessment.name,
+            code: esc(next.subject.id),
+            name: esc(next.assessment.name),
             n: next.week
           })) + '</div></div></div>' +
       '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' + when + '</span></div>';
@@ -267,7 +267,8 @@
             return (
               '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
-              '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' +
+              '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate" title="' +
+              esc(assessment.name) + '">' +
               '<a href="' + detailHref + '" class="hover:text-primary transition-colors">' + esc(assessment.name) + '</a>' +
               (marks ? ' ' + marks : '') +
               (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') +
@@ -279,7 +280,7 @@
                 ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' +
                   t('dl.homework') + '</span>'
                 : '') + '</div>' +
-              (meta ? '<div class="text-caption text-muted truncate">' + meta + '</div>' : '') + '</div></div>' +
+              (meta ? '<div class="text-caption text-muted truncate" title="' + esc(meta) + '">' + esc(meta) + '</div>' : '') + '</div></div>' +
               '<div class="flex items-center gap-3 shrink-0">' +
               weight + remove +
               '<a href="simulator.html?subject=' + item.subject.id + '" class="text-muted hover:text-primary transition-colors" title="' +

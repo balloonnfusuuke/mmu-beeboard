@@ -54,7 +54,7 @@
 
   function headFor(found) {
     return {
-      title: found ? found.assessment.name : t('dd.title'),
+      title: found ? esc(found.assessment.name) : t('dd.title'),
       subtitle: found ? t('dd.subtitle') : '',
       actions: '<a href="deadlines.html" class="bb-btn bb-btn-ghost">' +
         '<span class="material-symbols-outlined text-[18px]">arrow_back</span>' + t('dd.back') + '</a>'
