@@ -15,6 +15,15 @@
     return BB.store.get();
   }
 
+  function esc(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function setPath(target, path, value) {
     var parts = path.split('.');
     var node = target;
@@ -48,31 +57,42 @@
       'Personal and academic information displayed across the portal.',
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
         '<div><label class="bb-label" for="s-name">Full Name</label>' +
-        '<input id="s-name" class="bb-input" type="text" value="' + data.student.name + '" data-setting="student.name"></div>' +
+        '<input id="s-name" class="bb-input" type="text" value="' + esc(data.student.name) + '" data-setting="student.name">' +
+        '<p class="text-caption text-muted mt-1.5">The avatar initials follow this name.</p></div>' +
         '<div><label class="bb-label" for="s-programme">Programme</label>' +
-        '<input id="s-programme" class="bb-input" type="text" value="' + data.student.programme + '" disabled></div>' +
+        '<input id="s-programme" class="bb-input" type="text" value="' + esc(data.student.programme) + '" disabled>' +
+        '<p class="text-caption text-muted mt-1.5">Fixed placeholder — edit <code>STUDENT</code> in ' +
+        '<code>assets/js/data.js</code> to change it.</p></div>' +
         '<div><label class="bb-label" for="s-id">Student ID</label>' +
-        '<input id="s-id" class="bb-input num" type="text" value="' + data.student.studentId + '" data-setting="student.studentId"></div>' +
+        '<input id="s-id" class="bb-input num" type="text" value="' + esc(data.student.studentId) + '" data-setting="student.studentId">' +
+        '<p class="text-caption text-muted mt-1.5">Optional. Shown in the footer when filled in.</p></div>' +
         '<div><label class="bb-label" for="s-term">Active Trimester</label>' +
-        '<input id="s-term" class="bb-input" type="text" value="' + data.term.label + '" disabled></div>' +
+        '<input id="s-term" class="bb-input" type="text" value="' + esc(data.term.label) + '" disabled>' +
+        '<p class="text-caption text-muted mt-1.5">Change it in the Trimester section below.</p></div>' +
         '</div>'
     );
   }
 
   function subjectsSection() {
-    var rows = state()
-      .subjects.map(function (subject) {
+    var data = state();
+    var rows = data.subjects
+      .map(function (subject) {
         return (
           '<div class="flex items-center justify-between gap-3 py-3 border-b border-border-subtle last:border-0">' +
           '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(subject.color, subject.id) +
-          '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + subject.name + '</div>' +
+          '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + esc(subject.name) + '</div>' +
           '<div class="text-caption text-muted">' + subject.credits + ' Cr. • ' + subject.sessions.length +
           ' sessions • ' + subject.assessments.length + ' components</div></div></div>' +
-          '<a href="subject-edit.html?id=' + subject.id + '" class="bb-btn bb-btn-ghost" style="height:34px">' +
+          '<a href="subject-edit.html?id=' + encodeURIComponent(subject.id) + '" class="bb-btn bb-btn-ghost" style="height:34px">' +
           '<span class="material-symbols-outlined text-[16px]">edit</span>Edit</a></div>'
         );
       })
       .join('');
+
+    var empty =
+      '<div class="py-6 text-center">' +
+      '<span class="material-symbols-outlined text-[28px] text-placeholder">menu_book</span>' +
+      '<p class="text-body-sm text-muted mt-2">No subjects yet.</p></div>';
 
     return section(
       'menu_book',
@@ -80,9 +100,28 @@
       'Manage active subjects, session timings, and assessment weightings.',
       '<div class="flex items-center justify-between gap-3 pb-3 border-b border-border">' +
         '<div><div class="text-caption text-muted">Active Cycle</div>' +
-        '<div class="text-body-md font-semibold text-ink">' + state().term.label + '</div></div>' +
+        '<div class="text-body-md font-semibold text-ink">' + esc(data.term.label) + '</div></div>' +
         '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' +
-        state().subjects.length + ' subjects</span></div>' + rows
+        data.subjects.length + ' subject' + (data.subjects.length === 1 ? '' : 's') + '</span></div>' +
+        (rows || empty) +
+        '<div class="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
+        '<p class="text-caption text-muted">Add a module for this trimester, or edit an existing one.</p>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary shrink-0">' +
+        '<span class="material-symbols-outlined text-[18px]">add</span>Add subject</a></div>'
+    );
+  }
+
+  /* 初回セットアップをいつでも開き直せる導線。 */
+  function setupSection() {
+    return section(
+      'add_task',
+      'First-time setup',
+      'Re-run the guided setup for your trimester and first subject.',
+      '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
+        '<p class="text-body-sm text-muted">The wizard walks through the trimester label, Week 1 start date, ' +
+        'week count and your first subject. Skipping it is fine — nothing is locked.</p>' +
+        '<a href="setup.html" class="bb-btn bb-btn-primary shrink-0">' +
+        '<span class="material-symbols-outlined text-[18px]">arrow_forward</span>Open setup wizard</a></div>'
     );
   }
 
@@ -130,72 +169,25 @@
     );
   }
 
-  function languageSection() {
-    var data = state();
-    var languages = [
-      { id: 'en', label: 'English' },
-      { id: 'ms', label: 'Bahasa Melayu' },
-      { id: 'ja', label: '日本語' },
-      { id: 'zh', label: '简体中文' }
-    ];
-    var formats = ['DD/MM/YYYY', 'YYYY/MM/DD', 'MM/DD/YYYY'];
-
-    return section(
-      'language',
-      'Language &amp; Region',
-      'Configure portal interface language, regional date conventions, and bilingual displays.',
-      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
-        '<div><label class="bb-label" for="s-lang">Display Language</label>' +
-        '<select id="s-lang" class="bb-input" data-setting="settings.language">' +
-        languages
-          .map(function (language) {
-            return '<option value="' + language.id + '"' +
-              (data.settings.language === language.id ? ' selected' : '') + '>' + language.label + '</option>';
-          })
-          .join('') +
-        '</select></div>' +
-        '<div><label class="bb-label" for="s-date">Date &amp; Time Notation</label>' +
-        '<select id="s-date" class="bb-input" data-setting="settings.dateFormat">' +
-        formats
-          .map(function (format) {
-            return '<option value="' + format + '"' +
-              (data.settings.dateFormat === format ? ' selected' : '') + '>' + format + '</option>';
-          })
-          .join('') +
-        '</select></div>' +
-        '<label class="sm:col-span-2 flex items-center gap-3 text-body-sm text-body">' +
-        '<input type="checkbox" class="w-[18px] h-[18px] rounded border-border text-primary focus:ring-primary/20"' +
-        (data.settings.bilingual ? ' checked' : '') + ' data-setting="settings.bilingual">' +
-        'Show secondary translated titles alongside official MMU course codes</label>' +
-        '</div>'
-    );
-  }
-
   function goalsSection() {
     var data = state();
     return section(
       'flag',
       'Goals &amp; Alerts',
-      'Set academic target alerts and notification frequency.',
+      'Set the academic benchmarks used across the dashboard.',
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
         '<div><label class="bb-label" for="s-cgpa">CGPA Target</label>' +
         '<input id="s-cgpa" class="bb-input num" type="number" min="0" max="4" step="0.01" value="' +
-        data.settings.cgpaTarget + '" data-setting="settings.cgpaTarget"></div>' +
+        data.settings.cgpaTarget + '" data-setting="settings.cgpaTarget">' +
+        '<p class="text-caption text-muted mt-1.5">Shown in the header and used by the Grade Simulator.</p></div>' +
         '<div><label class="bb-label" for="s-att">Attendance Warning Threshold (%)</label>' +
         '<input id="s-att" class="bb-input num" type="number" min="0" max="100" step="1" value="' +
-        data.settings.attendanceThreshold + '" data-setting="settings.attendanceThreshold"></div>' +
+        data.settings.attendanceThreshold + '" data-setting="settings.attendanceThreshold">' +
+        '<p class="text-caption text-muted mt-1.5">Drives the attendance page, dashboard card and policy text.</p></div>' +
         '<div><label class="bb-label" for="s-study">Weekly Study Target (hours)</label>' +
         '<input id="s-study" class="bb-input num" type="number" min="1" max="80" step="1" value="' +
-        data.settings.weeklyStudyTarget + '" data-setting="settings.weeklyStudyTarget"></div>' +
-        '<div class="space-y-2 pt-1">' +
-        '<label class="flex items-center gap-3 text-body-sm text-body">' +
-        '<input type="checkbox" class="w-[18px] h-[18px] rounded border-border text-primary focus:ring-primary/20"' +
-        (data.settings.deadlineReminders ? ' checked' : '') + ' data-setting="settings.deadlineReminders">' +
-        'Deadline reminders 48h and 12h before submission</label>' +
-        '<label class="flex items-center gap-3 text-body-sm text-body">' +
-        '<input type="checkbox" class="w-[18px] h-[18px] rounded border-border text-primary focus:ring-primary/20"' +
-        (data.settings.classReminder ? ' checked' : '') + ' data-setting="settings.classReminder">' +
-        'Remind me before each class</label></div>' +
+        data.settings.weeklyStudyTarget + '" data-setting="settings.weeklyStudyTarget">' +
+        '<p class="text-caption text-muted mt-1.5">Used by the Study Log and the dashboard summary.</p></div>' +
         '</div>'
     );
   }
@@ -208,19 +200,35 @@
       'Schedule boundaries and calendar configuration.',
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
         '<div><label class="bb-label" for="s-start">Term Start Date</label>' +
-        '<input id="s-start" class="bb-input" type="date" value="' + data.term.startDate +
-        '" data-setting="term.startDate"></div>' +
+        '<input id="s-start" class="bb-input" type="date" value="' + esc(data.term.startDate) +
+        '" data-setting="term.startDate">' +
+        '<p class="text-caption text-muted mt-1.5">Week 1 Monday. Leave empty to keep every week number at Week 1.</p></div>' +
         '<div><label class="bb-label" for="s-weeks">Number of Weeks</label>' +
-        '<input id="s-weeks" class="bb-input num" type="number" min="1" max="30" value="' + data.term.weeks +
-        '" data-setting="term.weeks"></div>' +
-        '<div><label class="bb-label" for="s-day-start">Day Starts At</label>' +
-        '<input id="s-day-start" class="bb-input" type="time" value="' + data.settings.dayStart +
-        '" data-setting="settings.dayStart"></div>' +
-        '<div><label class="bb-label" for="s-day-end">Day Ends At</label>' +
-        '<input id="s-day-end" class="bb-input" type="time" value="' + data.settings.dayEnd +
-        '" data-setting="settings.dayEnd"></div>' +
+        '<input id="s-weeks" class="bb-input num" type="number" min="1" max="30" value="' + (data.term.weeks || 14) +
+        '" data-setting="term.weeks">' +
+        '<p class="text-caption text-muted mt-1.5">Teaching weeks before the exam week.</p></div>' +
         '</div>'
     );
+  }
+
+  /* 次の学期の Week 1 候補。今学期の開始日＋週数、無ければ次の月曜。 */
+  function suggestedStart() {
+    var data = state();
+    var start = BB.date.parse(data.term.startDate);
+    var weeks = data.term.weeks || 14;
+    var next;
+    if (start) {
+      next = new Date(start.getFullYear(), start.getMonth(), start.getDate() + weeks * 7);
+    } else {
+      var today = new Date();
+      var offset = (8 - today.getDay()) % 7 || 7;
+      next = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
+    }
+    return next.getFullYear() + '-' + pad2(next.getMonth() + 1) + '-' + pad2(next.getDate());
+  }
+
+  function pad2(n) {
+    return n < 10 ? '0' + n : String(n);
   }
 
   function termSection() {
@@ -231,9 +239,10 @@
           .map(function (entry, index) {
             return (
               '<div class="flex items-center justify-between gap-3 py-2.5 border-b border-border-subtle last:border-0">' +
-              '<div><div class="text-body-sm font-semibold text-ink">' + entry.term.label + '</div>' +
-              '<div class="text-caption text-muted">Starts ' + entry.term.startDate + ' • ' +
-              entry.subjects.length + ' modules • archived ' + String(entry.archivedAt).slice(0, 10) + '</div></div>' +
+              '<div><div class="text-body-sm font-semibold text-ink">' + esc(entry.term.label) + '</div>' +
+              '<div class="text-caption text-muted">Starts ' + esc(entry.term.startDate || 'not set') + ' • ' +
+              entry.subjects.length + ' module' + (entry.subjects.length === 1 ? '' : 's') +
+              ' • archived ' + esc(String(entry.archivedAt).slice(0, 10)) + '</div></div>' +
               '<button type="button" data-restore-term="' + index + '" class="bb-btn bb-btn-ghost" style="height:32px;font-size:.75rem">Restore</button></div>'
             );
           })
@@ -247,24 +256,35 @@
       '<div class="space-y-5">' +
         '<div class="rounded-control border border-border bg-canvas p-4">' +
         '<div class="text-caption uppercase tracking-wider text-muted">Active</div>' +
-        '<div class="text-title-md font-bold text-ink">' + data.term.label + '</div>' +
-        '<div class="text-body-sm text-muted">Starts ' + data.term.startDate + ' • ' + data.term.weeks +
-        ' weeks • exam week ' + data.term.examWeek + '</div></div>' +
+        '<div class="text-title-md font-bold text-ink">' + esc(data.term.label) + '</div>' +
+        '<div class="text-body-sm text-muted">' +
+        (data.term.startDate ? 'Starts ' + esc(data.term.startDate) : 'Start date not set') + ' • ' +
+        (data.term.weeks || 14) + ' weeks • exam week ' + (data.term.examWeek || (data.term.weeks || 14) + 1) +
+        '</div></div>' +
         '<div><div class="bb-label">Start next trimester</div>' +
         '<form id="term-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
         '<div class="sm:col-span-2"><label class="bb-label" for="t-label">Trimester label</label>' +
         '<input id="t-label" name="termLabel" class="bb-input" type="text" placeholder="Trimester Feb/Mar 2027" required></div>' +
         '<div><label class="bb-label" for="t-start">Week 1 starts (Monday)</label>' +
-        '<input id="t-start" name="termStart" class="bb-input" type="date" required></div>' +
+        '<input id="t-start" name="termStart" class="bb-input" type="date" value="' + suggestedStart() + '" required></div>' +
         '<div><label class="bb-label" for="t-weeks">Number of weeks</label>' +
         '<input id="t-weeks" name="termWeeks" class="bb-input num" type="number" min="1" max="30" step="1" value="' +
-        data.term.weeks + '"></div>' +
+        (data.term.weeks || 14) + '"></div>' +
         '<div><label class="bb-label" for="t-exam">Exam week</label>' +
         '<input id="t-exam" name="termExam" class="bb-input num" type="number" min="1" max="30" step="1" value="' +
-        data.term.examWeek + '"></div>' +
+        (data.term.examWeek || (data.term.weeks || 14) + 1) + '"></div>' +
+        '<div class="sm:col-span-2 rounded-control border border-border-subtle bg-canvas p-3.5">' +
+        '<div class="text-caption uppercase tracking-wider text-muted">What happens on switch</div>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2 text-body-sm">' +
+        '<div class="flex items-start gap-2"><span class="material-symbols-outlined text-[18px] text-success">check</span>' +
+        '<span class="text-body">Kept: ' + data.subjects.length + ' module' + (data.subjects.length === 1 ? '' : 's') +
+        ' with their sessions, colours and assessment weightings.</span></div>' +
+        '<div class="flex items-start gap-2"><span class="material-symbols-outlined text-[18px] text-alert">warning</span>' +
+        '<span class="text-body">Cleared: marks, attendance records, study log and custom deadlines. ' +
+        'The current trimester is archived first, so nothing is lost for good.</span></div>' +
+        '</div></div>' +
         '<div class="sm:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
-        '<p class="text-caption text-muted">Module structure carries over with marks, attendance and study log cleared. ' +
-        'Adjust modules afterwards in the Subject Editor.</p>' +
+        '<p class="text-caption text-muted">Adjust modules afterwards in the Subject Editor.</p>' +
         '<button type="submit" class="bb-btn bb-btn-primary shrink-0">' +
         '<span class="material-symbols-outlined text-[18px]">arrow_forward</span>Start trimester</button></div>' +
         '</form></div>' +
@@ -295,8 +315,8 @@
     document.getElementById('settings').innerHTML =
       profileSection() +
       subjectsSection() +
+      setupSection() +
       appearanceSection() +
-      languageSection() +
       goalsSection() +
       timetableSection() +
       termSection() +
@@ -315,17 +335,41 @@
       BB.ui.toast('Fill in label, start date and weeks');
       return;
     }
-    if (!window.confirm('Start "' + label + '"? The current trimester is archived and marks are cleared.')) return;
-    BB.store.startTerm({
-      id: 'term-' + Date.now(),
-      label: label,
-      shortLabel: label,
-      startDate: startDate,
-      weeks: weeks,
-      examWeek: isFinite(examWeek) && examWeek > 0 ? examWeek : weeks + 1
+    BB.ui
+      .confirm({
+        title: 'Start "' + label + '"?',
+        message:
+          'The current trimester is archived and marks, attendance, study log and custom deadlines are cleared. ' +
+          'Your modules carry over.',
+        confirmLabel: 'Start trimester'
+      })
+      .then(function (ok) {
+        if (!ok) return;
+        BB.store.startTerm({
+          id: 'term-' + Date.now(),
+          label: label,
+          shortLabel: label,
+          startDate: startDate,
+          weeks: weeks,
+          examWeek: isFinite(examWeek) && examWeek > 0 ? examWeek : weeks + 1
+        });
+        BB.ui.toast('Switched to ' + label);
+        BB.ui.refreshChrome();
+        render();
+      });
+  });
+
+  /* テキスト入力は打鍵のたびに保存する。blur 待ちだと入力直後の再読込で変更が消える。 */
+  document.addEventListener('input', function (event) {
+    var field = event.target.closest('[data-setting]');
+    if (!field) return;
+    if (field.type === 'checkbox' || field.type === 'number' || field.tagName === 'SELECT') return;
+    var path = field.getAttribute('data-setting');
+    BB.store.update(function (data) {
+      setPath(data, path, field.value);
+      if (path === 'student.name') data.student.initials = BB.ui.initials(field.value);
     });
-    BB.ui.toast('Switched to ' + label);
-    render();
+    BB.ui.refreshChrome();
   });
 
   document.addEventListener('change', function (event) {
@@ -339,8 +383,10 @@
 
     BB.store.update(function (data) {
       setPath(data, path, value);
+      if (path === 'student.name') data.student.initials = BB.ui.initials(value);
     });
     BB.ui.toast('Saved');
+    BB.ui.refreshChrome();
     render();
   });
 
@@ -348,10 +394,19 @@
     var restoreButton = event.target.closest('[data-restore-term]');
     if (restoreButton) {
       var index = Number(restoreButton.getAttribute('data-restore-term'));
-      if (!window.confirm('Restore this trimester? The current one is archived first.')) return;
-      BB.store.restoreTerm(index);
-      BB.ui.toast('Trimester restored');
-      render();
+      BB.ui
+        .confirm({
+          title: 'Restore this trimester?',
+          message: 'The current trimester is archived first, then the selected one becomes active.',
+          confirmLabel: 'Restore'
+        })
+        .then(function (ok) {
+          if (!ok) return;
+          BB.store.restoreTerm(index);
+          BB.ui.toast('Trimester restored');
+          BB.ui.refreshChrome();
+          render();
+        });
       return;
     }
 
@@ -367,7 +422,8 @@
       return;
     }
 
-    if (event.target.closest('#export-data')) {      var blob = new Blob([JSON.stringify(state(), null, 2)], { type: 'application/json' });
+    if (event.target.closest('#export-data')) {
+      var blob = new Blob([JSON.stringify(state(), null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
       var link = document.createElement('a');
       link.href = url;
@@ -379,10 +435,20 @@
     }
 
     if (event.target.closest('#reset-data')) {
-      if (window.confirm('Reset all local BeeBoard data? This cannot be undone.')) {
-        BB.store.reset();
-        window.location.reload();
-      }
+      BB.ui
+        .confirm({
+          title: 'Reset all local data?',
+          message:
+            'Every subject, mark, attendance record and study session in this browser is deleted and the setup ' +
+            'wizard runs again. Export a backup first if you want to keep it.',
+          confirmLabel: 'Reset everything',
+          danger: true
+        })
+        .then(function (ok) {
+          if (!ok) return;
+          BB.store.reset();
+          window.location.reload();
+        });
     }
   });
 
@@ -411,4 +477,15 @@
 
   applyTheme(state().settings.theme);
   render();
+
+  /* 他タブの保存を取り込んだら描き直す。入力中の欄があれば触らない。 */
+  BB.store.subscribe(function () {
+    var active = document.activeElement;
+    if (active && active.closest && active.closest('#settings') && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName)) {
+      return;
+    }
+    applyTheme(state().settings.theme);
+    BB.ui.refreshChrome();
+    render();
+  });
 })();

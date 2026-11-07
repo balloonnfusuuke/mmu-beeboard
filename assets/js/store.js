@@ -7,7 +7,10 @@
   /* 2: 科目コードを eBwise 表記（C 付き）に変更。旧コードの保存状態は破棄して再シードする。 */
   var VERSION = 2;
   var memory = null;
+  /* cache は「最後に読んだ生データ」とセットで持つ。生データが変わっていれば読み直す。 */
   var cache = null;
+  var cacheRaw = null;
+  var listeners = [];
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -37,13 +40,18 @@
       }),
       studySessions: [],
       customDeadlines: [],
-      archive: []
+      archive: [],
+      /* 初回セットアップを終えたか（Skip でも立てる）。未完了かつ科目0件のときだけ自動表示する。 */
+      setupDone: false
     };
   }
 
-  function read() {
+  function readRaw() {
     var store = storage();
-    var raw = store ? store.getItem(KEY) : memory;
+    return store ? store.getItem(KEY) : memory;
+  }
+
+  function parse(raw) {
     if (!raw) return null;
     try {
       var state = JSON.parse(raw);
@@ -59,24 +67,59 @@
     if (store) store.setItem(KEY, raw);
     else memory = raw;
     cache = state;
+    cacheRaw = raw;
+  }
+
+  /* 常に保存済みの最新状態を返す。他タブが書き換えていれば生データが変わるので読み直す。
+     これがないと「開いた時点のスナップショット」を保存して他タブの編集を消してしまう。 */
+  function current() {
+    var raw = readRaw();
+    if (cache && raw === cacheRaw) return cache;
+    var parsed = parse(raw);
+    if (parsed) {
+      cache = parsed;
+      cacheRaw = raw;
+      return cache;
+    }
+    /* 保存が無い・壊れている・バージョン違い → シードで作り直す */
+    cache = seedState();
+    write(cache);
+    return cache;
+  }
+
+  function notify() {
+    listeners.slice().forEach(function (listener) {
+      try {
+        listener();
+      } catch (e) {
+        /* 1 つの購読者が落ちても他は動かす */
+      }
+    });
   }
 
   var api = {
     get: function () {
-      if (!cache) {
-        cache = read() || seedState();
-        write(cache);
-      }
-      return cache;
+      return current();
     },
     save: function () {
-      write(api.get());
-      return api.get();
+      write(current());
+      return current();
     },
+    /* 変更関数は「保存直前の最新状態」に対して適用する。他タブの編集を巻き戻さない。 */
     update: function (mutate) {
-      var state = api.get();
+      var state = current();
       mutate(state);
-      return api.save();
+      write(state);
+      return state;
+    },
+    /* 他タブの保存を取り込んだときに呼ばれる。ページ側は再描画を登録する。 */
+    subscribe: function (listener) {
+      listeners.push(listener);
+      return function () {
+        listeners = listeners.filter(function (item) {
+          return item !== listener;
+        });
+      };
     },
     reset: function () {
       cache = seedState();
@@ -90,7 +133,18 @@
       }
       return null;
     },
-    /* 科目色は data.js の color のみが正。重複判定はここに集約する。 */
+    /* 初回セットアップの自動表示条件: 科目0件 かつ setupDone 未設定。 */
+    needsSetup: function () {
+      var state = api.get();
+      return !state.setupDone && (!state.subjects || state.subjects.length === 0);
+    },
+    /* Skip でも完了扱いにして、二度と自動表示しない。 */
+    completeSetup: function () {
+      return api.update(function (state) {
+        state.setupDone = true;
+      });
+    },
+    /* 科目色は保存済み state の color のみが正。重複判定はここに集約する。 */
     colorOwner: function (hex, exceptId) {
       var subjects = api.get().subjects;
       var target = String(hex).toUpperCase();
@@ -103,44 +157,56 @@
     },
     /* 現在の学期を archive へ退避する。切替・復元の両方から使う。 */
     archiveCurrent: function () {
-      var state = api.get();
-      state.archive = state.archive || [];
-      state.archive.push({
-        term: clone(state.term),
-        subjects: clone(state.subjects),
-        studySessions: clone(state.studySessions || []),
-        customDeadlines: clone(state.customDeadlines || []),
-        archivedAt: new Date().toISOString()
+      return api.update(function (state) {
+        state.archive = state.archive || [];
+        state.archive.push({
+          term: clone(state.term),
+          subjects: clone(state.subjects),
+          studySessions: clone(state.studySessions || []),
+          customDeadlines: clone(state.customDeadlines || []),
+          archivedAt: new Date().toISOString()
+        });
       });
-      return api.save();
     },
     /* 次の学期へ移る。科目構成は引き継ぎ、成績・出席・学習ログは持ち越さない。 */
     startTerm: function (term) {
-      var state = api.get();
       api.archiveCurrent();
-      state.term = clone(term);
-      state.subjects = state.subjects.map(function (subject) {
-        subject.marks = {};
-        return subject;
+      return api.update(function (state) {
+        state.term = clone(term);
+        state.subjects = state.subjects.map(function (subject) {
+          subject.marks = {};
+          return subject;
+        });
+        state.studySessions = [];
+        state.customDeadlines = [];
       });
-      state.studySessions = [];
-      state.customDeadlines = [];
-      return api.save();
     },
     /* archive の 1 件を現在の学期に戻す。今の学期は退避してから入れ替える。 */
     restoreTerm: function (index) {
-      var state = api.get();
-      var entry = (state.archive || [])[index];
-      if (!entry) return state;
+      var entry = (api.get().archive || [])[index];
+      if (!entry) return api.get();
       api.archiveCurrent();
-      state.archive.splice(index, 1);
-      state.term = clone(entry.term);
-      state.subjects = clone(entry.subjects);
-      state.studySessions = clone(entry.studySessions || []);
-      state.customDeadlines = clone(entry.customDeadlines || []);
-      return api.save();
+      return api.update(function (state) {
+        /* archiveCurrent が 1 件積んだので、対象は元の index のまま先頭側にある */
+        state.archive.splice(index, 1);
+        state.term = clone(entry.term);
+        state.subjects = clone(entry.subjects);
+        state.studySessions = clone(entry.studySessions || []);
+        state.customDeadlines = clone(entry.customDeadlines || []);
+      });
     }
   };
+
+  /* 他タブの保存を検知したらキャッシュを捨てて購読者へ知らせる。
+     これがないと、古いタブが自分のスナップショットを描き続けてしまう。 */
+  if (global.addEventListener) {
+    global.addEventListener('storage', function (event) {
+      if (event.key !== null && event.key !== KEY) return;
+      cache = null;
+      cacheRaw = null;
+      notify();
+    });
+  }
 
   /* ---------- color ---------- */
 
@@ -203,31 +269,45 @@
 
   /* ---------- date ---------- */
 
+  /* 'YYYY-MM-DD' → Date。未設定・不正値は null（例外にしない）。 */
   function parseDate(iso) {
+    if (!iso) return null;
     var parts = String(iso).split('-');
-    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    if (parts.length !== 3) return null;
+    var year = Number(parts[0]);
+    var month = Number(parts[1]);
+    var day = Number(parts[2]);
+    if (!isFinite(year) || !isFinite(month) || !isFinite(day)) return null;
+    var parsed = new Date(year, month - 1, day);
+    return isNaN(parsed.getTime()) ? null : parsed;
   }
 
   var date = {
     parse: parseDate,
-    /* 学期開始からの経過週。Week 1 は開始週。 */
+    /* 学期開始日が未設定なら null。呼び出し側は null を「日付未設定」として扱う。 */
+    start: function () {
+      return parseDate(api.get().term.startDate);
+    },
+    /* 学期開始からの経過週。Week 1 は開始週。開始日が未設定なら NaN。 */
     weekOf: function (when) {
-      var term = api.get().term;
-      var start = parseDate(term.startDate);
+      var start = date.start();
+      if (!start) return NaN;
       var day = new Date(when.getFullYear(), when.getMonth(), when.getDate());
       var diff = Math.floor((day - start) / 86400000);
       return Math.floor(diff / 7) + 1;
     },
+    /* 開始日が未設定なら null。 */
     weekRange: function (week) {
-      var term = api.get().term;
-      var start = parseDate(term.startDate);
+      var start = date.start();
+      if (!start) return null;
       var from = new Date(start.getTime() + (week - 1) * 7 * 86400000);
       var to = new Date(from.getTime() + 6 * 86400000);
       return { start: from, end: to };
     },
-    /* '23–29 Nov 2026' 形式 */
+    /* '23–29 Nov 2026' 形式。開始日が未設定なら空文字。 */
     weekLabel: function (week) {
       var range = date.weekRange(week);
+      if (!range) return '';
       var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       var from = range.start;
       var to = range.end;

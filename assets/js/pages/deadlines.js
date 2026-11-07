@@ -13,6 +13,9 @@
     }
   });
 
+  /* High Stakes の基準。監査で「判定基準が不明」と指摘されたため 1 か所に固定する。 */
+  var HIGH_STAKES_WEIGHT = 50;
+
   function items() {
     var all = BB.dash.deadlineItems();
     return filter === 'all'
@@ -25,6 +28,18 @@
   function renderAddForm() {
     var state = BB.store.get();
     var host = document.getElementById('add-deadline');
+
+    /* 科目0件では紐づけ先がない。追加フォームの代わりにセットアップへ誘導する。 */
+    if (!state.subjects.length) {
+      host.innerHTML =
+        '<div class="bb-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
+        '<div class="flex items-center gap-3">' +
+        '<span class="material-symbols-outlined text-[20px] text-primary">add_task</span>' +
+        '<span class="text-body-sm text-muted">Add a subject first — deadlines are tracked per module.</span></div>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-ghost shrink-0">Add a subject</a></div>';
+      return;
+    }
+
     var options = state.subjects
       .map(function (subject) {
         return '<option value="' + subject.id + '">' + subject.id + ' ' + subject.name + '</option>';
@@ -38,7 +53,8 @@
       '<span class="material-symbols-outlined text-[20px] text-primary">add_task</span>' +
       '<span class="text-title-md font-semibold text-ink">Add a deadline</span>' +
       '<span class="text-caption text-muted">for anything the module outline does not list</span></span>' +
-      '<span class="material-symbols-outlined text-muted">' + (formOpen ? 'expand_less' : 'expand_more') + '</span>' +
+      '<span class="material-symbols-outlined text-muted transition-transform" style="transform:rotate(' +
+      (formOpen ? '90deg' : '0deg') + ')">chevron_right</span>' +
       '</button>' +
       '<div class="px-5 pb-5 border-t border-border' + (formOpen ? '' : ' hidden') + '">' +
       '<form id="deadline-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">' +
@@ -79,7 +95,9 @@
           '">' + chip.label + '</button>'
         );
       })
-      .join('');
+      .join('') +
+      '<span class="w-full text-caption text-muted">High Stakes marks a week where ' + HIGH_STAKES_WEIGHT +
+      '% or more of a module\'s grade is due.</span>';
   }
 
   function renderMilestone() {
@@ -99,9 +117,13 @@
       return;
     }
 
-    var start = BB.date.weekRange(next.week).start;
-    var days = Math.round((start - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
-    var when = days <= 0 ? 'This week' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days';
+    var range = BB.date.weekRange(next.week);
+    var days = range
+      ? Math.round((range.start - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000)
+      : null;
+    var when = days === null
+      ? 'Week ' + next.week
+      : days <= 0 ? 'This week' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days';
 
     host.innerHTML =
       '<div class="bb-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
@@ -140,12 +162,14 @@
           return sum + item.assessment.weight;
         }, 0);
         var isExam = week >= BB.store.get().term.examWeek;
-        var highStakes = total >= 50;
+        var highStakes = total >= HIGH_STAKES_WEIGHT;
+        var range = BB.date.weekLabel(week);
 
         var rows = entries
           .map(function (item) {
             var assessment = item.assessment;
-            var meta = assessment.dueLabel || assessment.location || (assessment.kind === 'quiz' ? 'Standard Week Window' : '');
+            /* 具体的な日付・時刻が無い項目は、その週の実日付範囲を必ず併記する。 */
+            var meta = assessment.dueLabel || assessment.location || (range ? 'Due in the week of ' + range : '');
             var weight = assessment.weight > 0 ? assessment.weight + '%' : '—';
             var remove = item.custom
               ? '<button type="button" data-remove="' + item.custom.id + '" class="text-muted hover:text-alert transition-colors" title="Remove this custom deadline">' +
@@ -165,17 +189,25 @@
           })
           .join('');
 
+        var overWeighted = total > 100
+          ? '<div class="px-5 py-2.5 border-b border-border bg-alert-surface text-caption font-semibold text-alert">' +
+            'This week adds up to ' + total + '% — more than a module can carry. Check the weightings in the Subject Editor.</div>'
+          : '';
+
         return (
           '<div class="bb-card overflow-hidden">' +
           '<div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3 bg-canvas border-b border-border">' +
           '<div class="flex items-center gap-2">' +
           '<span class="text-label-sm font-bold text-primary uppercase tracking-wider">' +
           (isExam ? 'Week ' + week + ' (Exam Week)' : 'Week ' + week) + '</span>' +
-          '<span class="text-caption text-muted">' + BB.date.weekLabel(week) + '</span>' +
-          (highStakes ? '<span class="bb-chip" style="background:var(--bb-alert-surface);color:var(--bb-alert)">High Stakes</span>' : '') +
+          '<span class="text-caption text-muted">' + (range || 'Dates not set') + '</span>' +
+          (highStakes
+            ? '<span class="bb-chip" style="background:var(--bb-alert-surface);color:var(--bb-alert)" title="' +
+              HIGH_STAKES_WEIGHT + '% or more of the module grade is due this week">High Stakes</span>'
+            : '') +
           '</div>' +
           '<span class="text-caption text-muted">Total Weight: <strong class="text-ink num">' + total + '%</strong></span>' +
-          '</div>' + rows + '</div>'
+          '</div>' + overWeighted + rows + '</div>'
         );
       })
       .join('');
@@ -229,13 +261,41 @@
     var button = event.target.closest('[data-remove]');
     if (!button) return;
     var id = button.getAttribute('data-remove');
-    BB.store.update(function (data) {
-      data.customDeadlines = (data.customDeadlines || []).filter(function (entry) {
-        return entry.id !== id;
-      });
+    var entries = BB.store.get().customDeadlines || [];
+    var index = -1;
+    entries.forEach(function (entry, position) {
+      if (entry.id === id) index = position;
     });
-    BB.ui.toast('Deadline removed');
-    render();
+    if (index < 0) return;
+    var removed = JSON.parse(JSON.stringify(entries[index]));
+
+    BB.ui
+      .confirm({
+        title: 'Remove this deadline?',
+        message: '"' + removed.name + '" will be removed from the timeline.',
+        confirmLabel: 'Remove deadline',
+        danger: true
+      })
+      .then(function (ok) {
+        if (!ok) return;
+        BB.store.update(function (data) {
+          data.customDeadlines = (data.customDeadlines || []).filter(function (entry) {
+            return entry.id !== id;
+          });
+        });
+        render();
+        BB.ui.toast('Deadline removed', {
+          actionLabel: 'Undo',
+          onAction: function () {
+            BB.store.update(function (data) {
+              data.customDeadlines = data.customDeadlines || [];
+              data.customDeadlines.splice(Math.min(index, data.customDeadlines.length), 0, removed);
+            });
+            render();
+            BB.ui.toast('Deadline restored');
+          }
+        });
+      });
   });
 
   document.getElementById('filters').addEventListener('click', function (event) {
@@ -246,4 +306,9 @@
   });
 
   render();
+
+  /* 他タブの保存を取り込んだら描き直す。 */
+  BB.store.subscribe(function () {
+    render();
+  });
 })();

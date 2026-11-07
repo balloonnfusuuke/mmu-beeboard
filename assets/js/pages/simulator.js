@@ -29,17 +29,31 @@
     head: {
       title: 'Grade Simulator',
       subtitle: 'Enter coursework marks to project the grade and the final exam score still required.',
-      actions:
-        '<select id="subject-switch" class="bb-input" style="height:40px;width:auto">' +
-        state()
-          .subjects.map(function (subject) {
-            return '<option value="' + subject.id + '"' + (subject.id === active.id ? ' selected' : '') + '>' +
-              subject.id + ' ' + subject.name + '</option>';
-          })
-          .join('') +
-        '</select>'
+      actions: active
+        ? '<select id="subject-switch" class="bb-input" style="height:40px;width:auto">' +
+          state()
+            .subjects.map(function (subject) {
+              return '<option value="' + subject.id + '"' + (subject.id === active.id ? ' selected' : '') + '>' +
+                subject.id + ' ' + subject.name + '</option>';
+            })
+            .join('') +
+          '</select>'
+        : ''
     }
   });
+
+  /* 科目0件では比較対象がない。空状態を出してセットアップへ誘導する。 */
+  if (!active) {
+    document.getElementById('metrics').innerHTML = '';
+    document.getElementById('subjects').innerHTML =
+      '<div class="bb-card p-8 text-center">' +
+      '<span class="material-symbols-outlined text-[28px] text-placeholder">calculate</span>' +
+      '<p class="text-body-sm text-muted mt-2">No subjects to simulate yet.</p>' +
+      '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary mt-3">' +
+      '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+    renderSidebar();
+    return;
+  }
 
   function gradeFor(percent) {
     var scale = window.BB_SEED.gradingScale;
@@ -121,19 +135,39 @@
     var gpa = credits ? points / credits : null;
     var goal = state().settings.cgpaTarget;
     var distance = gpa === null ? null : gpa - goal;
-    var gauge = gpa === null ? 0 : Math.max(0, Math.min(100, ((gpa - 3) / 1) * 100));
+    var totalCredits = subjects.reduce(function (sum, subject) {
+      return sum + subject.credits;
+    }, 0);
+    var provisional = graded.length > 0 && graded.length < subjects.length;
+
+    /* 目盛りは目標値が必ず内側に入るように取る。3.00 固定だと 2.50 の目標が外に出る。 */
+    var scaleMin = Math.min(3, goal);
+    var scaleMax = 4;
+    function position(value) {
+      return Math.max(0, Math.min(100, ((value - scaleMin) / (scaleMax - scaleMin)) * 100));
+    }
+    var gauge = gpa === null ? 0 : position(gpa);
+    var cutoff = position(goal);
 
     document.getElementById('metrics').innerHTML =
       '<div class="bb-card p-6"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-center">' +
       '<div class="lg:border-r border-border pb-6 md:pb-0 lg:pr-6">' +
-      '<span class="text-caption text-muted block mb-1">Current Predicted CGPA</span>' +
+      '<span class="text-caption text-muted block mb-1">Predicted Trimester GPA</span>' +
       '<div class="flex items-baseline gap-2">' +
       '<span class="text-display font-bold text-ink num">' + (gpa === null ? '—' : gpa.toFixed(2)) + '</span>' +
       '<span class="text-label-md text-muted">' + (gpa === null ? 'No scores yet' : 'of 4.00') + '</span></div>' +
       '<span class="inline-flex items-center gap-1 mt-2 text-label-sm text-muted bg-surface-subtle px-2.5 py-1 rounded">' +
       '<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>' +
-      (graded.length ? graded.length + ' of ' + subjects.length + ' modules graded' : 'Awaiting coursework marks') +
-      '</span></div>' +
+      (graded.length
+        ? graded.length + ' of ' + subjects.length + ' module' + (subjects.length === 1 ? '' : 's') + ' graded' +
+          (provisional ? ' — provisional' : '')
+        : 'Awaiting coursework marks') +
+      '</span>' +
+      (provisional
+        ? '<p class="text-caption text-muted mt-2">Only graded modules are counted, so this figure will move ' +
+          'as the remaining marks come in.</p>'
+        : '') +
+      '</div>' +
       '<div class="lg:border-r border-border pb-6 md:pb-0 lg:pr-6">' +
       '<div class="flex items-center justify-between mb-1">' +
       '<span class="text-caption text-muted">Scholarship Retention Threshold</span>' +
@@ -149,18 +183,19 @@
       (distance === null ? '—' : (distance >= 0 ? '+' : '') + distance.toFixed(2)) + '</span></div>' +
       '<div class="relative w-full h-3 bg-surface-subtle rounded-full mt-3 overflow-hidden">' +
       '<div class="h-full bg-primary rounded-full" style="width:' + gauge + '%"></div>' +
-      '<div class="absolute top-0 bottom-0 w-1 bg-alert z-10" style="left:75%" title="Scholarship minimum ' + goal.toFixed(2) + '"></div></div>' +
+      '<div class="absolute top-0 bottom-0 w-1 bg-alert z-10" style="left:' + cutoff + '%" title="Scholarship minimum ' +
+      goal.toFixed(2) + '"></div></div>' +
       '<div class="flex justify-between items-center text-caption text-muted mt-2">' +
-      '<span>3.00</span><span class="text-alert font-semibold">' + goal.toFixed(2) + ' Cutoff</span><span>4.00</span></div></div>' +
-      '<div><span class="text-caption text-muted block mb-1">Simulated Trimester GPA</span>' +
+      '<span>' + scaleMin.toFixed(2) + '</span><span class="text-alert font-semibold">' + goal.toFixed(2) +
+      ' Cutoff</span><span>' + scaleMax.toFixed(2) + '</span></div></div>' +
+      '<div><span class="text-caption text-muted block mb-1">Modules Counted</span>' +
       '<div class="flex items-baseline gap-2">' +
-      '<span class="text-headline-lg font-bold text-ink num">' + (gpa === null ? '—' : gpa.toFixed(2)) + '</span>' +
-      '<span class="text-caption text-muted">' + subjects.length + ' Modules • ' +
-      subjects.reduce(function (sum, subject) {
-        return sum + subject.credits;
-      }, 0) + ' Cr.</span></div>' +
+      '<span class="text-headline-lg font-bold text-ink num">' + graded.length + ' / ' + subjects.length + '</span>' +
+      '<span class="text-caption text-muted">' + credits + ' of ' + totalCredits + ' Cr.</span></div>' +
       '<p class="text-caption text-muted mt-2">' +
-      (gpa === null ? 'Awaiting scores across registered modules to calculate forecast.' : 'Based on predicted grades for graded modules.') +
+      (gpa === null
+        ? 'Enter marks for every component of a module to predict its grade.'
+        : 'A module counts once all of its components have marks.') +
       '</p></div></div></div>';
   }
 
@@ -179,10 +214,12 @@
       '<input class="bb-input num" style="height:36px;width:88px;text-align:center;padding:0 .5rem" type="number"' +
       ' min="0" max="' + assessment.max + '" step="0.5" placeholder="—"' +
       ' value="' + (hasScore ? score : '') + '"' +
+      ' aria-label="Score obtained for ' + assessment.name + '"' +
       ' data-subject="' + subject.id + '" data-assessment="' + assessment.id + '">' +
       '<span class="text-caption text-muted num">/</span>' +
       '<input class="bb-input num" style="height:36px;width:64px;text-align:center;padding:0 .375rem" type="number"' +
       ' min="1" step="1" value="' + assessment.max + '" title="Full marks for this component"' +
+      ' aria-label="Full marks for ' + assessment.name + '"' +
       ' data-max="' + assessment.id + '" data-subject="' + subject.id + '"></div></td>' +
       '<td class="py-3 px-4 font-semibold text-ink num">' + contribution + '</td>' +
       '<td class="py-3 pl-4 text-right">' +
@@ -240,10 +277,12 @@
           '<thead><tr class="border-b border-border text-caption text-muted">' +
           '<th class="py-2.5 pr-4 font-semibold">Component</th>' +
           '<th class="py-2.5 px-4 font-semibold">Weight</th>' +
-          '<th class="py-2.5 px-4 font-semibold">Score Obtained</th>' +
+          '<th class="py-2.5 px-4 font-semibold">Score / Full marks</th>' +
           '<th class="py-2.5 px-4 font-semibold">Weighted</th>' +
           '<th class="py-2.5 pl-4 text-right font-semibold">Status</th></tr></thead>' +
-          '<tbody class="divide-y divide-border-subtle">' + rows + '</tbody></table></div>'
+          '<tbody class="divide-y divide-border-subtle">' + rows + '</tbody></table></div>' +
+          '<p class="text-caption text-muted">The second box is the denominator (full marks) for that component, ' +
+          'not a button. Marks save as you type.</p>'
         : '<div class="rounded-control border border-border bg-canvas p-4 text-body-sm text-muted">' +
           'The assessment structure for this module has not been published yet.</div>') +
       '<div class="p-4 sm:p-5 rounded-card border border-primary/25 bg-surface-sunken flex flex-col md:flex-row md:items-center justify-between gap-4">' +
@@ -325,9 +364,11 @@
       '<div class="bb-card p-6">' +
       '<div class="flex items-center justify-between pb-4 border-b border-border">' +
       '<div><h3 class="text-title-md font-semibold text-ink">MMU Grading Scale</h3>' +
-      '<p class="text-caption text-muted">Senate Academic Standard</p></div>' +
+      '<p class="text-caption text-muted">Indicative bands — confirm with your faculty handbook</p></div>' +
       '<span class="material-symbols-outlined text-muted">menu_book</span></div>' +
       '<div class="mt-4 space-y-1">' + rows + '</div>' +
+      '<p class="text-caption text-muted mt-3">(Target) marks the band that contains the ' + target +
+      '% target. A and A+ both carry 4.00 grade points, so the band only affects the percentage, not the GPA.</p>' +
       '<div class="mt-4 pt-4 border-t border-border text-caption text-muted flex items-start gap-2">' +
       '<span class="material-symbols-outlined text-[16px] text-alert shrink-0">info</span>' +
       '<span>A minimum grade point average of ' + state().settings.cgpaTarget.toFixed(2) +
@@ -340,6 +381,75 @@
     renderSidebar();
   }
 
+  function saveMax(subjectId, assessmentId, value) {
+    BB.store.update(function (data) {
+      data.subjects.forEach(function (subject) {
+        if (subject.id !== subjectId) return;
+        subject.assessments.forEach(function (assessment) {
+          if (assessment.id === assessmentId) assessment.max = value;
+        });
+      });
+    });
+  }
+
+  function saveMark(subjectId, assessmentId, raw) {
+    BB.store.update(function (data) {
+      data.subjects.forEach(function (subject) {
+        if (subject.id !== subjectId) return;
+        subject.marks = subject.marks || {};
+        if (raw === '') delete subject.marks[assessmentId];
+        else subject.marks[assessmentId] = Number(raw);
+      });
+    });
+  }
+
+  /* 入力中に再描画するとフォーカスが飛ぶため、少し待ってから同じ欄へ戻す。
+     これがないと「Enter を押すまで反映されない」ように見える。 */
+  var renderTimer = null;
+  function renderSoon(selector) {
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(function () {
+      renderTimer = null;
+      render();
+      if (!selector) return;
+      var node = document.querySelector(selector);
+      if (!node) return;
+      node.focus();
+      try {
+        node.setSelectionRange(node.value.length, node.value.length);
+      } catch (e) {
+        /* type=number では選択範囲を扱えないブラウザがある */
+      }
+    }, 450);
+  }
+
+  function fieldSelector(input) {
+    var subjectId = input.getAttribute('data-subject');
+    var assessmentId = input.getAttribute('data-assessment') || input.getAttribute('data-max');
+    var attribute = input.hasAttribute('data-max') ? 'data-max' : 'data-assessment';
+    return '[' + attribute + '="' + assessmentId + '"][data-subject="' + subjectId + '"]';
+  }
+
+  document.addEventListener('input', function (event) {
+    var maxInput = event.target.closest('[data-max]');
+    if (maxInput) {
+      var maxValue = Number(maxInput.value);
+      if (!isFinite(maxValue) || maxValue <= 0) return;
+      saveMax(maxInput.getAttribute('data-subject'), maxInput.getAttribute('data-max'), maxValue);
+      renderSoon(fieldSelector(maxInput));
+      return;
+    }
+
+    var input = event.target.closest('[data-assessment]');
+    if (!input) return;
+    saveMark(
+      input.getAttribute('data-subject'),
+      input.getAttribute('data-assessment'),
+      input.value.trim()
+    );
+    renderSoon(fieldSelector(input));
+  });
+
   document.addEventListener('change', function (event) {
     var maxInput = event.target.closest('[data-max]');
     if (maxInput) {
@@ -350,31 +460,18 @@
         render();
         return;
       }
-      BB.store.update(function (data) {
-        data.subjects.forEach(function (subject) {
-          if (subject.id !== maxSubjectId) return;
-          subject.assessments.forEach(function (assessment) {
-            if (assessment.id === maxAssessmentId) assessment.max = maxValue;
-          });
-        });
-      });
+      saveMax(maxSubjectId, maxAssessmentId, maxValue);
       render();
       return;
     }
 
     var input = event.target.closest('[data-assessment]');
     if (input) {
-      var subjectId = input.getAttribute('data-subject');
-      var assessmentId = input.getAttribute('data-assessment');
-      var raw = input.value.trim();
-      BB.store.update(function (data) {
-        data.subjects.forEach(function (subject) {
-          if (subject.id !== subjectId) return;
-          subject.marks = subject.marks || {};
-          if (raw === '') delete subject.marks[assessmentId];
-          else subject.marks[assessmentId] = Number(raw);
-        });
-      });
+      saveMark(
+        input.getAttribute('data-subject'),
+        input.getAttribute('data-assessment'),
+        input.value.trim()
+      );
       render();
       return;
     }
@@ -392,4 +489,9 @@
   });
 
   render();
+
+  /* 他タブの保存を取り込んだら描き直す。 */
+  BB.store.subscribe(function () {
+    render();
+  });
 })();

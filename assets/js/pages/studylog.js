@@ -25,8 +25,10 @@
   }
 
   function currentSubject() {
-    if (!selected) selected = state().subjects[0].id;
-    return subjectById(selected) || state().subjects[0];
+    var subjects = state().subjects;
+    if (!subjects.length) return null;
+    if (!selected) selected = subjects[0].id;
+    return subjectById(selected) || subjects[0];
   }
 
   function clock(seconds) {
@@ -52,6 +54,18 @@
   function renderActive() {
     var subject = currentSubject();
     var running = BB.timer.isRunning();
+
+    /* 科目0件ではタイマーの記録先がない。空状態を出してセットアップへ誘導する。 */
+    if (!subject) {
+      document.getElementById('active-session').innerHTML =
+        '<div class="bb-card p-8 text-center">' +
+        '<span class="material-symbols-outlined text-[28px] text-placeholder">timer</span>' +
+        '<p class="text-body-sm text-muted mt-2">Add a subject to start logging study time.</p>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary mt-3">' +
+        '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+      return;
+    }
+
     var chips = state()
       .subjects.map(function (item) {
         var active = item.id === subject.id;
@@ -137,6 +151,16 @@
       .join('');
     var today = new Date().toISOString().slice(0, 10);
 
+    if (!options) {
+      document.getElementById('manual-entry').innerHTML =
+        '<div class="bb-card p-5">' +
+        '<div class="flex items-center gap-2 pb-3 border-b border-border-subtle">' +
+        '<span class="material-symbols-outlined text-[20px] text-primary">edit_note</span>' +
+        '<h2 class="text-title-md font-bold text-ink">Manual Entry</h2></div>' +
+        '<p class="text-body-sm text-muted pt-3">Add a subject to log sessions manually.</p></div>';
+      return;
+    }
+
     document.getElementById('manual-entry').innerHTML =
       '<div class="bb-card p-5">' +
       '<div class="flex items-center gap-2 pb-3 border-b border-border-subtle">' +
@@ -147,7 +171,8 @@
       '<div class="sm:col-span-2"><label class="bb-label" for="m-subject">Subject</label>' +
       '<select id="m-subject" class="bb-input">' + options + '</select></div>' +
       '<div><label class="bb-label" for="m-minutes">Duration (minutes)</label>' +
-      '<input id="m-minutes" class="bb-input num" type="number" min="1" max="600" step="5" value="60" required></div>' +
+      '<input id="m-minutes" class="bb-input num" type="number" min="1" max="600" step="1" value="60" required>' +
+      '<p class="text-caption text-muted mt-1.5">Any whole number of minutes, e.g. 30, 45, 60 or 90.</p></div>' +
       '<div><label class="bb-label" for="m-date">Date</label>' +
       '<input id="m-date" class="bb-input" type="date" value="' + today + '" required></div>' +
       '<div class="sm:col-span-2"><label class="bb-label" for="m-note">Notes</label>' +
@@ -234,11 +259,14 @@
 
     if (event.target.closest('#timer-stop')) {
       var seconds = BB.timer.stop();
-      if (seconds < 60) {
+      var subject = currentSubject();
+      if (!subject) {
+        BB.ui.toast('Add a subject before logging a session');
+      } else if (seconds < 60) {
         BB.ui.toast('Session under a minute was discarded');
       } else {
         var startedAt = new Date(Date.now() - seconds * 1000).toISOString();
-        addSession(currentSubject().id, Math.round(seconds / 60), startedAt, '');
+        addSession(subject.id, Math.round(seconds / 60), startedAt, '');
         BB.ui.toast('Session saved');
       }
       render();
@@ -248,12 +276,41 @@
     var remove = event.target.closest('[data-delete]');
     if (remove) {
       var id = remove.getAttribute('data-delete');
-      BB.store.update(function (data) {
-        data.studySessions = data.studySessions.filter(function (session) {
-          return session.id !== id;
-        });
+      var sessions = state().studySessions;
+      var index = -1;
+      sessions.forEach(function (session, position) {
+        if (session.id === id) index = position;
       });
-      render();
+      if (index < 0) return;
+      var removed = JSON.parse(JSON.stringify(sessions[index]));
+      var label = hoursLabel(removed.minutes) + ' on ' + removed.startedAt.slice(0, 10);
+
+      BB.ui
+        .confirm({
+          title: 'Delete this session?',
+          message: label + ' will be removed from your study log.',
+          confirmLabel: 'Delete session',
+          danger: true
+        })
+        .then(function (ok) {
+          if (!ok) return;
+          BB.store.update(function (data) {
+            data.studySessions = data.studySessions.filter(function (session) {
+              return session.id !== id;
+            });
+          });
+          render();
+          BB.ui.toast('Session deleted', {
+            actionLabel: 'Undo',
+            onAction: function () {
+              BB.store.update(function (data) {
+                data.studySessions.splice(Math.min(index, data.studySessions.length), 0, removed);
+              });
+              render();
+              BB.ui.toast('Session restored');
+            }
+          });
+        });
     }
   });
 
@@ -264,6 +321,10 @@
     var minutes = Number(document.getElementById('m-minutes').value);
     var date = document.getElementById('m-date').value;
     var note = document.getElementById('m-note').value.trim();
+    if (!subjectId) {
+      BB.ui.toast('Add a subject before logging a session');
+      return;
+    }
     if (!minutes || minutes < 1) {
       BB.ui.toast('Enter a duration in minutes');
       return;
@@ -274,4 +335,9 @@
   });
 
   render();
+
+  /* 他タブの保存を取り込んだら描き直す。 */
+  BB.store.subscribe(function () {
+    render();
+  });
 })();

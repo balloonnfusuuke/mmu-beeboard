@@ -1,5 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="MMU BeeBoard">
   <rect width="32" height="32" rx="8" fill="#003DA5"/>
-  <path d="M16 6.4 24.31 11.2v9.6L16 25.6 7.69 20.8v-9.6z" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linejoin="round"/>
-  <path d="M16 10.8 20.5 13.4v5.2L16 21.2 11.5 18.6v-5.2z" fill="#FFFFFF"/>
+  <g transform="translate(17.46 13.49) rotate(-32) scale(8.6)">
+    <path d="M1 0 L-0.95 -0.72 L-0.42 0 Z" fill="#FFFFFF"/>
+    <path d="M1 0 L-0.42 0 L-0.95 0.72 Z" fill="#FFFFFF" fill-opacity="0.75"/>
+    <path d="M-0.42 0 L-0.95 0.72 L-0.55 0.24 Z" fill="#FFFFFF" fill-opacity="0.55"/>
+    <path d="M1 0 L0.55 -0.13 L0.55 0.13 Z" fill="#C8102E"/>
+  </g>
 </svg>

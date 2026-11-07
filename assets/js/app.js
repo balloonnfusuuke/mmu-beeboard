@@ -58,18 +58,22 @@
   }
 
   function termStart() {
-    return BB.date.parse(BB.store.get().term.startDate);
+    return BB.date.start();
   }
 
+  /* 開始日が未設定なら「プレビュー」ではなく通常表示にする。 */
   function isPreview(now) {
-    return startOfDay(now).getTime() < termStart().getTime();
+    var start = termStart();
+    if (!start) return false;
+    return startOfDay(now).getTime() < start.getTime();
   }
 
   function currentWeek(now) {
     var state = BB.store.get();
+    var weeks = state.term.weeks || 14;
     var week = BB.date.weekOf(now);
     if (!isFinite(week) || week < 1) return 1;
-    return Math.min(week, state.term.weeks + 1);
+    return Math.min(week, weeks + 1);
   }
 
   /* ---------- pure logic ---------- */
@@ -77,9 +81,9 @@
   function nextClass(now) {
     var state = BB.store.get();
     var base = startOfDay(now);
-    /* 学期開始前は開始日以降を探す。開始前の日付のコマを拾わない。 */
+    /* 学期開始前は開始日以降を探す。開始前の日付のコマを拾わない。開始日未設定なら今日から。 */
     var start = termStart();
-    if (base.getTime() < start.getTime()) base = start;
+    if (start && base.getTime() < start.getTime()) base = start;
     for (var offset = 0; offset < LOOKAHEAD_DAYS; offset++) {
       var day = addDays(base, offset);
       var weekday = day.getDay();
@@ -211,9 +215,10 @@
   /* ---------- rendering ---------- */
 
   function bindHeader(state, now, preview) {
+    var weeks = state.term.weeks || 14;
     var weekText = preview
       ? 'Starts ' + fmtDate(termStart())
-      : 'Week ' + currentWeek(now) + ' of ' + state.term.weeks;
+      : 'Week ' + currentWeek(now) + ' of ' + weeks;
     var binds = {
       'student.name': state.student.name,
       'student.initials': state.student.initials,
@@ -223,11 +228,10 @@
       'term.label': state.term.label,
       'term.week': weekText,
       'settings.cgpaTarget': state.settings.cgpaTarget.toFixed(2) + ' CGPA',
-      'settings.language': String(state.settings.language || 'en').toUpperCase(),
       'cgpa.value': '—',
-      'topics.week': 'Week ' + currentWeek(now) + ' of ' + state.term.weeks,
+      'topics.week': 'Week ' + currentWeek(now) + ' of ' + weeks,
       'timetable.subtitle':
-        state.term.label + ' • ' + state.term.weeks + ' teaching weeks • Click any class to open its Grade Simulator'
+        state.term.label + ' • ' + weeks + ' teaching weeks • Click any class to open its Grade Simulator'
     };
     $$('[data-bind]').forEach(function (node) {
       var key = node.getAttribute('data-bind');
@@ -238,11 +242,11 @@
   function renderPreviewBanner(preview, now) {
     var host = $('#preview-banner');
     if (!host) return;
-    if (!preview) {
+    var start = termStart();
+    if (!preview || !start) {
       host.innerHTML = '';
       return;
     }
-    var start = termStart();
     var days = Math.round((startOfDay(start).getTime() - startOfDay(now).getTime()) / 86400000);
     host.innerHTML =
       '<div class="flex items-start sm:items-center gap-3 rounded-card border border-primary/25 bg-surface-sunken px-4 py-3">' +
@@ -257,6 +261,17 @@
   function renderNextClass(next, now, preview) {
     var host = $('#next-class');
     if (!host) return;
+    if (!BB.store.get().subjects.length) {
+      host.innerHTML =
+        '<div class="rounded-card border border-border bg-surface p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">' +
+        '<div class="flex items-start gap-3">' +
+        '<span class="material-symbols-outlined text-[22px] text-primary mt-0.5">calendar_today</span>' +
+        '<div><div class="text-title-md font-bold text-ink">No classes on the timetable yet</div>' +
+        '<p class="text-body-sm text-muted mt-1">Add a subject and its weekly sessions to fill this card.</p></div></div>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary shrink-0">' +
+        '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+      return;
+    }
     if (!next) {
       host.innerHTML =
         '<div class="rounded-card border border-border bg-surface p-6 text-body-sm text-muted">' +
@@ -417,6 +432,12 @@
   function renderTopics(state) {
     var host = $('#topics');
     if (!host) return;
+    if (!state.subjects.length) {
+      host.innerHTML =
+        '<div class="sm:col-span-2 lg:col-span-4 rounded-card border border-border bg-surface p-5 text-body-sm text-muted">' +
+        'This week\'s topics appear here once you add a subject.</div>';
+      return;
+    }
     host.innerHTML = state.subjects
       .map(function (subject) {
         var chip = BB.color.chip(subject.color);
@@ -522,7 +543,8 @@
       '<span class="text-caption uppercase tracking-wider text-muted">Overall Status</span>' + statusPill + '</div>' +
       '<div class="text-headline-sm font-extrabold text-ink num">' +
       (overallRate === null ? '—' : Math.round(overallRate) + '%') +
-      ' <span class="text-body-sm font-normal text-muted">(' + totals.held + ' sessions held)</span></div>' +
+      ' <span class="text-body-sm font-normal text-muted">(' + totals.held + ' session' +
+      (totals.held === 1 ? '' : 's') + ' held)</span></div>' +
       '<div class="space-y-1.5 pt-1">' + rows + '</div>' +
       '</div>';
 
@@ -539,6 +561,7 @@
     var minutes = studyMinutesThisWeek(now);
     var target = state.settings.weeklyStudyTarget;
     var targetSubject = next ? next.subject : state.subjects[0];
+    var targetLabel = targetSubject ? targetSubject.id + ' ' + shortName(targetSubject) : 'No subject yet';
 
     var body =
       '<div class="py-3 space-y-2">' +
@@ -552,7 +575,7 @@
     var footer =
       '<div class="pt-3 border-t border-border-subtle space-y-2.5">' +
       '<div class="flex items-center justify-between text-caption text-muted">' +
-      '<span>Target subject:</span><span class="font-semibold text-primary">' + targetSubject.id + ' ' + shortName(targetSubject) + '</span></div>' +
+      '<span>Target subject:</span><span class="font-semibold text-primary">' + targetLabel + '</span></div>' +
       '<span class="w-full inline-flex items-center justify-center gap-2 py-2 px-3 rounded-control bg-primary text-on-primary text-label-md font-semibold hover:bg-primary-hover transition-colors shadow-rest">' +
       '<span class="material-symbols-outlined text-[18px]">play_arrow</span><span>Start timer</span></span></div>';
 
@@ -562,6 +585,14 @@
   function renderGrades(state) {
     var host = $('#grades');
     if (!host) return;
+    if (!state.subjects.length) {
+      host.innerHTML =
+        '<div class="p-8 text-center">' +
+        '<span class="material-symbols-outlined text-[28px] text-placeholder">grading</span>' +
+        '<p class="text-body-sm text-muted mt-2">No subjects to grade yet.</p>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-ghost mt-3">Add a subject</a></div>';
+      return;
+    }
     host.innerHTML = state.subjects
       .map(function (subject) {
         var secured = securedOf(subject);
@@ -598,13 +629,40 @@
       .join('');
   }
 
+  /* 科目0件の間だけ出す「セットアップを続ける」カード。ウィザードを開き直せる。 */
+  function renderSetupCard(state) {
+    var host = $('#setup-card');
+    if (!host) return;
+    if (state.subjects.length) {
+      host.innerHTML = '';
+      return;
+    }
+    host.innerHTML =
+      '<div class="rounded-card border border-primary/25 bg-surface-sunken p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">' +
+      '<div class="flex items-start gap-3">' +
+      '<span class="material-symbols-outlined text-[24px] text-primary mt-0.5">add_task</span>' +
+      '<div><div class="text-title-md font-bold text-ink">Continue setup</div>' +
+      '<p class="text-body-sm text-muted mt-1">You have no subjects yet. Run the setup wizard to set your trimester ' +
+      'and add your first module — it takes about a minute.</p></div></div>' +
+      '<a href="setup.html" class="bb-btn bb-btn-primary shrink-0">' +
+      '<span class="material-symbols-outlined text-[18px]">arrow_forward</span>Continue setup</a></div>';
+  }
+
   function init() {
     var state = BB.store.get();
+
+    /* 初回（科目0件かつ未セットアップ）はウィザードへ。Skip 済みならここには来ない。 */
+    if (BB.store.needsSetup()) {
+      window.location.replace('setup.html');
+      return;
+    }
+
     var now = new Date();
     var preview = isPreview(now);
     var next = nextClass(now);
 
     bindHeader(state, now, preview);
+    renderSetupCard(state);
     renderPreviewBanner(preview, now);
     renderNextClass(next, now, preview);
     renderLegend(state);
@@ -622,7 +680,7 @@
     var now = new Date();
     var weekText = isPreview(now)
       ? 'Starts ' + fmtDate(termStart())
-      : 'Week ' + currentWeek(now) + ' of ' + state.term.weeks;
+      : 'Week ' + currentWeek(now) + ' of ' + (state.term.weeks || 14);
     return (
       '<header class="sticky top-0 z-30 w-full bg-surface border-b border-border shadow-rest">' +
       '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">' +
@@ -671,13 +729,39 @@
     );
   }
 
+  var mountOptions = null;
+
+  /* プレースホルダを描画結果で置き換え、同じ id を付け直す。
+     id を残さないと 2 回目以降の描き直し（名前変更など）ができない。 */
+  function replacePlaceholder(id, html) {
+    var node = document.getElementById(id);
+    if (!node) return;
+    node.insertAdjacentHTML('beforebegin', html);
+    var fresh = node.previousElementSibling;
+    node.remove();
+    if (fresh) fresh.id = id;
+  }
+
   function mount(opts) {
-    var head = document.getElementById('app-header');
-    if (head) head.outerHTML = header(opts);
-    var foot = document.getElementById('app-footer');
-    if (foot) foot.outerHTML = footer();
+    mountOptions = opts || mountOptions || {};
+    replacePlaceholder('app-header', header(mountOptions));
+    replacePlaceholder('app-footer', footer());
     var page = document.getElementById('page-head');
-    if (page && opts.head) page.innerHTML = pageHead(opts.head);
+    if (page && mountOptions.head) page.innerHTML = pageHead(mountOptions.head);
+  }
+
+  /* ヘッダーとフッターだけ描き直す。氏名・イニシャルの変更を即座に反映する。 */
+  function refreshChrome() {
+    if (!mountOptions) return;
+    replacePlaceholder('app-header', header(mountOptions));
+    replacePlaceholder('app-footer', footer());
+  }
+
+  /* ページ副題を現在の設定値で描き直す。しきい値などを追随させる。 */
+  function setHead(headOpts) {
+    if (mountOptions) mountOptions.head = headOpts;
+    var page = document.getElementById('page-head');
+    if (page) page.innerHTML = pageHead(headOpts);
   }
 
   function chip(hex, label) {
@@ -692,17 +776,112 @@
     return '<span class="bb-chip" style="background:' + hex + ';color:#fff">' + label + '</span>';
   }
 
-  function toast(message) {
+  function toast(message, options) {
+    options = options || {};
+    var stack = $('.bb-toast-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.className = 'bb-toast-stack';
+      stack.setAttribute('role', 'status');
+      stack.setAttribute('aria-live', 'polite');
+      document.body.appendChild(stack);
+    }
+
     var node = document.createElement('div');
-    node.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-control bg-ink text-canvas text-label-md shadow-float';
-    node.textContent = message;
-    document.body.appendChild(node);
-    setTimeout(function () {
+    node.className = 'bb-toast';
+
+    var text = document.createElement('span');
+    text.textContent = message;
+    node.appendChild(text);
+
+    var timer = null;
+    function dismiss() {
+      if (timer) clearTimeout(timer);
       node.remove();
-    }, 1800);
+    }
+
+    if (options.actionLabel && typeof options.onAction === 'function') {
+      var action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'bb-toast-action';
+      action.textContent = options.actionLabel;
+      action.addEventListener('click', function () {
+        dismiss();
+        options.onAction();
+      });
+      node.appendChild(action);
+    }
+
+    stack.appendChild(node);
+    timer = setTimeout(dismiss, options.duration || (options.actionLabel ? 6000 : 1800));
+    return dismiss;
   }
 
-  function markAttendance(subjectId, status) {
+  /* 破壊的操作の確認。ネイティブ confirm() は環境によって自動却下され
+     「押しても無反応」に見えるため、ページ内モーダルで true/false を返す。 */
+  function confirmAction(options) {
+    options = options || {};
+    return new Promise(function (resolve) {
+      var previousFocus = document.activeElement;
+      var overlay = document.createElement('div');
+      overlay.className = 'bb-modal';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.innerHTML =
+        '<div class="bb-modal-panel">' +
+        '<div class="bb-modal-title"></div>' +
+        '<p class="bb-modal-body"></p>' +
+        '<div class="bb-modal-actions">' +
+        '<button type="button" class="bb-btn bb-btn-ghost" data-modal-cancel></button>' +
+        '<button type="button" class="bb-btn ' + (options.danger ? 'bb-btn-danger' : 'bb-btn-primary') +
+        '" data-modal-confirm></button>' +
+        '</div></div>';
+
+      $('.bb-modal-title', overlay).textContent = options.title || 'Are you sure?';
+      $('.bb-modal-body', overlay).textContent = options.message || '';
+      $('[data-modal-cancel]', overlay).textContent = options.cancelLabel || 'Cancel';
+      $('[data-modal-confirm]', overlay).textContent = options.confirmLabel || 'Confirm';
+
+      function close(result) {
+        document.removeEventListener('keydown', onKey, true);
+        overlay.remove();
+        if (previousFocus && previousFocus.focus) previousFocus.focus();
+        resolve(result);
+      }
+
+      function onKey(event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          close(false);
+        }
+      }
+
+      overlay.addEventListener('click', function (event) {
+        if (event.target === overlay) close(false);
+        if (event.target.closest('[data-modal-cancel]')) close(false);
+        if (event.target.closest('[data-modal-confirm]')) close(true);
+      });
+
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(overlay);
+      /* 破壊的操作では Cancel にフォーカスを置く。Enter の連打で消えないように。 */
+      $(options.danger ? '[data-modal-cancel]' : '[data-modal-confirm]', overlay).focus();
+    });
+  }
+
+  /* 氏名からアバターのイニシャルを作る。設定変更時にヘッダーを追随させるため公開する。 */
+  function initialsOf(name) {
+    var words = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return 'S';
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+  }
+
+  /* 出席は「どのコマを・いつの分か」を明示して記録する。誤タップを取り消せるよう
+     記録した log の位置を返し、unmark で同じ位置を消せるようにする。 */
+  function markAttendance(subjectId, status, meta) {
+    meta = meta || {};
+    var index = -1;
     BB.store.update(function (state) {
       var subject = null;
       state.subjects.forEach(function (item) {
@@ -710,11 +889,38 @@
       });
       if (!subject) return;
       if (!subject.attendance) subject.attendance = { held: 0, attended: 0, absences: 0, log: [] };
+      subject.attendance.log = subject.attendance.log || [];
       subject.attendance.held += 1;
       if (status === 'present') subject.attendance.attended += 1;
       else subject.attendance.absences += 1;
-      subject.attendance.log = subject.attendance.log || [];
-      subject.attendance.log.push({ date: new Date().toISOString().slice(0, 10), status: status });
+      subject.attendance.log.push({
+        id: 'at' + Date.now(),
+        date: meta.date || new Date().toISOString().slice(0, 10),
+        status: status,
+        session: meta.session || ''
+      });
+      index = subject.attendance.log.length - 1;
+    });
+    return index;
+  }
+
+  /* 出席記録を 1 件取り消す。held と attended/absences の集計も同時に戻す。 */
+  function unmarkAttendance(subjectId, index) {
+    BB.store.update(function (state) {
+      var subject = null;
+      state.subjects.forEach(function (item) {
+        if (item.id === subjectId) subject = item;
+      });
+      if (!subject || !subject.attendance || !subject.attendance.log) return;
+      var entry = subject.attendance.log[index];
+      if (!entry) return;
+      subject.attendance.log.splice(index, 1);
+      subject.attendance.held = Math.max(0, subject.attendance.held - 1);
+      if (entry.status === 'present') {
+        subject.attendance.attended = Math.max(0, subject.attendance.attended - 1);
+      } else {
+        subject.attendance.absences = Math.max(0, subject.attendance.absences - 1);
+      }
     });
   }
 
@@ -723,12 +929,16 @@
     footer: footer,
     pageHead: pageHead,
     mount: mount,
+    refreshChrome: refreshChrome,
+    setHead: setHead,
     chip: chip,
     solidChip: solidChip,
-    toast: toast
+    toast: toast,
+    confirm: confirmAction,
+    initials: initialsOf
   };
 
-  BB.attendance = { mark: markAttendance };
+  BB.attendance = { mark: markAttendance, unmark: unmarkAttendance };
 
   /* Stitch のインラインタイマーをここへ吸収。ページ側は UI だけを持つ。 */
   var timerState = { startedAt: null, handle: null, tick: null };

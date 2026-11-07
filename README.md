@@ -4,25 +4,38 @@ A personal study dashboard for MMU (Multimedia University) students. Static HTML
 vanilla JavaScript — no backend, no build step required to run, no tracking.
 
 > **Not an official MMU system.** This is an independent personal project. It is not
-> affiliated with, endorsed by, or connected to Multimedia University. Course codes,
-> timetables and assessment weightings are included as demo data only — always confirm
+> affiliated with, endorsed by, or connected to Multimedia University. It ships with no
+> course data at all — you enter your own modules and weightings, so always confirm them
 > against your official student portal.
 
 ---
 
 ## Features
 
+- **Guided first-time setup** — welcome, trimester, subjects, done, with a Skip on every step
 - **Weekly timetable** rendered from session data, with a "next class" card that handles
   week rollover and the pre-trimester preview state
-- **Attendance tracking** with the 80% barring threshold, per-module rates and remaining
-  allowable absences
+- **Attendance tracking** with the configurable barring threshold, per-module rates, remaining
+  allowable absences, and a per-session log you can correct
 - **Grade simulator** — enter coursework marks to see secured marks, the predicted grade,
   and the final exam score still required for a target
-- **Deadline timeline** grouped by week, with weight-at-stake totals and custom deadlines
+- **Deadline timeline** grouped by week, with weight-at-stake totals, the week's real dates,
+  and custom deadlines
 - **Study log** with a timer and manual entry
 - **Dark mode** (light / dark / system) driven entirely by CSS variables
 - **Trimester switching** that archives the previous trimester instead of deleting it
+- **Safe with several tabs open** — every save re-reads the stored state first, and other
+  tabs pick up the change through the `storage` event
+- **Reversible deletes** — destructive actions ask in an in-page dialog, and single-item
+  deletes offer an Undo
 - Everything persists in `localStorage` — nothing leaves the browser
+
+### Deliberately not included
+
+There is no interface language switcher, no date-format setting, no configurable timetable
+day bounds and no reminder notifications. Earlier builds exposed those controls but nothing
+in the app honoured them, so they were removed rather than left as dead switches. The UI is
+English and dates are shown as `DD Mon YYYY`.
 
 ## Quick start
 
@@ -35,23 +48,36 @@ python -m http.server 8000
 # then visit http://localhost:8000/
 ```
 
-## Demo data
+## First-time setup
 
-The app ships with a real Trimester 2630 (Oct/Nov 2026) timetable for B.C.S (Hons) Year 2:
+The app starts empty — no subjects, no timetable, no marks. On the first visit the dashboard
+sends you to a four-step setup wizard (`setup.html`):
 
-| Code | Module | Credits |
-|---|---|---|
-| CCP6114 | Programming Fundamentals | 4 |
-| CMA6114 | Calculus | 4 |
-| CMA6124 | Discrete Structures & Probability | 4 |
-| CPT6114 | Professional Development | 4 |
+1. **Welcome** — what the dashboard does, and a reminder that everything is stored in this
+   browser only.
+2. **Trimester** — trimester label (defaults to `My Trimester`), Week 1 start date, number of
+   weeks (defaults to 14) and an optional display name. The start date can be left empty; week
+   numbers then stay at Week 1 until you set one in Settings.
+3. **Subjects** — the same fields as the subject editor: code, name, credits, accent colour,
+   weekly sessions and assessment weightings. The colour is picked automatically from the
+   unused presets. After saving you can add another subject or move on.
+4. **Done** — a summary, then the dashboard.
 
-That is 4 modules, 11 weekly class blocks, and the full assessment structure with weights.
-The student identity is a placeholder (`Student`, no student ID, no contact details).
+Every step has a **Skip** button. Skipping marks setup as done, so the wizard never opens by
+itself again; the dashboard keeps a **Continue setup** card while you have no subjects, and
+**Settings → First-time setup** reopens the wizard at any time.
+
+After setup, add or edit modules from **Settings → Subjects & Timetable**: *Add subject* opens
+an empty editor, and each row has an *Edit* link. `subject-edit.html` with no `id` parameter
+always starts a new subject rather than silently opening an existing one.
+
+The student identity is a placeholder (`Student`, no student ID, no contact details) and the
+name is editable in the wizard and in Settings.
 
 ## Customising
 
-`assets/js/data.js` is the single source of truth. Edit it to make the dashboard yours:
+`assets/js/data.js` holds the empty starting state. Add subjects there if you would rather
+ship a pre-filled timetable than start from the wizard:
 
 ```js
 var STUDENT = {
@@ -66,14 +92,23 @@ var STUDENT = {
 
 - `TERM` — trimester label, Week 1 start date (a Monday), number of weeks, exam week
 - `SUBJECTS` — code, name, credits, colour, lecturer, weekly `sessions`, `assessments`
-- `SETTINGS` — CGPA target, attendance threshold, weekly study target, day bounds
-- `GRADING_SCALE` — grade bands and grade points
+- `SETTINGS` — theme, CGPA target, attendance threshold, weekly study target
+- `GRADING_SCALE` — grade bands and grade points (indicative; confirm against your faculty handbook)
 
-**Subject colours live only in `data.js`.** Chips and tinted badges derive their pale
-variants from that one colour, so changing it in one place updates the whole UI.
+**Subject colours live in the saved state, not in the CSS.** Chips and tinted badges derive
+their pale variants from that one colour, so changing it in one place updates the whole UI.
 
 To start over, use **Settings → Reset all data**, or clear the `mmu-beeboard` key from
-`localStorage`.
+`localStorage`. A reset returns to the empty state, so the wizard runs again. Reset, trimester
+switching and subject deletion confirm in an in-page dialog; deleting a study session, a custom
+deadline or an attendance record also offers an Undo for a few seconds.
+
+## Multiple tabs
+
+Every write re-reads `localStorage` immediately before applying the change, so a tab that has
+been open for a while cannot overwrite newer edits made in another tab. Other tabs are notified
+through the `storage` event and redraw themselves. Keep in mind that the last write still wins
+for the *same* field — two tabs editing the same mark at the same moment is not merged.
 
 ## Project structure
 
@@ -86,6 +121,7 @@ To start over, use **Settings → Reset all data**, or clear the `mmu-beeboard` 
 ├── studylog.html         # study log
 ├── settings.html         # preferences, trimester switching, data export
 ├── subject-edit.html     # per-module editor
+├── setup.html            # first-time setup wizard
 ├── assets/
 │   ├── css/
 │   │   ├── fonts.css     # @font-face for the self-hosted fonts
@@ -99,6 +135,7 @@ To start over, use **Settings → Reset all data**, or clear the `mmu-beeboard` 
 │   │   ├── store.js      # localStorage persistence + colour/date helpers
 │   │   ├── theme.js      # applies the saved theme before first paint
 │   │   ├── app.js        # shared UI shell, dashboard logic, calculations
+│   │   ├── subject-form.js   # subject fields shared by the editor and the wizard
 │   │   └── pages/        # one file per page
 │   ├── logo.svg
 │   └── favicon.svg
