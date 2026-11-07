@@ -283,6 +283,7 @@
     var chip = BB.color.chip(subject.color);
     var badge = preview ? 'Term starts ' + fmtDate(termStart()) : countdown(next.start, now);
     var dayText = fmtDate(next.start) + (isSameDay(next.start, now) ? ' • Today' : '');
+    var roomText = roomLabel(session.room);
 
     host.innerHTML =
       '<div class="relative bg-surface border border-border rounded-card p-5 sm:p-6 shadow-rest hover:shadow-hover transition-shadow overflow-hidden">' +
@@ -301,8 +302,10 @@
       '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span>' +
       '<span class="font-semibold text-ink num">' + session.start + ' – ' + session.end + '</span>' +
       '<span class="text-placeholder">(' + durationLabel(session) + ')</span></div>' +
-      '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-primary">room</span>' +
-      '<span>Room <strong class="text-ink font-semibold">' + session.room + '</strong></span></div>' +
+      '<div class="flex items-start gap-1"><span class="material-symbols-outlined text-[18px] text-primary">room</span>' +
+      '<span>Room <strong class="text-ink font-semibold">' + session.room + '</strong>' +
+      (roomText ? '<span class="block text-caption text-muted">' + roomText + '</span>' : '') +
+      '</span></div>' +
       (subject.lecturer ? '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-muted">person</span>' +
       '<span>' + subject.lecturer + '</span></div>' : '') +
       '</div></div>' +
@@ -325,6 +328,11 @@
         );
       })
       .join('');
+  }
+
+  /* 教室コードの下に出す人間可読な場所。表示専用で、保存値はコードのまま。 */
+  function roomLabel(code) {
+    return BB.room ? BB.room.label(code) : null;
   }
 
   function renderTimetable(state, now) {
@@ -359,12 +367,15 @@
             var endMin = minutesOf(session.end);
             var blockTop = ((startMin - HOUR_START * 60) / 60) * HOUR_HEIGHT;
             var blockHeight = ((endMin - startMin) / 60) * HOUR_HEIGHT;
+            var roomText = roomLabel(session.room);
             blocks.push(
               '<a class="tt-block" href="simulator.html?subject=' + subject.id + '"' +
                 ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + subject.color + '"' +
-                ' title="' + subject.id + ' ' + session.type + ' ' + session.start + '–' + session.end + ' · ' + session.room + '">' +
+                ' title="' + subject.id + ' ' + session.type + ' ' + session.start + '–' + session.end + ' · ' + session.room +
+                (roomText ? ' — ' + roomText : '') + '">' +
                 '<span class="tt-block-code">' + subject.id + '</span>' +
                 '<span class="tt-block-meta">' + session.type + ' · ' + session.room + '</span>' +
+                (roomText ? '<span class="tt-block-room">' + roomText + '</span>' : '') +
               '</a>'
             );
           });

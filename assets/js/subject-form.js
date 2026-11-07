@@ -99,6 +99,13 @@
     );
   }
 
+  /* 教室コードの下に人間可読な場所を出す。表示専用で、保存値はコードのまま。 */
+  function roomCaption(code) {
+    var text = BB.room ? BB.room.label(code) : null;
+    return '<p class="text-caption text-muted mt-1" data-room-label' + (text ? '' : ' hidden') + '>' +
+      esc(text || '') + '</p>';
+  }
+
   function sessionRow(session, index) {
     return (
       '<div class="grid grid-cols-12 gap-2 items-end pb-3 border-b border-border-subtle last:border-0" data-session="' + index + '">' +
@@ -118,7 +125,8 @@
         return '<option value="' + type + '"' + (session.type === type ? ' selected' : '') + '>' + type + '</option>';
       }).join('') + '</select></div>' +
       '<div class="col-span-9 sm:col-span-3"><label class="bb-label">Room</label>' +
-      '<input class="bb-input" type="text" value="' + esc(session.room) + '" data-field="room"></div>' +
+      '<input class="bb-input" type="text" value="' + esc(session.room) + '" data-field="room">' +
+      roomCaption(session.room) + '</div>' +
       '<div class="col-span-3 sm:col-span-1 flex justify-end">' +
       '<button type="button" class="bb-btn bb-btn-ghost" style="width:40px;padding:0" data-remove-session="' + index + '" title="Remove session">' +
       '<span class="material-symbols-outlined text-[18px]">delete</span></button></div></div>'
@@ -274,8 +282,21 @@
   /* 行の追加・削除と色選択。変更後は onChange() で呼び出し側が再描画する。 */
   function bind(host, draft, onChange) {
     host.addEventListener('input', function (event) {
-      if (!event.target.closest('[data-field="weight"]')) return;
-      updateTotal(host);
+      if (event.target.closest('[data-field="weight"]')) {
+        updateTotal(host);
+        return;
+      }
+
+      /* 教室コードは入力中にその場でデコード表示を差し替える（再描画しない）。 */
+      var room = event.target.closest('[data-field="room"]');
+      if (room) {
+        var row = room.closest('[data-session]');
+        var caption = row ? row.querySelector('[data-room-label]') : null;
+        if (!caption) return;
+        var text = BB.room ? BB.room.label(room.value) : null;
+        caption.textContent = text || '';
+        caption.hidden = !text;
+      }
     });
 
     host.addEventListener('click', function (event) {
