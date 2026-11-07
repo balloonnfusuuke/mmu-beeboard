@@ -25,6 +25,9 @@
   /* High Stakes の基準。監査で「判定基準が不明」と指摘されたため 1 か所に固定する。 */
   var HIGH_STAKES_WEIGHT = 50;
 
+  /* 締切の種別。辞書キーは dl.kind.<id>。 */
+  var KINDS = ['homework', 'assignment', 'testPrep', 'other'];
+
   function items() {
     var all = BB.dash.deadlineItems();
     return filter === 'all'
@@ -72,6 +75,15 @@
       esc(t('dl.titlePlaceholder')) + '" required></div>' +
       '<div><label class="bb-label" for="d-subject">' + t('dl.module') + '</label>' +
       '<select id="d-subject" name="subjectId" class="bb-input">' + options + '</select></div>' +
+      '<div><label class="bb-label" for="d-kind">' + t('dl.kindField') + '</label>' +
+      '<select id="d-kind" name="kind" class="bb-input">' +
+      KINDS.map(function (kind) {
+        return '<option value="' + kind + '">' + t('dl.kind.' + kind) + '</option>';
+      }).join('') +
+      '</select></div>' +
+      '<div><label class="bb-label" for="d-date">' + t('dl.dateField') + '</label>' +
+      '<input id="d-date" name="date" class="bb-input" type="datetime-local">' +
+      '<p class="text-caption text-muted mt-1">' + t('dl.dateHint') + '</p></div>' +
       '<div><label class="bb-label" for="d-week">' + t('dl.week') + '</label>' +
       '<input id="d-week" name="week" class="bb-input num" type="number" min="1" max="' +
       state.term.examWeek + '" step="1" value="' + BB.dash.currentWeek(new Date()) + '"></div>' +
@@ -205,6 +217,10 @@
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
               '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + assessment.name +
               (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') +
+              (item.custom && assessment.customKind
+                ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +
+                  t('dl.kind.' + assessment.customKind) + '</span>'
+                : '') +
               (assessment.homework
                 ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' +
                   t('dl.homework') + '</span>'
@@ -279,12 +295,21 @@
     event.preventDefault();
     var form = event.target;
     var name = form.elements.name.value.trim();
+    var dateValue = form.elements.date.value.trim();
     var week = Number(form.elements.week.value);
     if (!name) {
       BB.ui.toast(t('dl.toast.titleRequired'));
       return;
     }
-    if (!isFinite(week) || week < 1) {
+    /* 日付があれば週は日付から決める。無ければ従来どおり週の直接指定。 */
+    if (dateValue) {
+      var when = BB.date.parse(dateValue.slice(0, 10));
+      if (!when) {
+        BB.ui.toast(t('dl.toast.dateInvalid'));
+        return;
+      }
+      week = BB.dash.weekOf(when);
+    } else if (!isFinite(week) || week < 1) {
       BB.ui.toast(t('dl.toast.week'));
       return;
     }
@@ -295,6 +320,8 @@
         subjectId: form.elements.subjectId.value,
         name: name,
         week: week,
+        date: dateValue,
+        kind: form.elements.kind.value,
         weight: Number(form.elements.weight.value) || 0,
         note: form.elements.note.value.trim(),
         createdAt: new Date().toISOString()
@@ -303,6 +330,17 @@
     formOpen = false;
     BB.ui.toast(t('dl.toast.added'));
     render();
+  });
+
+  /* 日付を入れたら週欄を自動で埋める。週は残したまま手で上書きもできる。 */
+  document.getElementById('add-deadline').addEventListener('input', function (event) {
+    if (event.target.id !== 'd-date') return;
+    var raw = event.target.value.trim();
+    var weekInput = document.getElementById('d-week');
+    if (!raw || !weekInput) return;
+    var when = BB.date.parse(raw.slice(0, 10));
+    if (!when) return;
+    weekInput.value = BB.dash.weekOf(when);
   });
 
   document.getElementById('timeline').addEventListener('click', function (event) {

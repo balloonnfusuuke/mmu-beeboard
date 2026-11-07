@@ -54,6 +54,15 @@
     return t('date.short', { day: dayName(date.getDay()), d: date.getDate(), mon: monthName(date.getMonth()) });
   }
 
+  /* 'YYYY-MM-DDTHH:mm' → 'Mon 16 Nov 2026, 23:59'。時刻が無ければ日付だけ。 */
+  function fmtDateTime(value) {
+    var raw = String(value || '');
+    var day = BB.date.parse(raw.slice(0, 10));
+    if (!day) return '';
+    var time = raw.length > 10 ? raw.slice(11, 16) : '';
+    return fmtDateFull(day) + (time ? ', ' + time : '');
+  }
+
   function fmtDateFull(date) {
     return t('date.shortFull', {
       day: dayName(date.getDay()),
@@ -182,9 +191,11 @@
         if (candidate.id === entry.subjectId) subject = candidate;
       });
       if (!subject) return;
+      /* 日付があれば週は日付から決める。古いデータの week がずれていても実日付を優先する。 */
+      var when = entry.date ? BB.date.parse(String(entry.date).slice(0, 10)) : null;
       items.push({
         subject: subject,
-        week: entry.week,
+        week: when ? weekOfClamped(when) : entry.week,
         custom: entry,
         sortDue: entry.date || '',
         assessment: {
@@ -192,7 +203,8 @@
           name: entry.name,
           weight: entry.weight || 0,
           kind: 'custom',
-          dueLabel: entry.note || '',
+          customKind: entry.kind || 'other',
+          dueLabel: entry.date ? fmtDateTime(entry.date) : entry.note || '',
           custom: true
         }
       });

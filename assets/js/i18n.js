@@ -620,6 +620,15 @@
         weight: 'Weight (%)',
         due: 'Due / note',
         duePlaceholder: 'Sun 6 Dec, 23:59',
+        dateField: 'Date & time',
+        dateHint: 'Optional — the week is filled in from the date',
+        kindField: 'Type',
+        kind: {
+          homework: 'Homework',
+          assignment: 'Assignment',
+          testPrep: 'Test prep',
+          other: 'Other'
+        },
         submit: 'Add deadline',
         allModules: 'All modules',
         highStakesHint: "High Stakes marks a week where {n}% or more of a module's grade is due.",
@@ -647,6 +656,7 @@
         toast: {
           titleRequired: 'Title is required',
           week: 'Week must be 1 or later',
+          dateInvalid: 'Enter a valid date and time',
           added: 'Deadline added',
           removed: 'Deadline removed',
           restored: 'Deadline restored'
@@ -1374,6 +1384,15 @@
         weight: '配点（%）',
         due: '期限 / メモ',
         duePlaceholder: '12月6日(日) 23:59',
+        dateField: '日付・時刻',
+        dateHint: '任意 — 入力すると週が自動で決まります',
+        kindField: '種別',
+        kind: {
+          homework: '宿題',
+          assignment: '課題',
+          testPrep: 'テスト対策',
+          other: 'その他'
+        },
         submit: '締切を追加',
         allModules: 'すべての科目',
         highStakesHint: '「高負荷」は、ある科目の配点の{n}%以上が同じ週に集中している週を示します。',
@@ -1401,6 +1420,7 @@
         toast: {
           titleRequired: 'タイトルは必須です',
           week: '週は1以上にしてください',
+          dateInvalid: '日付と時刻を正しく入力してください',
           added: '締切を追加しました',
           removed: '締切を削除しました',
           restored: '締切を復元しました'
