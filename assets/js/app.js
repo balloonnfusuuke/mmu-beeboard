@@ -245,7 +245,12 @@
     var items = [];
     state.subjects.forEach(function (subject) {
       subject.assessments.forEach(function (assessment) {
-        items.push({ subject: subject, assessment: assessment, week: assessment.week });
+        items.push({
+          subject: subject,
+          assessment: assessment,
+          week: assessment.week,
+          key: 'a:' + subject.id + ':' + assessment.id
+        });
       });
     });
     /* 手動追加の締切は assessment と同じ形に均して、既存の描画にそのまま乗せる。 */
@@ -261,6 +266,7 @@
         subject: subject,
         week: when ? weekOfClamped(when) : entry.week,
         custom: entry,
+        key: 'c:' + entry.id,
         sortDue: entry.date || '',
         assessment: {
           id: entry.id,
@@ -382,6 +388,7 @@
           subject: subjectByCode(state, note.subjectCode) || placeholderSubject(),
           week: day ? weekOfClamped(day) : currentWeek(new Date()),
           note: note,
+          key: 'n:' + note.id,
           sortDue: note.due,
           assessment: {
             id: note.id,
@@ -393,6 +400,36 @@
           }
         };
       });
+  }
+
+  /* 締切の詳細（リンク・メモ）は本体と分けた層に置く。科目由来の評価にも付けられる。 */
+  function deadlineDetail(key) {
+    var details = BB.store.get().deadlineDetails || {};
+    var entry = details[key] || {};
+    return {
+      links: Array.isArray(entry.links) ? entry.links : [],
+      memo: entry.memo || ''
+    };
+  }
+
+  function hasDeadlineDetail(key) {
+    var detail = deadlineDetail(key);
+    return detail.links.length > 0 || !!detail.memo;
+  }
+
+  function setDeadlineDetail(key, detail) {
+    BB.store.update(function (state) {
+      state.deadlineDetails = state.deadlineDetails || {};
+      var links = (detail.links || []).filter(function (link) {
+        return link && (link.label || link.url);
+      });
+      var memo = detail.memo || '';
+      if (!links.length && !memo) {
+        delete state.deadlineDetails[key];
+        return;
+      }
+      state.deadlineDetails[key] = { links: links, memo: memo };
+    });
   }
 
   /* ---------- rendering ---------- */
@@ -760,7 +797,10 @@
       '<div class="py-3 space-y-1.5">' +
       '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.deadlines.nextUpcoming') + '</div>' +
       '<div class="text-body-lg font-bold text-ink flex items-center gap-2">' +
-      '<span>' + (nextItem ? nextItem.subject.id + ' ' + nextItem.assessment.name : '—') + '</span>' +
+      (nextItem
+        ? '<a href="deadline-detail.html?id=' + encodeURIComponent(nextItem.key || '') +
+          '" class="hover:text-primary transition-colors">' + nextItem.subject.id + ' ' + escHtml(nextItem.assessment.name) + '</a>'
+        : '<span>—</span>') +
       (nextItem ? '<span class="text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">' +
         t('common.week', { n: nextItem.week }) + '</span>' : '') +
       '</div>' +
@@ -1595,6 +1635,9 @@
     attendanceOf: attendanceOf,
     securedOf: securedOf,
     deadlineItems: deadlineItems,
+    deadlineDetail: deadlineDetail,
+    hasDeadlineDetail: hasDeadlineDetail,
+    setDeadlineDetail: setDeadlineDetail,
     overridesOf: overridesOf,
     overrideFor: overrideFor,
     noClassCount: noClassCount,

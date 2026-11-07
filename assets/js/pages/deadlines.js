@@ -207,6 +207,8 @@
             var meta = assessment.dueLabel || assessment.location ||
               (range ? t('dl.dueInWeek', { range: range }) : '');
             var weight = assessment.weight > 0 ? assessment.weight + '%' : '—';
+            var detailHref = 'deadline-detail.html?id=' + encodeURIComponent(item.key || '');
+            var hasDetail = item.key ? BB.dash.hasDeadlineDetail(item.key) : false;
             var remove = item.custom
               ? '<button type="button" data-remove="' + item.custom.id + '" class="text-muted hover:text-alert transition-colors" title="' +
                 esc(t('dl.removeCustom')) + '">' +
@@ -215,7 +217,12 @@
             return (
               '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
-              '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + assessment.name +
+              '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' +
+              '<a href="' + detailHref + '" class="hover:text-primary transition-colors">' + esc(assessment.name) + '</a>' +
+              (hasDetail
+                ? ' <span class="material-symbols-outlined text-[14px] align-middle text-primary" title="' +
+                  esc(t('dd.hasDetail')) + '" aria-label="' + esc(t('dd.hasDetail')) + '">link</span>'
+                : '') +
               (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') +
               (item.custom && assessment.customKind
                 ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +

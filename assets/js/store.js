@@ -43,6 +43,8 @@
       notes: [],
       /* 休講・振替は定例コマの定義を書き換えず、この別枠だけで持つ。 */
       sessionOverrides: [],
+      /* 締切の詳細（リンク・メモ）。締切本体とは分けて持つ。 */
+      deadlineDetails: {},
       archive: [],
       /* 初回セットアップを終えたか（Skip でも立てる）。未完了かつ科目0件のときだけ自動表示する。 */
       setupDone: false
@@ -169,6 +171,7 @@
           customDeadlines: clone(state.customDeadlines || []),
           notes: clone(state.notes || []),
           sessionOverrides: clone(state.sessionOverrides || []),
+          deadlineDetails: clone(state.deadlineDetails || {}),
           archivedAt: new Date().toISOString()
         });
       });
@@ -188,6 +191,7 @@
         state.customDeadlines = [];
         state.notes = [];
         state.sessionOverrides = [];
+        state.deadlineDetails = {};
       });
     },
     /* archive の 1 件を現在の学期に戻す。今の学期は退避してから入れ替える。 */
@@ -204,6 +208,7 @@
         state.customDeadlines = clone(entry.customDeadlines || []);
         state.notes = clone(entry.notes || []);
         state.sessionOverrides = clone(entry.sessionOverrides || []);
+        state.deadlineDetails = clone(entry.deadlineDetails || {});
       });
     }
   };
