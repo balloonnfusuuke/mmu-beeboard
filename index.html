@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MMU BeeBoard — Dashboard</title>
+<title data-i18n="page.dashboard">MMU BeeBoard — Dashboard</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/css/fonts.css">
 <link rel="stylesheet" href="assets/css/tokens.css">
 <link rel="stylesheet" href="assets/css/components.css">
 <script src="assets/js/theme.js"></script>
+<script src="assets/js/i18n.js"></script>
 <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body data-page="dashboard" class="bg-canvas text-ink font-sans antialiased min-h-screen">
@@ -20,7 +21,7 @@
         <img src="assets/logo.svg" alt="MMU BeeBoard" class="w-8 h-8 rounded-lg flex-shrink-0">
         <span class="flex flex-col leading-none">
           <span class="text-title-md text-primary tracking-tight"><span class="font-bold">MMU</span> <span class="font-normal">BeeBoard</span></span>
-          <span class="text-[11px] text-muted font-medium mt-0.5">Personal study dashboard</span>
+          <span class="text-[11px] text-muted font-medium mt-0.5" data-i18n="brand.tagline">Personal study dashboard</span>
         </span>
       </a>
       <div class="hidden md:block h-4 w-px bg-border"></div>
@@ -35,11 +36,11 @@
     <div class="flex items-center gap-2">
       <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-canvas text-muted text-label-sm shadow-rest">
         <span class="material-symbols-outlined text-alert text-[16px]">military_tech</span>
-        <span class="hidden sm:inline">Scholarship Target:</span>
+        <span class="hidden sm:inline" data-i18n="dash.scholarshipTarget">Scholarship Target:</span>
         <span class="font-semibold text-ink num" data-bind="settings.cgpaTarget"></span>
       </div>
       <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary text-on-primary text-label-sm font-bold shadow-rest">
-        <span>CGPA:</span><span class="text-body-sm font-extrabold num" data-bind="cgpa.value"></span>
+        <span data-i18n="dash.cgpa">CGPA:</span><span class="text-body-sm font-extrabold num" data-bind="cgpa.value"></span>
       </div>
     </div>
 
@@ -51,7 +52,7 @@
           <div class="text-caption text-muted" data-bind="student.programme"></div>
         </div>
       </div>
-      <a href="settings.html" class="p-2 text-muted hover:text-primary hover:bg-surface-subtle rounded-control border border-transparent hover:border-border transition-colors" aria-label="Settings" title="Settings">
+      <a href="settings.html" class="p-2 text-muted hover:text-primary hover:bg-surface-subtle rounded-control border border-transparent hover:border-border transition-colors" aria-label="Settings" title="Settings" data-i18n-aria-label="nav.settings" data-i18n-title="nav.settings">
         <span class="material-symbols-outlined text-[20px]">settings</span>
       </a>
     </div>
@@ -64,12 +65,12 @@
 
   <div id="setup-card"></div>
 
-  <section id="next-class" aria-label="Next class"></section>
+  <section id="next-class" aria-label="Next class" data-i18n-aria-label="dash.aria.nextClass"></section>
 
-  <section class="bg-surface border border-border rounded-card shadow-rest overflow-hidden" aria-label="Weekly timetable">
+  <section class="bg-surface border border-border rounded-card shadow-rest overflow-hidden" aria-label="Weekly timetable" data-i18n-aria-label="dash.aria.timetable">
     <div class="px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-title-md font-bold text-ink">Weekly Timetable</h2>
+        <h2 class="text-title-md font-bold text-ink" data-i18n="dash.weeklyTimetable">Weekly Timetable</h2>
         <p class="text-body-sm text-muted" data-bind="timetable.subtitle"></p>
       </div>
       <div id="legend" class="flex flex-wrap items-center gap-3 text-caption"></div>
@@ -80,28 +81,28 @@
     <div id="class-detail" class="border-t border-border bg-canvas/80 p-5 sm:p-6"></div>
   </section>
 
-  <section aria-label="This week's topics">
+  <section aria-label="This week's topics" data-i18n-aria-label="dash.aria.topics">
     <div class="flex items-center justify-between mb-2.5">
       <h2 class="text-title-md font-bold text-ink flex items-center gap-2">
-        <span>This Week's Topics</span>
+        <span data-i18n="dash.thisWeekTopics">This Week's Topics</span>
         <span class="text-caption font-semibold px-2 py-0.5 rounded-full bg-surface-sunken text-primary" data-bind="topics.week"></span>
       </h2>
-      <span class="text-caption text-muted">Trimester Syllabus Roadmap</span>
+      <span class="text-caption text-muted" data-i18n="dash.syllabusRoadmap">Trimester Syllabus Roadmap</span>
     </div>
     <div id="topics" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
   </section>
 
-  <section id="summaries" class="grid grid-cols-1 md:grid-cols-3 gap-5" aria-label="Academic summary"></section>
+  <section id="summaries" class="grid grid-cols-1 md:grid-cols-3 gap-5" aria-label="Academic summary" data-i18n-aria-label="dash.aria.summary"></section>
 
-  <section class="bg-surface border border-border rounded-card shadow-rest overflow-hidden" aria-label="Grades and assessments">
+  <section class="bg-surface border border-border rounded-card shadow-rest overflow-hidden" aria-label="Grades and assessments" data-i18n-aria-label="dash.aria.grades">
     <div class="p-6 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <div>
-        <h2 class="text-headline-sm font-bold text-ink">Grades &amp; Assessments</h2>
-        <p class="text-body-sm text-muted">Tap any subject row to open its Grade Simulator</p>
+        <h2 class="text-headline-sm font-bold text-ink" data-i18n="dash.gradesAssessments">Grades &amp; Assessments</h2>
+        <p class="text-body-sm text-muted" data-i18n="dash.gradesHint">Tap any subject row to open its Grade Simulator</p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-caption text-muted">Target Grade:</span>
-        <span class="px-2.5 py-1 rounded bg-surface-sunken text-primary text-label-sm font-bold border border-primary/20">A (80%+)</span>
+        <span class="text-caption text-muted" data-i18n="dash.targetGrade">Target Grade:</span>
+        <span class="px-2.5 py-1 rounded bg-surface-sunken text-primary text-label-sm font-bold border border-primary/20" data-i18n="dash.targetGradeValue">A (80%+)</span>
       </div>
     </div>
     <div id="grades" class="divide-y divide-border"></div>
@@ -110,7 +111,7 @@
   <footer class="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between text-caption text-muted gap-2 border-t border-border">
     <div class="flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-success"></span>
-      <span>MMU BeeBoard — a personal study dashboard. Not an official MMU system.</span>
+      <span data-i18n="dash.footer">MMU BeeBoard — a personal study dashboard. Not an official MMU system.</span>
     </div>
     <div class="num"><span data-bind="term.label"></span><span data-bind="student.idSuffix"></span></div>
   </footer>

@@ -6,17 +6,18 @@
 
   var BB = window.BB;
   var form = BB.subjectForm;
+  var t = BB.i18n.t;
+  var tn = BB.i18n.tn;
 
   var STEP_WELCOME = 0;
   var STEP_TERM = 1;
   var STEP_SUBJECT = 2;
   var STEP_DONE = 3;
-  var LABELS = ['Welcome', 'Trimester', 'Subjects', 'Done'];
 
   var step = STEP_WELCOME;
   var draft = form.blank();
   var justSaved = null;
-  BB.ui.mount({ title: 'First-time setup' });
+  BB.ui.mount({ title: t('wizard.title') });
 
   /* 学期ステップの入力は保存前なので、再描画で消えないようここに保持する。 */
   var termDraft = (function () {
@@ -82,10 +83,19 @@
 
   /* ---------- progress ---------- */
 
+  function stepLabels() {
+    return [
+      t('wizard.step.welcome'),
+      t('wizard.step.term'),
+      t('wizard.step.subjects'),
+      t('wizard.step.done')
+    ];
+  }
+
   function renderProgress() {
     progressHost.innerHTML =
       '<ol class="grid grid-cols-4 gap-2">' +
-      LABELS.map(function (label, index) {
+      stepLabels().map(function (label, index) {
         var done = index < step;
         var active = index === step;
         return (
@@ -108,21 +118,20 @@
 
   function welcomeStep() {
     var features = [
-      { icon: 'calendar_today', title: 'Weekly timetable', text: 'Class blocks on a Mon–Fri grid with a next-class card.' },
-      { icon: 'rule', title: 'Attendance', text: 'Track the exam-eligibility threshold per module.' },
-      { icon: 'calculate', title: 'Grade simulator', text: 'Secured marks and the final exam score still needed.' },
-      { icon: 'alarm', title: 'Deadlines', text: 'Assessment timeline grouped by week and weight.' },
-      { icon: 'timer', title: 'Study log', text: 'A timer and manual entries against a weekly target.' }
+      { icon: 'calendar_today', title: t('wizard.welcome.f1t'), text: t('wizard.welcome.f1d') },
+      { icon: 'rule', title: t('wizard.welcome.f2t'), text: t('wizard.welcome.f2d') },
+      { icon: 'calculate', title: t('wizard.welcome.f3t'), text: t('wizard.welcome.f3d') },
+      { icon: 'alarm', title: t('wizard.welcome.f4t'), text: t('wizard.welcome.f4d') },
+      { icon: 'timer', title: t('wizard.welcome.f5t'), text: t('wizard.welcome.f5d') }
     ];
 
     return (
       '<section class="bb-card overflow-hidden">' +
       '<div class="p-6 sm:p-8 border-b border-border">' +
       '<span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-sunken text-primary text-caption font-semibold uppercase tracking-wider">' +
-      '<span class="material-symbols-outlined text-[16px]">add_task</span>First-time setup</span>' +
-      '<h1 class="text-headline-md font-bold text-ink tracking-tight mt-3">Welcome to MMU BeeBoard</h1>' +
-      '<p class="text-body-md text-muted mt-2">A personal study dashboard for your trimester. ' +
-      'Three short steps and your timetable is yours.</p>' +
+      '<span class="material-symbols-outlined text-[16px]">add_task</span>' + t('wizard.welcome.badge') + '</span>' +
+      '<h1 class="text-headline-md font-bold text-ink tracking-tight mt-3">' + t('wizard.welcome.title') + '</h1>' +
+      '<p class="text-body-md text-muted mt-2">' + t('wizard.welcome.body') + '</p>' +
       '</div>' +
       '<div class="p-6 sm:p-8 space-y-5">' +
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
@@ -138,13 +147,12 @@
       '<div class="rounded-control border border-primary/25 bg-surface-sunken p-4 flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">info</span>' +
       '<div class="text-body-sm text-body">' +
-      '<span class="font-semibold text-ink">Your data stays in this browser.</span> ' +
-      'Everything you enter is saved to this browser\'s local storage only — no account, no server, ' +
-      'no analytics, no network requests. Clearing site data removes it.</div></div>' +
+      '<span class="font-semibold text-ink">' + t('wizard.welcome.privacyTitle') + '</span> ' +
+      t('wizard.welcome.privacyBody') + '</div></div>' +
       '</div>' +
       '<div class="px-6 sm:px-8 py-4 border-t border-border flex flex-wrap items-center justify-between gap-3">' +
-      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">Skip setup</button>' +
-      '<button type="button" id="w-start" class="bb-btn bb-btn-primary">Get started' +
+      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">' + t('wizard.welcome.skip') + '</button>' +
+      '<button type="button" id="w-start" class="bb-btn bb-btn-primary">' + t('wizard.welcome.start') +
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
       '</div></section>'
     );
@@ -156,43 +164,43 @@
     return (
       '<section class="bb-card overflow-hidden">' +
       '<div class="p-6 sm:p-8 border-b border-border">' +
-      '<h1 class="text-headline-sm font-bold text-ink tracking-tight">Set up your trimester</h1>' +
-      '<p class="text-body-sm text-muted mt-1">The label and week count drive the header, the timetable subtitle, ' +
-      'and every week number in the app.</p></div>' +
+      '<h1 class="text-headline-sm font-bold text-ink tracking-tight">' + t('wizard.term.title') + '</h1>' +
+      '<p class="text-body-sm text-muted mt-1">' + t('wizard.term.body') + '</p></div>' +
       '<div class="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4">' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="w-label">Trimester label</label>' +
-      '<input id="w-label" class="bb-input" type="text" value="' + esc(termDraft.label) + '" placeholder="My Trimester"></div>' +
-      '<div><label class="bb-label" for="w-start-date">Week 1 starts (Monday)</label>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="w-label">' + t('wizard.term.label') + '</label>' +
+      '<input id="w-label" class="bb-input" type="text" value="' + esc(termDraft.label) + '" placeholder="' +
+      esc(t('wizard.term.labelPlaceholder')) + '"></div>' +
+      '<div><label class="bb-label" for="w-start-date">' + t('wizard.term.week1') + '</label>' +
       '<input id="w-start-date" class="bb-input" type="date" value="' + esc(termDraft.startDate) + '">' +
-      '<p class="text-caption text-muted mt-1.5">Optional. Leave it empty and week numbers stay at Week 1 ' +
-      'until you set a date in Settings.</p></div>' +
-      '<div><label class="bb-label" for="w-weeks">Number of weeks</label>' +
+      '<p class="text-caption text-muted mt-1.5">' + t('wizard.term.week1Hint') + '</p></div>' +
+      '<div><label class="bb-label" for="w-weeks">' + t('wizard.term.weeks') + '</label>' +
       '<input id="w-weeks" class="bb-input num" type="number" min="1" max="30" step="1" value="' +
       esc(termDraft.weeks) + '">' +
-      '<p class="text-caption text-muted mt-1.5">Defaults to 14 teaching weeks.</p></div>' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="w-name">Your name (optional)</label>' +
-      '<input id="w-name" class="bb-input" type="text" value="' + esc(termDraft.name) + '" placeholder="Student">' +
-      '<p class="text-caption text-muted mt-1.5">Shown in the header and footer. You can change it any time in Settings.</p></div>' +
+      '<p class="text-caption text-muted mt-1.5">' + t('wizard.term.weeksHint') + '</p></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="w-name">' + t('wizard.term.name') + '</label>' +
+      '<input id="w-name" class="bb-input" type="text" value="' + esc(termDraft.name) + '" placeholder="' +
+      esc(t('wizard.term.namePlaceholder')) + '">' +
+      '<p class="text-caption text-muted mt-1.5">' + t('wizard.term.nameHint') + '</p></div>' +
       '</div>' +
       '<div class="px-6 sm:px-8 py-4 border-t border-border flex flex-wrap items-center justify-between gap-3">' +
       '<div class="flex items-center gap-2">' +
       '<button type="button" id="w-back" class="bb-btn bb-btn-ghost">' +
-      '<span class="material-symbols-outlined text-[18px]">arrow_back</span>Back</button>' +
-      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">Skip setup</button></div>' +
-      '<button type="button" id="w-next" class="bb-btn bb-btn-primary">Continue' +
+      '<span class="material-symbols-outlined text-[18px]">arrow_back</span>' + t('common.back') + '</button>' +
+      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">' + t('wizard.welcome.skip') + '</button></div>' +
+      '<button type="button" id="w-next" class="bb-btn bb-btn-primary">' + t('common.continue') +
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
       '</div></section>'
     );
   }
 
   function saveTerm() {
-    var label = document.getElementById('w-label').value.trim() || 'My Trimester';
+    var label = document.getElementById('w-label').value.trim() || t('wizard.term.labelPlaceholder');
     var startDate = document.getElementById('w-start-date').value;
     var weeks = Number(document.getElementById('w-weeks').value);
     var name = document.getElementById('w-name').value.trim();
 
     if (!isFinite(weeks) || weeks < 1) {
-      BB.ui.toast('Number of weeks must be 1 or more');
+      BB.ui.toast(t('wizard.toast.weeks'));
       return;
     }
 
@@ -223,17 +231,18 @@
       '<div class="px-5 py-3.5 border-b border-border flex items-center justify-between gap-3">' +
       '<div class="flex items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">menu_book</span>' +
-      '<h2 class="text-title-md font-bold text-ink">Added so far</h2></div>' +
-      '<span class="text-caption text-muted">' + subjects.length + ' subject' + (subjects.length === 1 ? '' : 's') + '</span></div>' +
+      '<h2 class="text-title-md font-bold text-ink">' + t('wizard.subject.addedSoFar') + '</h2></div>' +
+      '<span class="text-caption text-muted">' + tn('wizard.subject.count', subjects.length) + '</span></div>' +
       subjects.map(function (subject) {
         return (
           '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
           '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(subject.color, subject.id) +
           '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + esc(subject.name) + '</div>' +
-          '<div class="text-caption text-muted">' + subject.credits + ' Cr. • ' + subject.sessions.length +
-          ' sessions • ' + subject.assessments.length + ' components</div></div></div>' +
+          '<div class="text-caption text-muted">' + t('common.credits', { n: subject.credits }) + ' • ' +
+          tn('form.sessionCount', subject.sessions.length) + ' • ' +
+          tn('form.componentCount', subject.assessments.length) + '</div></div></div>' +
           '<a href="subject-edit.html?id=' + encodeURIComponent(subject.id) + '" class="bb-btn bb-btn-ghost" style="height:32px">' +
-          '<span class="material-symbols-outlined text-[16px]">edit</span>Edit</a></div>'
+          '<span class="material-symbols-outlined text-[16px]">edit</span>' + t('wizard.subject.edit') + '</a></div>'
         );
       }).join('') +
       '</div>'
@@ -242,20 +251,20 @@
 
   function savedPanel() {
     var subject = BB.store.subject(justSaved);
-    var name = subject ? subject.id + ' ' + subject.name : 'Subject';
+    var name = subject ? subject.id + ' ' + subject.name : t('common.subject');
     return (
       '<section class="bb-card overflow-hidden">' +
       '<div class="p-6 sm:p-8 flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[24px] text-success">task_alt</span>' +
-      '<div><h2 class="text-title-md font-bold text-ink">' + esc(name) + ' added</h2>' +
-      '<p class="text-body-sm text-muted mt-1">It is already on your timetable, deadlines, attendance and study log. ' +
-      'Add another module, or finish setup and open the dashboard.</p></div></div>' +
+      '<div><h2 class="text-title-md font-bold text-ink">' +
+      t('wizard.subject.savedTitle', { name: esc(name) }) + '</h2>' +
+      '<p class="text-body-sm text-muted mt-1">' + t('wizard.subject.savedBody') + '</p></div></div>' +
       '<div class="px-6 sm:px-8 py-4 border-t border-border flex flex-wrap items-center justify-between gap-3">' +
-      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">Skip setup</button>' +
+      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">' + t('wizard.welcome.skip') + '</button>' +
       '<div class="flex flex-wrap items-center gap-2">' +
       '<button type="button" id="w-add-another" class="bb-btn bb-btn-ghost">' +
-      '<span class="material-symbols-outlined text-[18px]">add</span>Add another subject</button>' +
-      '<button type="button" id="w-finish" class="bb-btn bb-btn-primary">Go to finish' +
+      '<span class="material-symbols-outlined text-[18px]">add</span>' + t('wizard.subject.addAnother') + '</button>' +
+      '<button type="button" id="w-finish" class="bb-btn bb-btn-primary">' + t('wizard.subject.finish') +
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
       '</div></div></section>'
     );
@@ -265,20 +274,19 @@
     var head =
       '<section class="bb-card overflow-hidden">' +
       '<div class="p-6 sm:p-8 border-b border-border">' +
-      '<h1 class="text-headline-sm font-bold text-ink tracking-tight">Add your first subject</h1>' +
-      '<p class="text-body-sm text-muted mt-1">Same fields as the subject editor: code, name, credits, colour, ' +
-      'weekly sessions and assessment weightings. The colour is picked from the unused presets.</p></div>' +
+      '<h1 class="text-headline-sm font-bold text-ink tracking-tight">' + t('wizard.subject.title') + '</h1>' +
+      '<p class="text-body-sm text-muted mt-1">' + t('wizard.subject.body') + '</p></div>' +
       '<div class="px-6 sm:px-8 py-4 flex flex-wrap items-center justify-between gap-3">' +
       '<div class="flex items-center gap-2">' +
       '<button type="button" id="w-back" class="bb-btn bb-btn-ghost">' +
-      '<span class="material-symbols-outlined text-[18px]">arrow_back</span>Back</button>' +
-      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">Skip setup</button></div>' +
+      '<span class="material-symbols-outlined text-[18px]">arrow_back</span>' + t('common.back') + '</button>' +
+      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">' + t('wizard.welcome.skip') + '</button></div>' +
       '<div class="flex flex-wrap items-center gap-2">' +
       (state().subjects.length
-        ? '<button type="button" id="w-finish" class="bb-btn bb-btn-ghost">Go to finish</button>'
+        ? '<button type="button" id="w-finish" class="bb-btn bb-btn-ghost">' + t('wizard.subject.finish') + '</button>'
         : '') +
       '<button type="button" id="w-save-subject" class="bb-btn bb-btn-primary">' +
-      '<span class="material-symbols-outlined text-[18px]">check</span>Save subject</button>' +
+      '<span class="material-symbols-outlined text-[18px]">check</span>' + t('wizard.subject.save') + '</button>' +
       '</div></div></section>';
 
     return head + '<div id="subject-form"></div>';
@@ -313,39 +321,40 @@
     var start = BB.date.start();
     var startText = start
       ? start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0')
-      : 'Not set yet';
+      : t('wizard.done.notSet');
 
     return (
       '<section class="bb-card overflow-hidden">' +
       '<div class="p-6 sm:p-8 border-b border-border">' +
       '<span class="material-symbols-outlined text-[28px] text-success">task_alt</span>' +
-      '<h1 class="text-headline-sm font-bold text-ink tracking-tight mt-2">Setup complete</h1>' +
-      '<p class="text-body-sm text-muted mt-1">Everything is stored in this browser. You can change any of it later in Settings.</p>' +
+      '<h1 class="text-headline-sm font-bold text-ink tracking-tight mt-2">' + t('wizard.done.title') + '</h1>' +
+      '<p class="text-body-sm text-muted mt-1">' + t('wizard.done.body') + '</p>' +
       '</div>' +
       '<div class="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-3 gap-3">' +
       '<div class="rounded-control border border-border-subtle bg-canvas p-3.5">' +
-      '<div class="text-caption text-muted">Trimester</div>' +
-      '<div class="text-label-md font-semibold text-ink">' + esc(data.term.label) + '</div></div>' +
+      '<div class="text-caption text-muted">' + t('wizard.done.trimester') + '</div>' +
+      '<div class="text-label-md font-semibold text-ink">' + esc(BB.ui.termLabel(data)) + '</div></div>' +
       '<div class="rounded-control border border-border-subtle bg-canvas p-3.5">' +
-      '<div class="text-caption text-muted">Week 1 starts</div>' +
+      '<div class="text-caption text-muted">' + t('wizard.done.week1') + '</div>' +
       '<div class="text-label-md font-semibold text-ink num">' + esc(startText) + '</div></div>' +
       '<div class="rounded-control border border-border-subtle bg-canvas p-3.5">' +
-      '<div class="text-caption text-muted">Teaching weeks</div>' +
+      '<div class="text-caption text-muted">' + t('wizard.done.teachingWeeks') + '</div>' +
       '<div class="text-label-md font-semibold text-ink num">' + esc(data.term.weeks) + '</div></div>' +
       '</div>' +
       '<div class="px-6 sm:px-8 pb-6 sm:pb-8">' +
       (subjects.length
-        ? '<p class="text-body-sm text-muted">' + subjects.length + ' subject' + (subjects.length === 1 ? '' : 's') +
-          ' ready: ' + subjects.map(function (subject) { return esc(subject.id); }).join(', ') + '</p>'
-        : '<p class="text-body-sm text-muted">No subjects yet — the dashboard will show an empty state and a ' +
-          '"Continue setup" card until you add one.</p>') +
+        ? '<p class="text-body-sm text-muted">' +
+          tn('wizard.done.ready', subjects.length, {
+            list: subjects.map(function (subject) { return esc(subject.id); }).join(', ')
+          }) + '</p>'
+        : '<p class="text-body-sm text-muted">' + t('wizard.done.none') + '</p>') +
       '</div>' +
       '<div class="px-6 sm:px-8 py-4 border-t border-border flex flex-wrap items-center justify-between gap-3">' +
       '<div class="flex items-center gap-2">' +
-      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">Skip setup</button>' +
+      '<button type="button" id="w-skip" class="bb-btn bb-btn-ghost">' + t('wizard.welcome.skip') + '</button>' +
       '<button type="button" id="w-add-another" class="bb-btn bb-btn-ghost">' +
-      '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</button></div>' +
-      '<button type="button" id="w-open" class="bb-btn bb-btn-primary">Open dashboard' +
+      '<span class="material-symbols-outlined text-[18px]">add</span>' + t('wizard.done.addSubject') + '</button></div>' +
+      '<button type="button" id="w-open" class="bb-btn bb-btn-primary">' + t('wizard.done.open') +
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
       '</div></section>'
     );
@@ -397,7 +406,7 @@
 
     if (id === 'w-label' || id === 'w-name') {
       BB.ui.refreshChrome({
-        termLabel: termDraft.label.trim() || 'My Trimester',
+        termLabel: termDraft.label.trim() || t('wizard.term.labelPlaceholder'),
         initials: BB.ui.initials(termDraft.name)
       });
     }

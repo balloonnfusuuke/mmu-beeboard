@@ -3,6 +3,7 @@
 
   var BB = window.BB;
   var form = BB.subjectForm;
+  var t = BB.i18n.t;
 
   function state() {
     return BB.store.get();
@@ -25,17 +26,15 @@
   var host = document.getElementById('editor');
 
   BB.ui.mount({
-    title: isNew ? 'Add Subject' : 'Edit Subject',
+    title: isNew ? t('se.addTitle') : t('se.editTitle'),
     head: {
-      title: isNew ? 'Add Subject' : 'Edit Subject',
-      subtitle: isNew
-        ? 'Register a module for this trimester: code, name, credits, colour, weekly sessions and weightings.'
-        : 'Configure subject metadata, weekly sessions, and continuous assessment weightings.',
+      title: isNew ? t('se.addTitle') : t('se.editTitle'),
+      subtitle: isNew ? t('se.addSubtitle') : t('se.editSubtitle'),
       actions:
-        '<a href="settings.html" class="bb-btn bb-btn-ghost">Cancel</a>' +
+        '<a href="settings.html" class="bb-btn bb-btn-ghost">' + t('se.cancel') + '</a>' +
         '<button type="button" id="save-subject" class="bb-btn bb-btn-primary">' +
         '<span class="material-symbols-outlined text-[18px]">check</span>' +
-        (isNew ? 'Add subject' : 'Save changes') + '</button>'
+        (isNew ? t('se.add') : t('se.save')) + '</button>'
     }
   });
 
@@ -58,7 +57,7 @@
       BB.store.update(function (data) {
         data.subjects.push(created);
       });
-      BB.ui.toast(created.id + ' added');
+      BB.ui.toast(t('se.toastAdded', { id: created.id }));
       window.location.href = 'settings.html';
       return;
     }
@@ -76,7 +75,7 @@
         return subject.id === source.id ? draft : subject;
       });
     });
-    BB.ui.toast('Subject saved');
+    BB.ui.toast(t('se.toastSaved'));
     window.location.href = 'settings.html';
   }
 
@@ -91,12 +90,9 @@
     if (event.target.closest('#delete-subject')) {
       BB.ui
         .confirm({
-          title: 'Delete ' + source.id + '?',
-          message:
-            source.name +
-            ' and its sessions, assessment weightings, marks and attendance records are removed from this ' +
-            'trimester. This cannot be undone.',
-          confirmLabel: 'Delete subject',
+          title: t('se.confirm.title', { id: source.id }),
+          message: t('se.confirm.body', { name: source.name }),
+          confirmLabel: t('se.confirm.ok'),
           danger: true
         })
         .then(function (ok) {

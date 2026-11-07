@@ -306,17 +306,30 @@
       var to = new Date(from.getTime() + 6 * 86400000);
       return { start: from, end: to };
     },
-    /* '23–29 Nov 2026' 形式。開始日が未設定なら空文字。 */
+    /* '23–29 Nov 2026' 形式。開始日が未設定なら空文字。月名と並びは辞書から引く。 */
     weekLabel: function (week) {
       var range = date.weekRange(week);
       if (!range) return '';
-      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      var i18n = global.BB && global.BB.i18n;
+      if (!i18n) return '';
+      var keys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
       var from = range.start;
       var to = range.end;
-      var head = from.getDate() + '–' + to.getDate() + ' ' + months[to.getMonth()];
-      return from.getMonth() === to.getMonth()
-        ? head + ' ' + to.getFullYear()
-        : from.getDate() + ' ' + months[from.getMonth()] + '–' + to.getDate() + ' ' + months[to.getMonth()] + ' ' + to.getFullYear();
+      if (from.getMonth() === to.getMonth()) {
+        return i18n.t('date.weekSameMonth', {
+          d1: from.getDate(),
+          d2: to.getDate(),
+          mon: i18n.t('month.' + keys[to.getMonth()]),
+          year: to.getFullYear()
+        });
+      }
+      return i18n.t('date.weekCrossMonth', {
+        d1: from.getDate(),
+        mon1: i18n.t('month.' + keys[from.getMonth()]),
+        d2: to.getDate(),
+        mon2: i18n.t('month.' + keys[to.getMonth()]),
+        year: to.getFullYear()
+      });
     }
   };
 

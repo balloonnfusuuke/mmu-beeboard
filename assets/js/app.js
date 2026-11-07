@@ -4,8 +4,10 @@
   'use strict';
 
   var BB = global.BB;
-  var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var t = BB.i18n.t;
+  var tn = BB.i18n.tn;
+  var DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  var MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
   var HOUR_START = 8;
   var HOUR_END = 18;
   var HOUR_HEIGHT = 52;
@@ -40,17 +42,30 @@
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
+  function dayName(index) {
+    return t('day.' + DAY_KEYS[index]);
+  }
+
+  function monthName(index) {
+    return t('month.' + MONTH_KEYS[index]);
+  }
+
   function fmtDate(date) {
-    return DAY_NAMES[date.getDay()] + ' ' + date.getDate() + ' ' + MONTHS[date.getMonth()];
+    return t('date.short', { day: dayName(date.getDay()), d: date.getDate(), mon: monthName(date.getMonth()) });
   }
 
   function fmtDateFull(date) {
-    return fmtDate(date) + ' ' + date.getFullYear();
+    return t('date.shortFull', {
+      day: dayName(date.getDay()),
+      d: date.getDate(),
+      mon: monthName(date.getMonth()),
+      year: date.getFullYear()
+    });
   }
 
   function durationLabel(session) {
     var hours = (minutesOf(session.end) - minutesOf(session.start)) / 60;
-    return hours === 1 ? '1 Hour' : hours + ' Hours';
+    return hours === 1 ? t('duration.hour') : t('duration.hours', { n: hours });
   }
 
   function shortName(subject) {
@@ -109,11 +124,11 @@
 
   function countdown(target, now) {
     var mins = Math.round((target.getTime() - now.getTime()) / 60000);
-    if (mins < 1) return 'Starting now';
-    if (mins < 60) return 'Starts in ' + mins + ' min';
+    if (mins < 1) return t('countdown.now');
+    if (mins < 60) return t('countdown.min', { n: mins });
     var hours = Math.round(mins / 60);
-    if (hours < 24) return 'Starts in ' + hours + ' h';
-    return 'In ' + Math.round(hours / 24) + ' days';
+    if (hours < 24) return t('countdown.hour', { n: hours });
+    return t('countdown.days', { n: Math.round(hours / 24) });
   }
 
   function attendanceOf(subject) {
@@ -209,7 +224,8 @@
   }
 
   function hoursLabel(minutes) {
-    return Math.floor(minutes / 60) + 'h ' + pad2(minutes % 60) + 'm';
+    var m = minutes % 60;
+    return t('duration.hm', { h: Math.floor(minutes / 60), m: m, mm: pad2(m) });
   }
 
   /* ---------- rendering ---------- */
@@ -217,21 +233,25 @@
   function bindHeader(state, now, preview) {
     var weeks = state.term.weeks || 14;
     var weekText = preview
-      ? 'Starts ' + fmtDate(termStart())
-      : 'Week ' + currentWeek(now) + ' of ' + weeks;
+      ? t('header.starts', { date: fmtDate(termStart()) })
+      : t('common.weekOf', { n: currentWeek(now), total: weeks });
     var binds = {
       'student.name': state.student.name,
       'student.initials': state.student.initials,
-      'student.programme': state.student.programme + ' • Year ' + state.student.year,
+      'student.programme': t('header.programmeYear', {
+        programme: state.student.programme,
+        year: state.student.year
+      }),
       'student.id': state.student.studentId,
-      'student.idSuffix': state.student.studentId ? ' • Student ID: ' + state.student.studentId : '',
-      'term.label': state.term.label,
+      'student.idSuffix': state.student.studentId
+        ? t('header.studentIdSuffix', { id: state.student.studentId })
+        : '',
+      'term.label': termLabelOf(state),
       'term.week': weekText,
-      'settings.cgpaTarget': state.settings.cgpaTarget.toFixed(2) + ' CGPA',
+      'settings.cgpaTarget': t('header.cgpaTarget', { value: state.settings.cgpaTarget.toFixed(2) }),
       'cgpa.value': '—',
-      'topics.week': 'Week ' + currentWeek(now) + ' of ' + weeks,
-      'timetable.subtitle':
-        state.term.label + ' • ' + weeks + ' teaching weeks • Click any class to open its Grade Simulator'
+      'topics.week': t('common.weekOf', { n: currentWeek(now), total: weeks }),
+      'timetable.subtitle': t('dash.timetableSubtitle', { term: termLabelOf(state), weeks: weeks })
     };
     $$('[data-bind]').forEach(function (node) {
       var key = node.getAttribute('data-bind');
@@ -252,9 +272,11 @@
       '<div class="flex items-start sm:items-center gap-3 rounded-card border border-primary/25 bg-surface-sunken px-4 py-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">event_upcoming</span>' +
       '<div class="text-body-sm text-body">' +
-      '<span class="font-semibold text-ink">Week 1 starts ' + fmtDateFull(start) + '</span>' +
-      ' — showing a preview of the trimester. ' +
-      '<span class="text-muted">' + (days === 1 ? 'Tomorrow' : 'In ' + days + ' days') + ' · no sessions held yet.</span>' +
+      '<span class="font-semibold text-ink">' + t('preview.weekStarts', { date: fmtDateFull(start) }) + '</span>' +
+      ' ' + t('preview.body') + ' ' +
+      '<span class="text-muted">' +
+      (days === 1 ? t('common.tomorrow') : t('countdown.days', { n: days })) +
+      ' · ' + t('preview.noSessions') + '</span>' +
       '</div></div>';
   }
 
@@ -266,23 +288,23 @@
         '<div class="rounded-card border border-border bg-surface p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">' +
         '<div class="flex items-start gap-3">' +
         '<span class="material-symbols-outlined text-[22px] text-primary mt-0.5">calendar_today</span>' +
-        '<div><div class="text-title-md font-bold text-ink">No classes on the timetable yet</div>' +
-        '<p class="text-body-sm text-muted mt-1">Add a subject and its weekly sessions to fill this card.</p></div></div>' +
+        '<div><div class="text-title-md font-bold text-ink">' + t('next.emptyTitle') + '</div>' +
+        '<p class="text-body-sm text-muted mt-1">' + t('next.emptyBody') + '</p></div></div>' +
         '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary shrink-0">' +
-        '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+        '<span class="material-symbols-outlined text-[18px]">add</span>' + t('next.emptyCta') + '</a></div>';
       return;
     }
     if (!next) {
       host.innerHTML =
         '<div class="rounded-card border border-border bg-surface p-6 text-body-sm text-muted">' +
-        'No upcoming class found in the next ' + LOOKAHEAD_DAYS + ' days.</div>';
+        t('next.notFound', { days: LOOKAHEAD_DAYS }) + '</div>';
       return;
     }
     var subject = next.subject;
     var session = next.session;
     var chip = BB.color.chip(subject.color);
-    var badge = preview ? 'Term starts ' + fmtDate(termStart()) : countdown(next.start, now);
-    var dayText = fmtDate(next.start) + (isSameDay(next.start, now) ? ' • Today' : '');
+    var badge = preview ? t('next.termStarts', { date: fmtDate(termStart()) }) : countdown(next.start, now);
+    var dayText = fmtDate(next.start) + (isSameDay(next.start, now) ? ' • ' + t('next.today') : '');
     var roomText = roomLabel(session.room);
 
     host.innerHTML =
@@ -303,7 +325,7 @@
       '<span class="font-semibold text-ink num">' + session.start + ' – ' + session.end + '</span>' +
       '<span class="text-placeholder">(' + durationLabel(session) + ')</span></div>' +
       '<div class="flex items-start gap-1"><span class="material-symbols-outlined text-[18px] text-primary">room</span>' +
-      '<span>Room <strong class="text-ink font-semibold">' + session.room + '</strong>' +
+      '<span>' + t('next.room', { room: '<strong class="text-ink font-semibold">' + session.room + '</strong>' }) +
       (roomText ? '<span class="block text-caption text-muted">' + roomText + '</span>' : '') +
       '</span></div>' +
       (subject.lecturer ? '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-muted">person</span>' +
@@ -311,9 +333,9 @@
       '</div></div>' +
       '<div class="flex items-center gap-3 shrink-0 pt-2 md:pt-0">' +
       '<a href="simulator.html?subject=' + subject.id + '" class="inline-flex items-center gap-2 px-4 py-2 rounded-control bg-primary text-on-primary text-label-md font-semibold hover:bg-primary-hover transition-colors shadow-rest">' +
-      '<span class="material-symbols-outlined text-[18px]">calculate</span><span>Open Course Simulator</span></a>' +
+      '<span class="material-symbols-outlined text-[18px]">calculate</span><span>' + t('next.openSimulator') + '</span></a>' +
       '<a href="attendance.html" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors">' +
-      '<span class="material-symbols-outlined text-[18px] text-muted">rule</span><span>Attendance</span></a>' +
+      '<span class="material-symbols-outlined text-[18px] text-muted">rule</span><span>' + t('next.attendance') + '</span></a>' +
       '</div></div></div>';
   }
 
@@ -342,11 +364,12 @@
     host.style.setProperty('--tt-hour', HOUR_HEIGHT + 'px');
 
     var head =
-      '<div class="tt-head"><div class="tt-corner">Time</div>' +
+      '<div class="tt-head"><div class="tt-corner">' + t('tt.time') + '</div>' +
       [1, 2, 3, 4, 5]
         .map(function (day) {
           var today = now.getDay() === day;
-          return '<div class="tt-day' + (today ? ' is-today' : '') + '">' + DAY_NAMES[day] + (today ? ' (Today)' : '') + '</div>';
+          return '<div class="tt-day' + (today ? ' is-today' : '') + '">' + dayName(day) +
+            (today ? ' ' + t('tt.today') : '') + '</div>';
         })
         .join('') +
       '</div>';
@@ -404,28 +427,32 @@
     var upcoming = nextAssessmentOf(subject, week);
 
     var attendanceValue = attendance.rate === null ? '—' : Math.round(attendance.rate) + '%';
-    var attendanceNote = attendance.rate === null ? 'no sessions yet' : attendance.absences + ' absences';
+    var attendanceNote = attendance.rate === null
+      ? t('detail.noSessionsYet')
+      : t('detail.absences', { n: attendance.absences });
     var securedValue = secured.entered > 0 ? secured.secured.toFixed(1) + ' / ' + secured.possible : '—';
-    var securedNote = secured.published ? 'coursework pending' : 'not published yet';
-    var assessmentValue = upcoming ? upcoming.name : 'not published yet';
-    var assessmentNote = upcoming ? 'Week ' + upcoming.week : '';
+    var securedNote = secured.published ? t('detail.courseworkPending') : t('detail.notPublishedYet');
+    var assessmentValue = upcoming ? upcoming.name : t('detail.notPublishedYet');
+    var assessmentNote = upcoming ? t('common.week', { n: upcoming.week }) : '';
 
     host.innerHTML =
       '<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-border">' +
       '<div class="flex items-center gap-3">' +
       '<span class="w-3.5 h-3.5 rounded-full" style="background:' + subject.color + ';box-shadow:0 0 0 4px ' + BB.color.alpha(subject.color, 0.2) + '"></span>' +
-      '<div><h3 class="text-title-md font-bold text-ink">Next class: ' + subject.id + ' ' + subject.name +
-      ' <span class="font-normal text-muted">(' + session.type + ' • ' + DAY_NAMES[session.day] + ' ' + session.start + '–' + session.end + ')</span></h3>' +
-      '<p class="text-caption text-muted">' + subject.faculty + (subject.lecturer ? ' • Lecturer: ' + subject.lecturer : '') + '</p></div>' +
+      '<div><h3 class="text-title-md font-bold text-ink">' +
+      t('detail.nextClass', { code: subject.id, name: subject.name }) +
+      ' <span class="font-normal text-muted">(' + session.type + ' • ' + dayName(session.day) + ' ' + session.start + '–' + session.end + ')</span></h3>' +
+      '<p class="text-caption text-muted">' + subject.faculty +
+      (subject.lecturer ? ' • ' + t('detail.lecturer', { name: subject.lecturer }) : '') + '</p></div>' +
       '</div>' +
       '<a href="simulator.html?subject=' + subject.id + '" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-control bg-surface border border-border hover:border-primary/40 text-caption font-semibold text-primary transition-colors shadow-rest">' +
-      '<span>Open Course Simulator</span><span class="material-symbols-outlined text-[15px]">arrow_forward</span></a>' +
+      '<span>' + t('detail.openSimulator') + '</span><span class="material-symbols-outlined text-[15px]">arrow_forward</span></a>' +
       '</div>' +
       '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">' +
-      detailPill('menu_book', subject.color, "This week's topic", subject.topics.title, '') +
-      detailPill('verified', attendance.atRisk ? 'var(--bb-alert)' : subject.color, 'Attendance', attendanceValue, attendanceNote) +
-      detailPill('grade', subject.color, 'Secured marks', securedValue, securedNote) +
-      detailPill('assignment_late', 'var(--bb-text-muted)', 'Next assessment', assessmentValue, assessmentNote) +
+      detailPill('menu_book', subject.color, t('detail.thisWeekTopic'), subject.topics.title, '') +
+      detailPill('verified', attendance.atRisk ? 'var(--bb-alert)' : subject.color, t('detail.attendance'), attendanceValue, attendanceNote) +
+      detailPill('grade', subject.color, t('detail.securedMarks'), securedValue, securedNote) +
+      detailPill('assignment_late', 'var(--bb-text-muted)', t('detail.nextAssessment'), assessmentValue, assessmentNote) +
       '</div>';
   }
 
@@ -446,7 +473,7 @@
     if (!state.subjects.length) {
       host.innerHTML =
         '<div class="sm:col-span-2 lg:col-span-4 rounded-card border border-border bg-surface p-5 text-body-sm text-muted">' +
-        'This week\'s topics appear here once you add a subject.</div>';
+        t('topics.empty') + '</div>';
       return;
     }
     host.innerHTML = state.subjects
@@ -483,7 +510,7 @@
       '<span class="material-symbols-outlined text-[20px]" style="color:' + iconColor + '">' + icon + '</span>' +
       '<h3 class="text-title-md font-bold text-ink group-hover:text-primary transition-colors">' + title + '</h3></div>' +
       '<div class="flex items-center gap-1 text-muted group-hover:text-primary transition-colors">' +
-      '<span class="text-caption hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity">Details</span>' +
+      '<span class="text-caption hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity">' + t('card.details') + '</span>' +
       '<span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">chevron_right</span>' +
       '</div></div>' + body + '</div>' + footer + '</a>'
     );
@@ -504,22 +531,24 @@
 
     var body =
       '<div class="py-3 space-y-1.5">' +
-      '<div class="text-caption uppercase tracking-wider text-muted">Next Upcoming</div>' +
+      '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.deadlines.nextUpcoming') + '</div>' +
       '<div class="text-body-lg font-bold text-ink flex items-center gap-2">' +
       '<span>' + (nextItem ? nextItem.subject.id + ' ' + nextItem.assessment.name : '—') + '</span>' +
-      (nextItem ? '<span class="text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">Week ' + nextItem.week + '</span>' : '') +
+      (nextItem ? '<span class="text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">' +
+        t('common.week', { n: nextItem.week }) + '</span>' : '') +
       '</div>' +
-      '<p class="text-body-sm text-muted">' + items.length + ' assessments scheduled this trimester</p>' +
+      '<p class="text-body-sm text-muted">' + t('card.deadlines.scheduled', { n: items.length }) + '</p>' +
       '</div>';
 
     var footer =
       '<div class="pt-3 border-t border-border-subtle flex items-center justify-between text-caption text-muted">' +
-      '<div class="flex items-center gap-1.5">' + dots + '<span class="pl-1">All modules tracked</span></div>' +
+      '<div class="flex items-center gap-1.5">' + dots +
+      '<span class="pl-1">' + t('card.deadlines.allTracked') + '</span></div>' +
       '<span class="font-semibold text-primary group-hover:underline flex items-center gap-0.5">' +
-      '<span>View ' + items.length + ' items</span>' +
+      '<span>' + t('card.deadlines.viewItems', { n: items.length }) + '</span>' +
       '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></span></div>';
 
-    return cardShell('deadlines.html', 'Deadlines', 'assignment_late', 'var(--bb-primary)', body, footer);
+    return cardShell('deadlines.html', t('card.deadlines.title'), 'assignment_late', 'var(--bb-primary)', body, footer);
   }
 
   function attendanceCard(state) {
@@ -543,54 +572,62 @@
 
     var overallRate = totals.held > 0 ? (totals.attended / totals.held) * 100 : null;
     var statusPill = overallRate === null
-      ? '<span class="px-2 py-0.5 rounded text-caption font-semibold bg-surface-subtle text-muted border border-border">No sessions yet</span>'
+      ? '<span class="px-2 py-0.5 rounded text-caption font-semibold bg-surface-subtle text-muted border border-border">' +
+        t('card.attendance.noSessions') + '</span>'
       : overallRate >= state.settings.attendanceThreshold
-        ? '<span class="px-2 py-0.5 rounded text-caption font-semibold bb-status-ok">Eligible (≥' + state.settings.attendanceThreshold + '% req)</span>'
-        : '<span class="px-2 py-0.5 rounded text-caption font-semibold bb-status-alert">Below ' + state.settings.attendanceThreshold + '%</span>';
+        ? '<span class="px-2 py-0.5 rounded text-caption font-semibold bb-status-ok">' +
+          t('card.attendance.eligible', { n: state.settings.attendanceThreshold }) + '</span>'
+        : '<span class="px-2 py-0.5 rounded text-caption font-semibold bb-status-alert">' +
+          t('card.attendance.below', { n: state.settings.attendanceThreshold }) + '</span>';
 
     var body =
       '<div class="py-3 space-y-2">' +
       '<div class="flex items-center justify-between">' +
-      '<span class="text-caption uppercase tracking-wider text-muted">Overall Status</span>' + statusPill + '</div>' +
+      '<span class="text-caption uppercase tracking-wider text-muted">' + t('card.attendance.overall') + '</span>' +
+      statusPill + '</div>' +
       '<div class="text-headline-sm font-extrabold text-ink num">' +
       (overallRate === null ? '—' : Math.round(overallRate) + '%') +
-      ' <span class="text-body-sm font-normal text-muted">(' + totals.held + ' session' +
-      (totals.held === 1 ? '' : 's') + ' held)</span></div>' +
+      ' <span class="text-body-sm font-normal text-muted">' + tn('card.attendance.held', totals.held) + '</span></div>' +
       '<div class="space-y-1.5 pt-1">' + rows + '</div>' +
       '</div>';
 
     var footer =
       '<div class="pt-3 border-t border-border-subtle text-caption text-muted flex items-center justify-between">' +
-      '<span>Barred threshold: &lt;' + state.settings.attendanceThreshold + '%</span>' +
+      '<span>' + t('card.attendance.barred', { n: state.settings.attendanceThreshold }) + '</span>' +
       '<span class="font-semibold text-primary group-hover:underline flex items-center gap-0.5">' +
-      '<span>Attendance detail</span><span class="material-symbols-outlined text-[14px]">arrow_forward</span></span></div>';
+      '<span>' + t('card.attendance.detail') + '</span>' +
+      '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></span></div>';
 
-    return cardShell('attendance.html', 'Attendance', 'rule', 'var(--bb-success)', body, footer);
+    return cardShell('attendance.html', t('card.attendance.title'), 'rule', 'var(--bb-success)', body, footer);
   }
 
   function studyLogCard(state, now, next) {
     var minutes = studyMinutesThisWeek(now);
     var target = state.settings.weeklyStudyTarget;
     var targetSubject = next ? next.subject : state.subjects[0];
-    var targetLabel = targetSubject ? targetSubject.id + ' ' + shortName(targetSubject) : 'No subject yet';
+    var targetLabel = targetSubject ? targetSubject.id + ' ' + shortName(targetSubject) : t('card.studyLog.noSubject');
 
     var body =
       '<div class="py-3 space-y-2">' +
-      '<div class="text-caption uppercase tracking-wider text-muted">Current Week Logged</div>' +
+      '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.studyLog.currentWeek') + '</div>' +
       '<div class="text-headline-sm font-extrabold text-ink num">' + hoursLabel(minutes) +
-      ' <span class="text-body-sm font-normal text-muted">/ ' + target + 'h Target</span></div>' +
+      ' <span class="text-body-sm font-normal text-muted">' + t('card.studyLog.target', { n: target }) + '</span></div>' +
       '<p class="text-body-sm text-muted">' +
-      (minutes === 0 ? 'Week ' + currentWeek(now) + ' just begun. Ready for your first focused study session?' : 'Keep the streak going.') +
+      (minutes === 0
+        ? t('card.studyLog.justBegun', { n: currentWeek(now) })
+        : t('card.studyLog.keepGoing')) +
       '</p></div>';
 
     var footer =
       '<div class="pt-3 border-t border-border-subtle space-y-2.5">' +
       '<div class="flex items-center justify-between text-caption text-muted">' +
-      '<span>Target subject:</span><span class="font-semibold text-primary">' + targetLabel + '</span></div>' +
+      '<span>' + t('card.studyLog.targetSubject') + '</span>' +
+      '<span class="font-semibold text-primary">' + targetLabel + '</span></div>' +
       '<span class="w-full inline-flex items-center justify-center gap-2 py-2 px-3 rounded-control bg-primary text-on-primary text-label-md font-semibold hover:bg-primary-hover transition-colors shadow-rest">' +
-      '<span class="material-symbols-outlined text-[18px]">play_arrow</span><span>Start timer</span></span></div>';
+      '<span class="material-symbols-outlined text-[18px]">play_arrow</span><span>' +
+      t('card.studyLog.startTimer') + '</span></span></div>';
 
-    return cardShell('studylog.html', 'Study Log', 'menu_book', 'var(--bb-primary)', body, footer);
+    return cardShell('studylog.html', t('card.studyLog.title'), 'menu_book', 'var(--bb-primary)', body, footer);
   }
 
   function renderGrades(state) {
@@ -600,8 +637,8 @@
       host.innerHTML =
         '<div class="p-8 text-center">' +
         '<span class="material-symbols-outlined text-[28px] text-placeholder">grading</span>' +
-        '<p class="text-body-sm text-muted mt-2">No subjects to grade yet.</p>' +
-        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-ghost mt-3">Add a subject</a></div>';
+        '<p class="text-body-sm text-muted mt-2">' + t('grades.empty') + '</p>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-ghost mt-3">' + t('grades.addSubject') + '</a></div>';
       return;
     }
     host.innerHTML = state.subjects
@@ -612,19 +649,21 @@
 
         if (!secured.published) {
           right =
-            '<div class="text-right"><span class="text-body-sm text-muted italic">Assessment structure not published yet.</span></div>' +
-            '<div class="flex items-center gap-3"><span class="text-label-md font-semibold text-muted">Secured —</span>' +
+            '<div class="text-right"><span class="text-body-sm text-muted italic">' + t('grades.notPublished') + '</span></div>' +
+            '<div class="flex items-center gap-3"><span class="text-label-md font-semibold text-muted">' + t('grades.secured') + '</span>' +
             '<span class="material-symbols-outlined text-[22px] text-muted group-hover:text-primary group-hover:translate-x-1 transition-all">chevron_right</span></div>';
         } else {
           var pct = secured.possible ? (secured.secured / secured.possible) * 100 : 0;
           right =
             '<div class="w-40 sm:w-56 space-y-1">' +
-            '<div class="flex justify-between text-caption text-muted"><span>Coursework Secured</span>' +
-            '<span class="font-bold text-ink num">' + secured.secured.toFixed(1) + ' / ' + secured.possible + ' Marks</span></div>' +
+            '<div class="flex justify-between text-caption text-muted"><span>' + t('grades.courseworkSecured') + '</span>' +
+            '<span class="font-bold text-ink num">' +
+            t('grades.marks', { a: secured.secured.toFixed(1), b: secured.possible }) + '</span></div>' +
             '<div class="w-full bg-border h-2 rounded-full overflow-hidden">' +
             '<div class="h-full rounded-full" style="width:' + pct + '%;background:' + subject.color + '"></div></div></div>' +
             '<div class="flex items-center gap-2">' +
-            '<span class="px-2 py-0.5 rounded text-caption font-medium" style="background:' + chip.background + ';color:' + chip.color + '">Simulator</span>' +
+            '<span class="px-2 py-0.5 rounded text-caption font-medium" style="background:' + chip.background + ';color:' + chip.color + '">' +
+            t('grades.simulator') + '</span>' +
             '<span class="material-symbols-outlined text-[22px] text-muted group-hover:text-primary group-hover:translate-x-1 transition-all">chevron_right</span></div>';
         }
 
@@ -633,7 +672,8 @@
           '<div class="flex items-center gap-3">' +
           '<span class="px-3 py-1 rounded-md text-caption font-bold text-white" style="background:' + subject.color + '">' + subject.id + '</span>' +
           '<div><h3 class="text-title-md font-bold text-ink">' + subject.name + '</h3>' +
-          '<p class="text-caption text-muted">' + subject.credits + ' Credit Hours' + (subject.lecturer ? ' • ' + subject.lecturer : '') + '</p></div></div>' +
+          '<p class="text-caption text-muted">' + t('grades.creditHours', { n: subject.credits }) +
+          (subject.lecturer ? ' • ' + subject.lecturer : '') + '</p></div></div>' +
           '<div class="flex items-center gap-6">' + right + '</div></a>'
         );
       })
@@ -652,11 +692,10 @@
       '<div class="rounded-card border border-primary/25 bg-surface-sunken p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">' +
       '<div class="flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[24px] text-primary mt-0.5">add_task</span>' +
-      '<div><div class="text-title-md font-bold text-ink">Continue setup</div>' +
-      '<p class="text-body-sm text-muted mt-1">You have no subjects yet. Run the setup wizard to set your trimester ' +
-      'and add your first module — it takes about a minute.</p></div></div>' +
+      '<div><div class="text-title-md font-bold text-ink">' + t('setupCard.title') + '</div>' +
+      '<p class="text-body-sm text-muted mt-1">' + t('setupCard.body') + '</p></div></div>' +
       '<a href="setup.html" class="bb-btn bb-btn-primary shrink-0">' +
-      '<span class="material-symbols-outlined text-[18px]">arrow_forward</span>Continue setup</a></div>';
+      '<span class="material-symbols-outlined text-[18px]">arrow_forward</span>' + t('setupCard.cta') + '</a></div>';
   }
 
   function init() {
@@ -695,25 +734,32 @@
       .replace(/"/g, '&quot;');
   }
 
+  /* 学期名が未設定なら言語ごとの既定名を出す。空欄のままにしない。 */
+  function termLabelOf(state) {
+    return state.term.label || t('wizard.term.labelPlaceholder');
+  }
+
   function header(opts, preview) {
     var state = BB.store.get();
-    var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : state.term.label;
+    var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : termLabelOf(state);
     var initials = preview && preview.initials !== undefined ? preview.initials : state.student.initials;
     var now = new Date();
     var weekText = isPreview(now)
-      ? 'Starts ' + fmtDate(termStart())
-      : 'Week ' + currentWeek(now) + ' of ' + (state.term.weeks || 14);
+      ? t('header.starts', { date: fmtDate(termStart()) })
+      : t('common.weekOf', { n: currentWeek(now), total: state.term.weeks || 14 });
     return (
       '<header class="sticky top-0 z-30 w-full bg-surface border-b border-border shadow-rest">' +
       '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">' +
       '<div class="flex items-center gap-3 min-w-0">' +
-      '<a href="index.html" class="p-2 -ml-2 rounded-control text-muted hover:text-primary hover:bg-surface-subtle transition-colors" aria-label="Back to dashboard" title="Back to dashboard">' +
+      '<a href="index.html" class="p-2 -ml-2 rounded-control text-muted hover:text-primary hover:bg-surface-subtle transition-colors" aria-label="' +
+      escHtml(t('nav.backToDashboard')) + '" title="' + escHtml(t('nav.backToDashboard')) + '">' +
       '<span class="material-symbols-outlined text-[20px]">arrow_back</span></a>' +
       '<a href="index.html" class="flex items-center gap-2.5 min-w-0">' +
       '<img src="assets/logo.svg" alt="" class="w-8 h-8 rounded-lg flex-shrink-0">' +
       '<span class="flex flex-col leading-none min-w-0">' +
       '<span class="text-title-md text-primary tracking-tight whitespace-nowrap"><span class="font-bold">MMU</span> <span class="font-normal">BeeBoard</span></span>' +
-      '<span class="text-[11px] text-muted font-medium mt-0.5 whitespace-nowrap">' + (opts.title || 'Personal study dashboard') + '</span>' +
+      '<span class="text-[11px] text-muted font-medium mt-0.5 whitespace-nowrap">' +
+      escHtml(opts.title || t('brand.tagline')) + '</span>' +
       '</span></a>' +
       '<div class="hidden lg:block h-4 w-px bg-border"></div>' +
       '<div class="hidden lg:flex items-center gap-2 text-muted text-label-md">' +
@@ -723,7 +769,8 @@
       '</div>' +
       '<div class="flex items-center gap-3">' +
       '<span class="w-8 h-8 rounded-full bg-primary text-on-primary text-label-sm font-bold flex items-center justify-center flex-shrink-0">' + escHtml(initials) + '</span>' +
-      '<a href="settings.html" class="p-2 text-muted hover:text-primary hover:bg-surface-subtle rounded-control border border-transparent hover:border-border transition-colors" aria-label="Settings" title="Settings">' +
+      '<a href="settings.html" class="p-2 text-muted hover:text-primary hover:bg-surface-subtle rounded-control border border-transparent hover:border-border transition-colors" aria-label="' +
+      escHtml(t('nav.settings')) + '" title="' + escHtml(t('nav.settings')) + '">' +
       '<span class="material-symbols-outlined text-[20px]">settings</span></a>' +
       '</div></div></header>'
     );
@@ -742,13 +789,14 @@
 
   function footer(preview) {
     var state = BB.store.get();
-    var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : state.term.label;
+    var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : termLabelOf(state);
     return (
       '<footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between text-caption text-muted gap-2 border-t border-border">' +
       '<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-success"></span>' +
-      '<span>MMU BeeBoard — a personal study dashboard. Not an official MMU system.</span></div>' +
+      '<span>' + t('dash.footer') + '</span></div>' +
       '<div class="num">' + escHtml(termLabel) +
-      (state.student.studentId ? ' • Student ID: ' + state.student.studentId : '') + '</div></footer>'
+      (state.student.studentId ? t('header.studentIdSuffix', { id: state.student.studentId }) : '') +
+      '</div></footer>'
     );
   }
 
@@ -861,10 +909,10 @@
         '" data-modal-confirm></button>' +
         '</div></div>';
 
-      $('.bb-modal-title', overlay).textContent = options.title || 'Are you sure?';
+      $('.bb-modal-title', overlay).textContent = options.title || t('common.areYouSure');
       $('.bb-modal-body', overlay).textContent = options.message || '';
-      $('[data-modal-cancel]', overlay).textContent = options.cancelLabel || 'Cancel';
-      $('[data-modal-confirm]', overlay).textContent = options.confirmLabel || 'Confirm';
+      $('[data-modal-cancel]', overlay).textContent = options.cancelLabel || t('common.cancel');
+      $('[data-modal-confirm]', overlay).textContent = options.confirmLabel || t('common.confirm');
 
       function close(result) {
         document.removeEventListener('keydown', onKey, true);
@@ -959,7 +1007,8 @@
     solidChip: solidChip,
     toast: toast,
     confirm: confirmAction,
-    initials: initialsOf
+    initials: initialsOf,
+    termLabel: termLabelOf
   };
 
   BB.attendance = { mark: markAttendance, unmark: unmarkAttendance };
@@ -1008,5 +1057,15 @@
     }
   };
 
-  if (typeof document !== 'undefined' && document.body && document.body.dataset.page === 'dashboard') init();
+  if (typeof document !== 'undefined' && document.body && document.body.dataset.page === 'dashboard') {
+    init();
+    /* 言語が変わったらダッシュボードを描き直す。静的 HTML 側は i18n.js が担当する。 */
+    var lastLang = BB.i18n.lang();
+    BB.store.subscribe(function () {
+      var next = BB.i18n.lang();
+      if (next === lastLang) return;
+      lastLang = next;
+      init();
+    });
+  }
 })(window);

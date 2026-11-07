@@ -9,8 +9,8 @@
      startDate が空のままでも週番号計算は落ちない（store.js の date ヘルパが null を返す）。 */
   var TERM = {
     id: 'term-1',
-    label: 'My Trimester',
-    shortLabel: 'My Trimester',
+    label: '',
+    shortLabel: '',
     startDate: '', // 未設定。Week 1 の月曜を入れると週番号が動き出す
     weeks: 14,
     examWeek: 15

@@ -2,15 +2,25 @@
   'use strict';
 
   var BB = window.BB;
+  var t = BB.i18n.t;
+  var tn = BB.i18n.tn;
   var selected = null;
 
   BB.ui.mount({
-    title: 'Study Log',
+    title: t('sl.title'),
     head: {
-      title: 'Study Log',
-      subtitle: 'Track focused revision and module study time towards your academic goals.'
+      title: t('sl.title'),
+      subtitle: t('sl.subtitle')
     }
   });
+
+  function esc(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
   function state() {
     return BB.store.get();
@@ -41,7 +51,12 @@
   }
 
   function hoursLabel(minutes) {
-    return Math.floor(minutes / 60) + 'h ' + (minutes % 60 < 10 ? '0' : '') + (minutes % 60) + 'm';
+    var m = minutes % 60;
+    return t('duration.hm', {
+      h: Math.floor(minutes / 60),
+      m: m,
+      mm: m < 10 ? '0' + m : String(m)
+    });
   }
 
   function weekSessions() {
@@ -60,9 +75,9 @@
       document.getElementById('active-session').innerHTML =
         '<div class="bb-card p-8 text-center">' +
         '<span class="material-symbols-outlined text-[28px] text-placeholder">timer</span>' +
-        '<p class="text-body-sm text-muted mt-2">Add a subject to start logging study time.</p>' +
+        '<p class="text-body-sm text-muted mt-2">' + t('sl.empty') + '</p>' +
         '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary mt-3">' +
-        '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+        '<span class="material-symbols-outlined text-[18px]">add</span>' + t('sl.addSubject') + '</a></div>';
       return;
     }
 
@@ -83,20 +98,24 @@
       '<div class="bb-card p-6">' +
       '<div class="flex items-center gap-2 pb-4 border-b border-border-subtle">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">timer</span>' +
-      '<h2 class="text-title-md font-bold text-ink">Active Session</h2>' +
-      '<span class="text-caption text-muted ml-auto">Focus Interval</span></div>' +
-      '<div class="pt-4"><div class="bb-label">Select module to log</div>' +
+      '<h2 class="text-title-md font-bold text-ink">' + t('sl.active') + '</h2>' +
+      '<span class="text-caption text-muted ml-auto">' + t('sl.focusInterval') + '</span></div>' +
+      '<div class="pt-4"><div class="bb-label">' + t('sl.selectModule') + '</div>' +
       '<div class="flex flex-wrap gap-2">' + chips + '</div></div>' +
       '<div class="text-center py-6">' +
       '<div id="timer-display" class="text-display font-bold text-ink num tracking-tight">' +
       clock(BB.timer.elapsed()) + '</div>' +
-      '<div class="text-caption text-muted mt-1">' + state().term.label + ' • Week ' +
-      BB.dash.currentWeek(new Date()) + ' • Target ' + state().settings.weeklyStudyTarget + ' hrs/week</div></div>' +
+      '<div class="text-caption text-muted mt-1">' +
+      t('sl.meta', {
+        term: BB.ui.termLabel(state()),
+        week: BB.dash.currentWeek(new Date()),
+        target: state().settings.weeklyStudyTarget
+      }) + '</div></div>' +
       '<div class="flex items-center justify-center gap-3">' +
       '<button type="button" id="timer-start" class="bb-btn bb-btn-primary"' + (running ? ' disabled' : '') + '>' +
-      '<span class="material-symbols-outlined text-[18px]">play_arrow</span>Start</button>' +
+      '<span class="material-symbols-outlined text-[18px]">play_arrow</span>' + t('sl.start') + '</button>' +
       '<button type="button" id="timer-stop" class="bb-btn bb-btn-ghost"' + (running ? '' : ' disabled') + '>' +
-      '<span class="material-symbols-outlined text-[18px]">stop</span>Stop</button></div></div>';
+      '<span class="material-symbols-outlined text-[18px]">stop</span>' + t('sl.stop') + '</button></div></div>';
   }
 
   function renderWeek() {
@@ -120,7 +139,8 @@
           '<div class="space-y-1">' +
           '<div class="flex items-center justify-between text-caption text-muted">' +
           '<span>' + subject.id + ' ' + subject.name.split(' ')[0] + '</span>' +
-          '<span class="font-semibold num" style="color:' + subject.color + '">' + (minutes / 60).toFixed(1) + ' hrs</span></div>' +
+          '<span class="font-semibold num" style="color:' + subject.color + '">' +
+          t('sl.hrs', { n: (minutes / 60).toFixed(1) }) + '</span></div>' +
           '<div class="w-full bg-border h-1.5 rounded-full overflow-hidden">' +
           '<div class="h-full rounded-full" style="width:' + pct + '%;background:' + subject.color + '"></div></div></div>'
         );
@@ -131,12 +151,13 @@
       '<div class="bb-card p-5">' +
       '<div class="flex items-center gap-2 pb-3 border-b border-border-subtle">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">bar_chart</span>' +
-      '<h2 class="text-title-md font-bold text-ink">This Week</h2></div>' +
+      '<h2 class="text-title-md font-bold text-ink">' + t('sl.thisWeek') + '</h2></div>' +
       '<div class="pt-3">' +
-      '<div class="text-caption text-muted">Target: ' + state().settings.weeklyStudyTarget +
-      ' hrs/week • Week ' + BB.dash.currentWeek(new Date()) + '</div>' +
+      '<div class="text-caption text-muted">' +
+      t('sl.targetMeta', { n: state().settings.weeklyStudyTarget, w: BB.dash.currentWeek(new Date()) }) + '</div>' +
       '<div class="text-headline-sm font-extrabold text-ink num mt-1">' + hoursLabel(total) +
-      ' <span class="text-body-sm font-normal text-muted">/ ' + state().settings.weeklyStudyTarget + 'h</span></div>' +
+      ' <span class="text-body-sm font-normal text-muted">' +
+      t('sl.target', { n: state().settings.weeklyStudyTarget }) + '</span></div>' +
       '<div class="w-full bg-border h-2 rounded-full overflow-hidden mt-2">' +
       '<div class="h-full rounded-full bg-primary" style="width:' +
       (target ? Math.min(100, (total / target) * 100) : 0) + '%"></div></div>' +
@@ -156,8 +177,8 @@
         '<div class="bb-card p-5">' +
         '<div class="flex items-center gap-2 pb-3 border-b border-border-subtle">' +
         '<span class="material-symbols-outlined text-[20px] text-primary">edit_note</span>' +
-        '<h2 class="text-title-md font-bold text-ink">Manual Entry</h2></div>' +
-        '<p class="text-body-sm text-muted pt-3">Add a subject to log sessions manually.</p></div>';
+        '<h2 class="text-title-md font-bold text-ink">' + t('sl.manual') + '</h2></div>' +
+        '<p class="text-body-sm text-muted pt-3">' + t('sl.manualEmpty') + '</p></div>';
       return;
     }
 
@@ -165,21 +186,22 @@
       '<div class="bb-card p-5">' +
       '<div class="flex items-center gap-2 pb-3 border-b border-border-subtle">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">edit_note</span>' +
-      '<h2 class="text-title-md font-bold text-ink">Manual Entry</h2></div>' +
-      '<p class="text-body-sm text-muted pt-3">Log offline sessions or group tutorial revisions directly.</p>' +
+      '<h2 class="text-title-md font-bold text-ink">' + t('sl.manual') + '</h2></div>' +
+      '<p class="text-body-sm text-muted pt-3">' + t('sl.manualHint') + '</p>' +
       '<form id="manual-form" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="m-subject">Subject</label>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="m-subject">' + t('sl.subject') + '</label>' +
       '<select id="m-subject" class="bb-input">' + options + '</select></div>' +
-      '<div><label class="bb-label" for="m-minutes">Duration (minutes)</label>' +
+      '<div><label class="bb-label" for="m-minutes">' + t('sl.duration') + '</label>' +
       '<input id="m-minutes" class="bb-input num" type="number" min="1" max="600" step="1" value="60" required>' +
-      '<p class="text-caption text-muted mt-1.5">Any whole number of minutes, e.g. 30, 45, 60 or 90.</p></div>' +
-      '<div><label class="bb-label" for="m-date">Date</label>' +
+      '<p class="text-caption text-muted mt-1.5">' + t('sl.durationHint') + '</p></div>' +
+      '<div><label class="bb-label" for="m-date">' + t('sl.date') + '</label>' +
       '<input id="m-date" class="bb-input" type="date" value="' + today + '" required></div>' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="m-note">Notes</label>' +
-      '<input id="m-note" class="bb-input" type="text" placeholder="e.g. Tutorial sheet 1 revision"></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="m-note">' + t('sl.notes') + '</label>' +
+      '<input id="m-note" class="bb-input" type="text" placeholder="' +
+      esc(t('sl.notesPlaceholder')) + '"></div>' +
       '<div class="sm:col-span-2 flex justify-end">' +
       '<button type="submit" class="bb-btn bb-btn-primary">' +
-      '<span class="material-symbols-outlined text-[18px]">add</span>Add session</button></div>' +
+      '<span class="material-symbols-outlined text-[18px]">add</span>' + t('sl.addSession') + '</button></div>' +
       '</form></div>';
   }
 
@@ -201,23 +223,23 @@
               '<div class="text-caption text-muted truncate">' + session.startedAt.slice(0, 10) +
               (session.note ? ' • ' + session.note : '') + '</div></div></div>' +
               '<button type="button" class="text-muted hover:text-alert transition-colors" data-delete="' +
-              session.id + '" title="Delete session">' +
+              session.id + '" title="' + t('sl.deleteSession') + '">' +
               '<span class="material-symbols-outlined text-[18px]">delete</span></button></div>'
             );
           })
           .join('')
       : '<div class="px-5 py-8 text-center">' +
         '<span class="material-symbols-outlined text-[28px] text-placeholder">history_toggle_off</span>' +
-        '<p class="text-body-sm text-muted mt-2">No sessions yet</p>' +
-        '<p class="text-caption text-muted mt-1">Start the timer or add a session manually.</p></div>';
+        '<p class="text-body-sm text-muted mt-2">' + t('sl.historyEmpty') + '</p>' +
+        '<p class="text-caption text-muted mt-1">' + t('sl.historyHint') + '</p></div>';
 
     document.getElementById('history').innerHTML =
       '<div class="bb-card overflow-hidden">' +
       '<div class="px-5 py-4 border-b border-border flex items-center justify-between gap-3">' +
       '<div class="flex items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">history</span>' +
-      '<h2 class="text-title-md font-bold text-ink">Session History</h2></div>' +
-      '<span class="text-caption text-muted">' + sessions.length + ' Sessions</span></div>' +
+      '<h2 class="text-title-md font-bold text-ink">' + t('sl.history') + '</h2></div>' +
+      '<span class="text-caption text-muted">' + tn('sl.count', sessions.length) + '</span></div>' +
       body + '</div>';
   }
 
@@ -261,13 +283,13 @@
       var seconds = BB.timer.stop();
       var subject = currentSubject();
       if (!subject) {
-        BB.ui.toast('Add a subject before logging a session');
+        BB.ui.toast(t('sl.toast.noSubject'));
       } else if (seconds < 60) {
-        BB.ui.toast('Session under a minute was discarded');
+        BB.ui.toast(t('sl.toast.tooShort'));
       } else {
         var startedAt = new Date(Date.now() - seconds * 1000).toISOString();
         addSession(subject.id, Math.round(seconds / 60), startedAt, '');
-        BB.ui.toast('Session saved');
+        BB.ui.toast(t('sl.toast.saved'));
       }
       render();
       return;
@@ -283,13 +305,13 @@
       });
       if (index < 0) return;
       var removed = JSON.parse(JSON.stringify(sessions[index]));
-      var label = hoursLabel(removed.minutes) + ' on ' + removed.startedAt.slice(0, 10);
+      var label = hoursLabel(removed.minutes) + ' · ' + removed.startedAt.slice(0, 10);
 
       BB.ui
         .confirm({
-          title: 'Delete this session?',
-          message: label + ' will be removed from your study log.',
-          confirmLabel: 'Delete session',
+          title: t('sl.confirm.title'),
+          message: t('sl.confirm.body', { label: label }),
+          confirmLabel: t('sl.confirm.ok'),
           danger: true
         })
         .then(function (ok) {
@@ -300,14 +322,14 @@
             });
           });
           render();
-          BB.ui.toast('Session deleted', {
-            actionLabel: 'Undo',
+          BB.ui.toast(t('sl.toast.deleted'), {
+            actionLabel: t('common.undo'),
             onAction: function () {
               BB.store.update(function (data) {
                 data.studySessions.splice(Math.min(index, data.studySessions.length), 0, removed);
               });
               render();
-              BB.ui.toast('Session restored');
+              BB.ui.toast(t('sl.toast.restored'));
             }
           });
         });
@@ -322,15 +344,15 @@
     var date = document.getElementById('m-date').value;
     var note = document.getElementById('m-note').value.trim();
     if (!subjectId) {
-      BB.ui.toast('Add a subject before logging a session');
+      BB.ui.toast(t('sl.toast.noSubject'));
       return;
     }
     if (!minutes || minutes < 1) {
-      BB.ui.toast('Enter a duration in minutes');
+      BB.ui.toast(t('sl.toast.duration'));
       return;
     }
     addSession(subjectId, minutes, new Date(date + 'T12:00:00').toISOString(), note);
-    BB.ui.toast('Session added');
+    BB.ui.toast(t('sl.toast.added'));
     render();
   });
 

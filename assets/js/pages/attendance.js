@@ -2,7 +2,9 @@
   'use strict';
 
   var BB = window.BB;
-  var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var t = BB.i18n.t;
+  var tn = BB.i18n.tn;
+  var DAY_KEYS = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'];
 
   /* 記録対象のコマと日付は科目ごとに保持する。再描画で選択が戻らないように。 */
   var pickedSession = {};
@@ -21,18 +23,17 @@
     var count = data.subjects.length;
     var threshold = data.settings.attendanceThreshold;
     return {
-      title: 'Attendance',
+      title: t('att.title'),
       subtitle: count
-        ? 'Monitor attendance across your ' + count + ' module' + (count === 1 ? '' : 's') +
-          ' and maintain the ' + threshold + '% threshold for MMU exam eligibility.'
-        : 'Track attendance per module and keep the ' + threshold + '% threshold for MMU exam eligibility.'
+        ? tn('att.subtitle', count, { n: count, t: threshold })
+        : t('att.subtitleEmpty', { t: threshold })
     };
   }
 
-  BB.ui.mount({ title: 'Attendance', head: headOptions() });
+  BB.ui.mount({ title: t('att.title'), head: headOptions() });
 
   function sessionLabel(session) {
-    return DAY_NAMES[session.day] + ' ' + session.start + '–' + session.end + ' ' + session.type +
+    return t(DAY_KEYS[session.day]) + ' ' + session.start + '–' + session.end + ' ' + session.type +
       (session.room ? ' · ' + session.room : '');
   }
 
@@ -67,15 +68,15 @@
     if (held === 0) {
       tone = 'border-border bg-surface text-muted';
       icon = 'info';
-      text = 'No sessions held yet — attendance tracking starts in Week 1.';
+      text = t('att.noSessions');
     } else if (below === 0) {
       tone = 'bb-status-ok';
       icon = 'verified_user';
-      text = 'Status: Exam Eligible (All Subjects)';
+      text = t('att.eligible');
     } else {
       tone = 'bb-status-alert';
       icon = 'warning';
-      text = 'Status: ' + below + ' module' + (below === 1 ? '' : 's') + ' below the ' + threshold + '% threshold';
+      text = tn('att.below', below, { n: below, t: threshold });
     }
 
     host.innerHTML =
@@ -89,24 +90,23 @@
       '<div class="bb-card p-4 flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">gavel</span>' +
       '<div class="text-body-sm text-body">' +
-      '<span class="font-semibold text-ink">MMU Attendance Policy:</span> ' +
-      'Minimum ' + threshold + '% total attendance is required per subject to sit for final examinations. ' +
-      'Falling below ' + threshold + '% triggers an automatic exam bar.</div></div>';
+      '<span class="font-semibold text-ink">' + t('att.policyTitle') + '</span> ' +
+      t('att.policyBody', { t: threshold }) + '</div></div>';
   }
 
   /* 記録するコマを選ばせる。以前は「どの授業の分か」を選べず誤タップがそのまま残った。 */
   function sessionPicker(subject) {
     if (!subject.sessions.length) {
       return (
-        '<div><label class="bb-label">Session</label>' +
-        '<select class="bb-input" disabled><option>No sessions defined</option></select>' +
-        '<p class="text-caption text-muted mt-1.5">Add weekly sessions in the Subject Editor to record per class.</p></div>'
+        '<div><label class="bb-label">' + t('att.session') + '</label>' +
+        '<select class="bb-input" disabled><option>' + t('att.noSessionsDefined') + '</option></select>' +
+        '<p class="text-caption text-muted mt-1.5">' + t('att.addSessionsHint') + '</p></div>'
       );
     }
     var selected = pickedSession[subject.id];
     if (selected === undefined) selected = 0;
     return (
-      '<div><label class="bb-label">Session</label>' +
+      '<div><label class="bb-label">' + t('att.session') + '</label>' +
       '<select class="bb-input" data-session-picker="' + subject.id + '">' +
       subject.sessions
         .map(function (session, index) {
@@ -124,9 +124,9 @@
       host.innerHTML =
         '<div class="bb-card p-8 text-center lg:col-span-2">' +
         '<span class="material-symbols-outlined text-[28px] text-placeholder">rule</span>' +
-        '<p class="text-body-sm text-muted mt-2">No subjects to track yet.</p>' +
+        '<p class="text-body-sm text-muted mt-2">' + t('att.empty') + '</p>' +
         '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary mt-3">' +
-        '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+        '<span class="material-symbols-outlined text-[18px]">add</span>' + t('att.addSubject') + '</a></div>';
       return;
     }
     host.innerHTML = stats
@@ -139,9 +139,8 @@
         var noteIcon = attendance.atRisk ? 'warning' : 'check_circle';
         var noteColor = attendance.atRisk ? 'var(--bb-alert)' : 'var(--bb-success)';
         var note = attendance.atRisk
-          ? 'You are below the ' + threshold + '% threshold. Attend the next sessions to recover.'
-          : 'You can miss <strong>' + attendance.allowed + ' more session' + (attendance.allowed === 1 ? '' : 's') +
-            '</strong> before dropping below ' + threshold + '%.';
+          ? t('att.belowNote', { t: threshold })
+          : tn('att.canMiss', attendance.allowed, { n: attendance.allowed, t: threshold });
         var lastEntry = (subject.attendance && subject.attendance.log && subject.attendance.log.length)
           ? subject.attendance.log[subject.attendance.log.length - 1]
           : null;
@@ -151,20 +150,20 @@
           '<div class="flex items-start justify-between gap-3">' +
           '<div class="min-w-0">' +
           '<div class="flex items-center gap-2">' + BB.ui.solidChip(subject.color, subject.id) +
-          '<span class="text-caption text-muted">· ' + subject.credits + ' Credits</span></div>' +
+          '<span class="text-caption text-muted">· ' + t('att.credits', { n: subject.credits }) + '</span></div>' +
           '<h3 class="text-title-md font-bold text-ink mt-1.5">' + subject.name + '</h3>' +
-          '<p class="text-caption text-muted">' + subject.sessions.length + ' session' +
-          (subject.sessions.length === 1 ? '' : 's') + ' per week · ' +
-          attendance.total + ' trimester sessions total</p></div>' +
+          '<p class="text-caption text-muted">' +
+          tn('att.perWeek', subject.sessions.length, { n: subject.sessions.length, total: attendance.total }) +
+          '</p></div>' +
           '<div class="text-right shrink-0">' +
           '<div class="text-headline-md font-extrabold num" style="color:' + rateColor + '">' + rateText + '</div>' +
-          '<div class="text-caption text-muted">Current Standing</div></div></div>' +
+          '<div class="text-caption text-muted">' + t('att.standing') + '</div></div></div>' +
           '<div class="grid grid-cols-2 gap-3 mt-4">' +
           '<div class="bg-canvas rounded-control p-3 border border-border-subtle">' +
-          '<div class="text-caption text-muted">Sessions Attended</div>' +
+          '<div class="text-caption text-muted">' + t('att.attended') + '</div>' +
           '<div class="text-title-md font-bold text-ink num">' + attendance.attended + ' / ' + attendance.held + '</div></div>' +
           '<div class="bg-canvas rounded-control p-3 border border-border-subtle">' +
-          '<div class="text-caption text-muted">Absences Recorded</div>' +
+          '<div class="text-caption text-muted">' + t('att.absences') + '</div>' +
           '<div class="text-title-md font-bold text-ink num">' + attendance.absences + '</div></div></div>' +
           '<div class="mt-3 flex items-start gap-2 text-body-sm text-body">' +
           '<span class="material-symbols-outlined text-[18px]" style="color:' + noteColor + '">' + noteIcon + '</span>' +
@@ -172,18 +171,20 @@
           '<div class="mt-3 pt-3 border-t border-border-subtle space-y-2.5">' +
           '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' +
           sessionPicker(subject) +
-          '<div><label class="bb-label">Date</label>' +
+          '<div><label class="bb-label">' + t('att.date') + '</label>' +
           '<input class="bb-input num" type="date" data-session-date="' + subject.id + '" value="' +
           (pickedDate[subject.id] || today()) + '"></div>' +
           '</div>' +
           '<div class="flex flex-wrap items-center justify-between gap-2">' +
-          '<span class="text-caption text-muted">Last session: ' +
-          (lastEntry ? lastEntry.date + (lastEntry.session ? ' · ' + lastEntry.session : '') : '—') + '</span>' +
+          '<span class="text-caption text-muted">' +
+          t('att.lastSession', {
+            value: lastEntry ? lastEntry.date + (lastEntry.session ? ' · ' + lastEntry.session : '') : '—'
+          }) + '</span>' +
           '<div class="flex items-center gap-2">' +
           '<button type="button" class="bb-btn bb-btn-ghost" data-mark="present" data-subject="' + subject.id + '">' +
-          '<span class="material-symbols-outlined text-[18px]">check</span>Mark attended</button>' +
+          '<span class="material-symbols-outlined text-[18px]">check</span>' + t('att.markPresent') + '</button>' +
           '<button type="button" class="bb-btn bb-btn-ghost" data-mark="absent" data-subject="' + subject.id + '">' +
-          '<span class="material-symbols-outlined text-[18px]">event_busy</span>Mark absent</button>' +
+          '<span class="material-symbols-outlined text-[18px]">event_busy</span>' + t('att.markAbsent') + '</button>' +
           '</div></div></div></div>'
         );
       })
@@ -216,9 +217,10 @@
               '<div class="flex items-center gap-3 shrink-0">' +
               '<span class="text-caption text-muted num">' + item.entry.date + '</span>' +
               '<span class="bb-chip" style="background:' + (present ? 'var(--bb-success-surface)' : 'var(--bb-alert-surface)') + ';color:' +
-              (present ? 'var(--bb-success)' : 'var(--bb-alert)') + '">' + (present ? 'Present' : 'Absent') + '</span>' +
+              (present ? 'var(--bb-success)' : 'var(--bb-alert)') + '">' +
+              (present ? t('att.present') : t('att.absent')) + '</span>' +
               '<button type="button" class="text-muted hover:text-alert transition-colors" data-remove-entry="' +
-              item.subject.id + '" data-entry-index="' + item.index + '" title="Delete this record">' +
+              item.subject.id + '" data-entry-index="' + item.index + '" title="' + t('att.deleteRecord') + '">' +
               '<span class="material-symbols-outlined text-[18px]">delete</span></button>' +
               '</div></div>'
             );
@@ -226,11 +228,11 @@
           .join('')
       : '<div class="px-5 py-8 text-center">' +
         '<span class="material-symbols-outlined text-[28px] text-placeholder">task_alt</span>' +
-        '<p class="text-body-sm text-muted mt-2">No attendance recorded yet.</p>' +
+        '<p class="text-body-sm text-muted mt-2">' + t('att.logEmpty') + '</p>' +
         '<p class="text-caption text-muted mt-1">' +
         (data.subjects.length
-          ? 'Mark a session above to start the log for ' + data.term.label + '.'
-          : 'Add a subject to start tracking attendance.') +
+          ? t('att.logEmptyHint', { term: BB.ui.termLabel(data) })
+          : t('att.logEmptyNoSubject')) +
         '</p></div>';
 
     document.getElementById('absence-log').innerHTML =
@@ -238,8 +240,8 @@
       '<div class="px-5 py-4 border-b border-border flex items-center justify-between gap-3">' +
       '<div class="flex items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">history</span>' +
-      '<h2 class="text-title-md font-bold text-ink">Attendance Log</h2>' +
-      '<span class="text-caption text-muted">' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + '</span></div></div>' +
+      '<h2 class="text-title-md font-bold text-ink">' + t('att.logTitle') + '</h2>' +
+      '<span class="text-caption text-muted">' + tn('att.entry', entries.length) + '</span></div></div>' +
       body + '</div>';
   }
 
@@ -272,13 +274,14 @@
     render();
 
     BB.ui.toast(
-      (status === 'present' ? 'Marked attended' : 'Marked absent') + ' · ' + date + (label ? ' · ' + label : ''),
+      (status === 'present' ? t('att.toast.present') : t('att.toast.absent')) + ' · ' + date +
+        (label ? ' · ' + label : ''),
       {
-        actionLabel: 'Undo',
+        actionLabel: t('common.undo'),
         onAction: function () {
           BB.attendance.unmark(subjectId, entryIndex);
           render();
-          BB.ui.toast('Record removed');
+          BB.ui.toast(t('att.toast.removed'));
         }
       }
     );
@@ -297,18 +300,22 @@
 
     BB.ui
       .confirm({
-        title: 'Delete this attendance record?',
-        message: subject.id + ' · ' + entry.date + (entry.session ? ' · ' + entry.session : '') +
-          ' (' + (entry.status === 'present' ? 'Present' : 'Absent') + ') will be removed and the totals recalculated.',
-        confirmLabel: 'Delete record',
+        title: t('att.confirm.title'),
+        message: t('att.confirm.body', {
+          code: subject.id,
+          date: entry.date,
+          session: entry.session ? ' · ' + entry.session : '',
+          status: entry.status === 'present' ? t('att.present') : t('att.absent')
+        }),
+        confirmLabel: t('att.confirm.ok'),
         danger: true
       })
       .then(function (ok) {
         if (!ok) return;
         BB.attendance.unmark(subjectId, index);
         render();
-        BB.ui.toast('Record deleted', {
-          actionLabel: 'Undo',
+        BB.ui.toast(t('att.toast.deleted'), {
+          actionLabel: t('common.undo'),
           onAction: function () {
             BB.store.update(function (data) {
               var target = null;
@@ -324,7 +331,7 @@
               else target.attendance.absences += 1;
             });
             render();
-            BB.ui.toast('Record restored');
+            BB.ui.toast(t('att.toast.restored'));
           }
         });
       });

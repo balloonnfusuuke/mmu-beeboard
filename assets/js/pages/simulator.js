@@ -2,6 +2,8 @@
   'use strict';
 
   var BB = window.BB;
+  var t = BB.i18n.t;
+  var tn = BB.i18n.tn;
   var TARGETS = [
     { label: 'A+ (85%)', value: 85 },
     { label: 'A (80%)', value: 80 },
@@ -25,10 +27,10 @@
   var active = requestedSubject();
 
   BB.ui.mount({
-    title: 'Grade Simulator',
+    title: t('sim.title'),
     head: {
-      title: 'Grade Simulator',
-      subtitle: 'Enter coursework marks to project the grade and the final exam score still required.',
+      title: t('sim.title'),
+      subtitle: t('sim.subtitle'),
       actions: active
         ? '<select id="subject-switch" class="bb-input" style="height:40px;width:auto">' +
           state()
@@ -48,9 +50,9 @@
     document.getElementById('subjects').innerHTML =
       '<div class="bb-card p-8 text-center">' +
       '<span class="material-symbols-outlined text-[28px] text-placeholder">calculate</span>' +
-      '<p class="text-body-sm text-muted mt-2">No subjects to simulate yet.</p>' +
+      '<p class="text-body-sm text-muted mt-2">' + t('sim.empty') + '</p>' +
       '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-primary mt-3">' +
-      '<span class="material-symbols-outlined text-[18px]">add</span>Add a subject</a></div>';
+      '<span class="material-symbols-outlined text-[18px]">add</span>' + t('sim.addSubject') + '</a></div>';
     renderSidebar();
     return;
   }
@@ -161,50 +163,47 @@
     document.getElementById('metrics').innerHTML =
       '<div class="bb-card p-6"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-center">' +
       '<div class="lg:border-r border-border pb-6 md:pb-0 lg:pr-6">' +
-      '<span class="text-caption text-muted block mb-1">Predicted Trimester GPA</span>' +
+      '<span class="text-caption text-muted block mb-1">' + t('sim.gpa') + '</span>' +
       '<div class="flex items-baseline gap-2">' +
       '<span class="text-display font-bold text-ink num">' + (gpa === null ? '—' : gpa.toFixed(2)) + '</span>' +
-      '<span class="text-label-md text-muted">' + (gpa === null ? 'No scores yet' : 'of 4.00') + '</span></div>' +
+      '<span class="text-label-md text-muted">' + (gpa === null ? t('sim.noScores') : t('sim.ofFour')) + '</span></div>' +
       '<span class="inline-flex items-center gap-1 mt-2 text-label-sm text-muted bg-surface-subtle px-2.5 py-1 rounded">' +
       '<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>' +
       (graded.length
-        ? graded.length + ' of ' + subjects.length + ' module' + (subjects.length === 1 ? '' : 's') + ' graded' +
-          (provisional ? ' — provisional' : '')
-        : 'Awaiting coursework marks') +
+        ? tn('sim.graded', graded.length, { total: subjects.length }) +
+          (provisional ? t('sim.provisional') : '')
+        : t('sim.awaiting')) +
       '</span>' +
       (provisional
-        ? '<p class="text-caption text-muted mt-2">Only graded modules are counted, so this figure will move ' +
-          'as the remaining marks come in.</p>'
+        ? '<p class="text-caption text-muted mt-2">' + t('sim.provisionalNote') + '</p>'
         : '') +
       '</div>' +
       '<div class="lg:border-r border-border pb-6 md:pb-0 lg:pr-6">' +
       '<div class="flex items-center justify-between mb-1">' +
-      '<span class="text-caption text-muted">Scholarship Retention Threshold</span>' +
-      '<span class="text-label-sm font-semibold text-alert">JPA / High Achiever</span></div>' +
+      '<span class="text-caption text-muted">' + t('sim.threshold') + '</span>' +
+      '<span class="text-label-sm font-semibold text-alert">' + t('sim.scholarship') + '</span></div>' +
       '<div class="flex items-baseline gap-2">' +
       '<span class="text-headline-lg font-bold text-ink num">' + goal.toFixed(2) + '</span>' +
-      '<span class="text-caption text-muted">Min. Required</span></div>' +
-      '<p class="text-body-sm text-muted mt-2 leading-tight">Requires continuous maintenance each trimester.</p></div>' +
+      '<span class="text-caption text-muted">' + t('sim.minRequired') + '</span></div>' +
+      '<p class="text-body-sm text-muted mt-2 leading-tight">' + t('sim.maintenance') + '</p></div>' +
       '<div class="lg:border-r border-border pb-6 md:pb-0 lg:pr-6">' +
       '<div class="flex items-center justify-between mb-1">' +
-      '<span class="text-caption text-muted">Distance to Target</span>' +
+      '<span class="text-caption text-muted">' + t('sim.distance') + '</span>' +
       '<span class="text-label-sm font-semibold ' + (distance === null ? 'text-muted' : distance >= 0 ? 'text-primary' : 'text-alert') + '">' +
       (distance === null ? '—' : (distance >= 0 ? '+' : '') + distance.toFixed(2)) + '</span></div>' +
       '<div class="relative w-full h-3 bg-surface-subtle rounded-full mt-3 overflow-hidden">' +
       '<div class="h-full bg-primary rounded-full" style="width:' + gauge + '%"></div>' +
-      '<div class="absolute top-0 bottom-0 w-1 bg-alert z-10" style="left:' + cutoff + '%" title="Scholarship minimum ' +
-      goal.toFixed(2) + '"></div></div>' +
+      '<div class="absolute top-0 bottom-0 w-1 bg-alert z-10" style="left:' + cutoff + '%" title="' +
+      t('sim.cutoffTitle', { n: goal.toFixed(2) }) + '"></div></div>' +
       '<div class="flex justify-between items-center text-caption text-muted mt-2">' +
-      '<span>' + scaleMin.toFixed(2) + '</span><span class="text-alert font-semibold">' + goal.toFixed(2) +
-      ' Cutoff</span><span>' + scaleMax.toFixed(2) + '</span></div></div>' +
-      '<div><span class="text-caption text-muted block mb-1">Modules Counted</span>' +
+      '<span>' + scaleMin.toFixed(2) + '</span><span class="text-alert font-semibold">' +
+      t('sim.cutoff', { n: goal.toFixed(2) }) + '</span><span>' + scaleMax.toFixed(2) + '</span></div></div>' +
+      '<div><span class="text-caption text-muted block mb-1">' + t('sim.modulesCounted') + '</span>' +
       '<div class="flex items-baseline gap-2">' +
       '<span class="text-headline-lg font-bold text-ink num">' + graded.length + ' / ' + subjects.length + '</span>' +
-      '<span class="text-caption text-muted">' + credits + ' of ' + totalCredits + ' Cr.</span></div>' +
+      '<span class="text-caption text-muted">' + t('sim.creditsOf', { a: credits, b: totalCredits }) + '</span></div>' +
       '<p class="text-caption text-muted mt-2">' +
-      (gpa === null
-        ? 'Enter marks for every component of a module to predict its grade.'
-        : 'A module counts once all of its components have marks.') +
+      (gpa === null ? t('sim.enterAll') : t('sim.countsWhenComplete')) +
       '</p></div></div></div>';
   }
 
@@ -217,24 +216,24 @@
     return (
       '<tr class="' + (isExam ? 'bg-surface-sunken/60' : 'hover:bg-canvas') + ' transition-colors">' +
       '<td class="py-3 pr-4"><span class="font-semibold text-ink block">' + assessment.name + '</span>' +
-      '<span class="text-caption text-muted">Week ' + assessment.week + '</span></td>' +
+      '<span class="text-caption text-muted">' + t('sim.week', { n: assessment.week }) + '</span></td>' +
       '<td class="py-3 px-4 text-muted text-label-md num">' + assessment.weight + '%</td>' +
       '<td class="py-3 px-4"><div class="flex items-center gap-2">' +
       '<input class="bb-input num" style="height:36px;width:88px;text-align:center;padding:0 .5rem" type="number"' +
       ' min="0" max="' + assessment.max + '" step="0.5" placeholder="—"' +
       ' value="' + (hasScore ? score : '') + '"' +
-      ' aria-label="Score obtained for ' + assessment.name + '"' +
+      ' aria-label="' + t('sim.scoreAria', { name: assessment.name }) + '"' +
       ' data-subject="' + subject.id + '" data-assessment="' + assessment.id + '">' +
       '<span class="text-caption text-muted num">/</span>' +
       '<input class="bb-input num" style="height:36px;width:64px;text-align:center;padding:0 .375rem" type="number"' +
-      ' min="1" step="1" value="' + assessment.max + '" title="Full marks for this component"' +
-      ' aria-label="Full marks for ' + assessment.name + '"' +
+      ' min="1" step="1" value="' + assessment.max + '" title="' + t('sim.maxTitle') + '"' +
+      ' aria-label="' + t('sim.maxAria', { name: assessment.name }) + '"' +
       ' data-max="' + assessment.id + '" data-subject="' + subject.id + '"></div></td>' +
       '<td class="py-3 px-4 font-semibold text-ink num" data-weighted="' + assessment.id + '">' + contribution + '</td>' +
       '<td class="py-3 pl-4 text-right">' +
       '<span class="bb-chip" data-status="' + assessment.id + '" style="background:' + (hasScore ? 'var(--bb-success-surface)' : 'var(--bb-surface-subtle)') +
       ';color:' + (hasScore ? 'var(--bb-success)' : 'var(--bb-text-muted)') + '">' +
-      (hasScore ? 'Graded' : 'Pending') + '</span></td></tr>'
+      (hasScore ? t('sim.gradedStatus') : t('sim.pendingStatus')) + '</span></td></tr>'
     );
   }
 
@@ -243,20 +242,18 @@
   function neededHtml(result) {
     var needed = result.needed;
     if (!result.published) {
-      return '<span class="text-muted">Assessment structure not published yet.</span>';
+      return '<span class="text-muted">' + t('sim.notPublished') + '</span>';
     }
     if (!needed) {
-      return '<span class="text-muted">No final exam component — set one component\'s Type to ' +
-        '&ldquo;Final exam&rdquo; in the Subject Editor.</span>';
+      return '<span class="text-muted">' + t('sim.noFinal') + '</span>';
     }
-    if (needed.secured) return '<span class="text-success font-bold">Already secured</span>';
-    if (!needed.reachable) return '<span class="text-alert font-bold">Not reachable</span>';
+    if (needed.secured) return '<span class="text-success font-bold">' + t('sim.alreadySecured') + '</span>';
+    if (!needed.reachable) return '<span class="text-alert font-bold">' + t('sim.notReachable') + '</span>';
     return '<span class="text-primary font-bold num">' + needed.marks.toFixed(1) + ' / ' + needed.max + '</span>';
   }
 
   function expandedCard(subject) {
     var result = compute(subject);
-    var chip = BB.color.chip(subject.color);
     var neededText = neededHtml(result);
 
     var rows = subject.assessments
@@ -270,41 +267,40 @@
       '<div class="p-6 border-b border-border">' +
       '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
       '<div><div class="flex items-center gap-2 mb-1.5">' + BB.ui.solidChip(subject.color, subject.id) +
-      '<span class="text-caption text-muted">' + subject.credits + ' Credit Hours</span>' +
+      '<span class="text-caption text-muted">' + t('sim.creditHours', { n: subject.credits }) + '</span>' +
       '<span class="w-1.5 h-1.5 rounded-full bg-border"></span>' +
       '<span class="text-caption text-muted">' + subject.faculty + '</span></div>' +
       '<h3 class="text-headline-sm font-bold text-ink">' + subject.name + '</h3></div>' +
       '<div class="flex items-center gap-4 bg-canvas px-4 py-2.5 rounded-control border border-border">' +
-      '<div><span class="text-caption text-muted block">Current Secured</span>' +
+      '<div><span class="text-caption text-muted block">' + t('sim.currentSecured') + '</span>' +
       '<span class="text-label-md font-bold text-ink num" data-secured="' + subject.id + '">' + result.secured.toFixed(1) + ' / ' +
       result.possible + ' (' + (result.possible ? ((result.secured / result.possible) * 100).toFixed(1) : '0.0') + '%)</span></div>' +
       '<div class="h-8 w-px bg-border"></div>' +
-      '<div><span class="text-caption text-muted block">Predicted Grade</span>' +
+      '<div><span class="text-caption text-muted block">' + t('sim.predictedGrade') + '</span>' +
       '<span class="text-label-md font-bold num" data-predicted="' + subject.id + '" style="color:' + (result.predicted ? subject.color : 'var(--bb-text-muted)') + '">' +
       (result.predicted ? result.predicted.grade : '—') + '</span></div></div></div></div>' +
       '<div class="p-6 space-y-5">' +
-      '<h4 class="text-title-md font-semibold text-ink">Continuous Assessments &amp; Weighted Components</h4>' +
+      '<h4 class="text-title-md font-semibold text-ink">' + t('sim.assessmentsTitle') + '</h4>' +
       (result.published
         ? '<div class="overflow-x-auto bb-scroll"><table class="w-full text-left text-body-md border-collapse">' +
           '<thead><tr class="border-b border-border text-caption text-muted">' +
-          '<th class="py-2.5 pr-4 font-semibold">Component</th>' +
-          '<th class="py-2.5 px-4 font-semibold">Weight</th>' +
-          '<th class="py-2.5 px-4 font-semibold">Score / Full marks</th>' +
-          '<th class="py-2.5 px-4 font-semibold">Weighted</th>' +
-          '<th class="py-2.5 pl-4 text-right font-semibold">Status</th></tr></thead>' +
+          '<th class="py-2.5 pr-4 font-semibold">' + t('sim.th.component') + '</th>' +
+          '<th class="py-2.5 px-4 font-semibold">' + t('sim.th.weight') + '</th>' +
+          '<th class="py-2.5 px-4 font-semibold">' + t('sim.th.score') + '</th>' +
+          '<th class="py-2.5 px-4 font-semibold">' + t('sim.th.weighted') + '</th>' +
+          '<th class="py-2.5 pl-4 text-right font-semibold">' + t('sim.th.status') + '</th></tr></thead>' +
           '<tbody class="divide-y divide-border-subtle">' + rows + '</tbody></table></div>' +
-          '<p class="text-caption text-muted">The second box is the denominator (full marks) for that component, ' +
-          'not a button. Marks save as you type.</p>'
+          '<p class="text-caption text-muted">' + t('sim.denominatorNote') + '</p>'
         : '<div class="rounded-control border border-border bg-canvas p-4 text-body-sm text-muted">' +
-          'The assessment structure for this module has not been published yet.</div>') +
+          t('sim.structureNotPublished') + '</div>') +
       '<div class="p-4 sm:p-5 rounded-card border border-primary/25 bg-surface-sunken flex flex-col md:flex-row md:items-center justify-between gap-4">' +
       '<div class="space-y-1">' +
       '<div class="flex flex-wrap items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">calculate</span>' +
-      '<span class="text-title-md font-bold text-ink">Final exam score needed for ' + target + '%:</span>' +
+      '<span class="text-title-md font-bold text-ink">' + t('sim.neededFor', { n: target }) + '</span>' +
       '<span data-needed="' + subject.id + '">' + neededText + '</span></div>' +
-      '<p class="text-body-sm text-muted" data-secured-line="' + subject.id + '">Current coursework secured: ' + result.secured.toFixed(2) + ' / ' +
-      result.possible + '%. Enter marks above to recompute the target buffer.</p></div>' +
+      '<p class="text-body-sm text-muted" data-secured-line="' + subject.id + '">' +
+      t('sim.securedLine', { a: result.secured.toFixed(2), b: result.possible }) + '</p></div>' +
       '<div class="flex items-center gap-2 shrink-0">' +
       TARGETS.map(function (option) {
         var on = option.value === target;
@@ -319,9 +315,12 @@
   function collapsedCard(subject) {
     var result = compute(subject);
     var summary = result.published
-      ? result.secured.toFixed(1) + ' / ' + result.possible + ' secured • ' +
-        subject.assessments.length + ' components'
-      : 'Assessment structure not published yet.';
+      ? t('sim.securedSummary', {
+          a: result.secured.toFixed(1),
+          b: result.possible,
+          n: subject.assessments.length
+        })
+      : t('sim.structureNotPublished');
 
     return (
       '<a href="simulator.html?subject=' + subject.id + '" class="bb-card bb-card-hover p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">' +
@@ -331,11 +330,11 @@
       '<div><div class="flex items-center gap-2">' +
       '<span class="text-label-sm font-bold" style="color:' + subject.color + '">' + subject.id + '</span>' +
       '<span class="text-title-md font-semibold text-ink">' + subject.name + '</span>' +
-      '<span class="text-caption text-muted">(' + subject.credits + ' Cr.)</span></div>' +
+      '<span class="text-caption text-muted">' + t('sim.cr', { n: subject.credits }) + '</span></div>' +
       '<p class="text-body-sm text-muted mt-0.5">' + summary + '</p></div></div>' +
       '<div class="flex items-center gap-3 self-end md:self-center">' +
       '<span class="bb-chip" style="background:var(--bb-surface-subtle);color:var(--bb-text-muted)">' +
-      (result.entered ? 'In progress' : 'No scores yet') + '</span>' +
+      (result.entered ? t('sim.inProgress') : t('sim.noScoresYet')) + '</span>' +
       '<span class="material-symbols-outlined text-[20px] text-muted">chevron_right</span></div></a>'
     );
   }
@@ -367,7 +366,7 @@
           '<span class="w-6 text-center font-bold ' + (isTarget ? 'text-primary' : 'text-ink') + '">' + entry.grade + '</span>' +
           '<span class="' + (isTarget ? 'text-ink font-medium' : 'text-muted') + '">' + entry.min + ' - ' + entry.max + '%</span></div>' +
           '<span class="font-semibold num ' + (isTarget ? 'text-primary' : 'text-ink') + '">' +
-          entry.point.toFixed(2) + ' GP' + (isTarget ? ' (Target)' : '') + '</span></div>'
+          entry.point.toFixed(2) + ' ' + t('sim.gp') + (isTarget ? ' ' + t('sim.target') : '') + '</span></div>'
         );
       })
       .join('');
@@ -375,16 +374,14 @@
     document.getElementById('sidebar').innerHTML =
       '<div class="bb-card p-6">' +
       '<div class="flex items-center justify-between pb-4 border-b border-border">' +
-      '<div><h3 class="text-title-md font-semibold text-ink">MMU Grading Scale</h3>' +
-      '<p class="text-caption text-muted">Indicative bands — confirm with your faculty handbook</p></div>' +
+      '<div><h3 class="text-title-md font-semibold text-ink">' + t('sim.gradingScale') + '</h3>' +
+      '<p class="text-caption text-muted">' + t('sim.gradingHint') + '</p></div>' +
       '<span class="material-symbols-outlined text-muted">menu_book</span></div>' +
       '<div class="mt-4 space-y-1">' + rows + '</div>' +
-      '<p class="text-caption text-muted mt-3">(Target) marks the band that contains the ' + target +
-      '% target. A and A+ both carry 4.00 grade points, so the band only affects the percentage, not the GPA.</p>' +
+      '<p class="text-caption text-muted mt-3">' + t('sim.targetNote', { n: target }) + '</p>' +
       '<div class="mt-4 pt-4 border-t border-border text-caption text-muted flex items-start gap-2">' +
       '<span class="material-symbols-outlined text-[16px] text-alert shrink-0">info</span>' +
-      '<span>A minimum grade point average of ' + state().settings.cgpaTarget.toFixed(2) +
-      ' is mandatory across two consecutive trimesters to retain the full scholarship endowment.</span></div></div>';
+      '<span>' + t('sim.scholarshipNote', { n: state().settings.cgpaTarget.toFixed(2) }) + '</span></div></div>';
   }
 
   function render() {
@@ -452,7 +449,7 @@
 
       var status = document.querySelector('[data-status="' + assessment.id + '"]');
       if (status) {
-        status.textContent = hasScore ? 'Graded' : 'Pending';
+        status.textContent = hasScore ? t('sim.gradedStatus') : t('sim.pendingStatus');
         status.style.background = hasScore ? 'var(--bb-success-surface)' : 'var(--bb-surface-subtle)';
         status.style.color = hasScore ? 'var(--bb-success)' : 'var(--bb-text-muted)';
       }
@@ -480,8 +477,7 @@
 
     var line = document.querySelector('[data-secured-line="' + subjectId + '"]');
     if (line) {
-      line.textContent = 'Current coursework secured: ' + result.secured.toFixed(2) + ' / ' +
-        result.possible + '%. Enter marks above to recompute the target buffer.';
+      line.textContent = t('sim.securedLine', { a: result.secured.toFixed(2), b: result.possible });
     }
 
     renderMetrics();
@@ -526,7 +522,7 @@
       var clamped = saveMark(subjectId, input.getAttribute('data-assessment'), input.value.trim());
       if (clamped !== null) {
         input.value = clamped;
-        BB.ui.toast('Score capped at the full marks for this component');
+        BB.ui.toast(t('sim.toastCapped'));
       }
       refreshLive(subjectId);
       return;

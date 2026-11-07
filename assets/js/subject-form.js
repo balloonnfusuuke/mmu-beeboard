@@ -5,27 +5,29 @@
   'use strict';
 
   var BB = global.BB;
+  var t = BB.i18n.t;
+  var tn = BB.i18n.tn;
 
   var PRESETS = [
-    { hex: '#003DA5', name: 'MMU Blue' },
-    { hex: '#0E7490', name: 'Cyan' },
-    { hex: '#0F766E', name: 'Teal' },
-    { hex: '#15803D', name: 'Green' },
-    { hex: '#4D7C0F', name: 'Olive' },
-    { hex: '#E35205', name: 'Orange' },
-    { hex: '#BE185D', name: 'Pink' },
-    { hex: '#7C3AED', name: 'Purple' },
-    { hex: '#4338CA', name: 'Indigo' },
-    { hex: '#6D4C41', name: 'Brown' },
-    { hex: '#475569', name: 'Slate' }
+    { hex: '#003DA5', key: 'mmuBlue' },
+    { hex: '#0E7490', key: 'cyan' },
+    { hex: '#0F766E', key: 'teal' },
+    { hex: '#15803D', key: 'green' },
+    { hex: '#4D7C0F', key: 'olive' },
+    { hex: '#E35205', key: 'orange' },
+    { hex: '#BE185D', key: 'pink' },
+    { hex: '#7C3AED', key: 'purple' },
+    { hex: '#4338CA', key: 'indigo' },
+    { hex: '#6D4C41', key: 'brown' },
+    { hex: '#475569', key: 'slate' }
   ];
 
   var DAYS = [
-    { value: 1, label: 'Mon' },
-    { value: 2, label: 'Tue' },
-    { value: 3, label: 'Wed' },
-    { value: 4, label: 'Thu' },
-    { value: 5, label: 'Fri' }
+    { value: 1, key: 'mon' },
+    { value: 2, key: 'tue' },
+    { value: 3, key: 'wed' },
+    { value: 4, key: 'thu' },
+    { value: 5, key: 'fri' }
   ];
 
   function esc(value) {
@@ -57,7 +59,11 @@
       sessions: [],
       assessments: [],
       marks: {},
-      topics: { label: 'Module 1', title: 'Introduction', resource: 'Course outline' }
+      topics: {
+        label: t('form.defaultTopicLabel'),
+        title: t('form.defaultTopicTitle'),
+        resource: t('form.defaultTopicResource')
+      }
     };
   }
 
@@ -79,8 +85,8 @@
         var selected = preset.hex.toUpperCase() === String(color).toUpperCase();
         var owner = colorOwner(preset.hex, draft.id);
         return (
-          '<button type="button" data-color="' + preset.hex + '" title="' + esc(preset.name) +
-          (owner ? ' — in use by ' + esc(owner.id) : '') + '"' +
+          '<button type="button" data-color="' + preset.hex + '" title="' + esc(t('form.preset.' + preset.key)) +
+          (owner ? ' — ' + esc(t('form.inUseBy', { id: owner.id })) : '') + '"' +
           ' class="relative w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105"' +
           ' style="background:' + preset.hex + ';box-shadow:0 0 0 ' + (selected ? '3px' : '1px') + ' ' +
           (selected ? 'var(--bb-primary)' : 'var(--bb-border)') + '">' +
@@ -91,10 +97,12 @@
       }).join('') +
       '</div>' +
       '<div class="flex items-center gap-3 mt-3">' +
-      '<span class="text-caption text-muted">Custom HEX</span>' +
+      '<span class="text-caption text-muted">' + t('form.customHex') + '</span>' +
       '<input id="f-color" class="bb-input num" style="height:36px;width:120px" type="text" value="' + esc(color) + '">' +
       '<span class="w-6 h-6 rounded" style="background:' + esc(color) + '"></span>' +
-      '<span class="text-caption text-muted">' + (colorOwner(color, draft.id) ? 'In use by ' + esc(colorOwner(color, draft.id).id) : 'Available') + '</span>' +
+      '<span class="text-caption text-muted">' +
+      (colorOwner(color, draft.id) ? t('form.inUseBy', { id: colorOwner(color, draft.id).id }) : t('form.available')) +
+      '</span>' +
       '</div>'
     );
   }
@@ -109,26 +117,27 @@
   function sessionRow(session, index) {
     return (
       '<div class="grid grid-cols-12 gap-2 items-end pb-3 border-b border-border-subtle last:border-0" data-session="' + index + '">' +
-      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">Day</label>' +
+      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">' + t('common.day') + '</label>' +
       '<select class="bb-input" data-field="day">' +
       DAYS.map(function (day) {
         return '<option value="' + day.value + '"' + (session.day === day.value ? ' selected' : '') + '>' +
-          day.label + '</option>';
+          t('day.' + day.key) + '</option>';
       }).join('') + '</select></div>' +
-      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">Start</label>' +
+      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">' + t('common.start') + '</label>' +
       '<input class="bb-input num" type="time" value="' + esc(session.start) + '" data-field="start"></div>' +
-      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">End</label>' +
+      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">' + t('common.end') + '</label>' +
       '<input class="bb-input num" type="time" value="' + esc(session.end) + '" data-field="end"></div>' +
-      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">Type</label>' +
+      '<div class="col-span-6 sm:col-span-2"><label class="bb-label">' + t('common.type') + '</label>' +
       '<select class="bb-input" data-field="type">' +
       ['LEC', 'TUT', 'LAB'].map(function (type) {
         return '<option value="' + type + '"' + (session.type === type ? ' selected' : '') + '>' + type + '</option>';
       }).join('') + '</select></div>' +
-      '<div class="col-span-9 sm:col-span-3"><label class="bb-label">Room</label>' +
+      '<div class="col-span-9 sm:col-span-3"><label class="bb-label">' + t('common.room') + '</label>' +
       '<input class="bb-input" type="text" value="' + esc(session.room) + '" data-field="room">' +
       roomCaption(session.room) + '</div>' +
       '<div class="col-span-3 sm:col-span-1 flex justify-end">' +
-      '<button type="button" class="bb-btn bb-btn-ghost" style="width:40px;padding:0" data-remove-session="' + index + '" title="Remove session">' +
+      '<button type="button" class="bb-btn bb-btn-ghost" style="width:40px;padding:0" data-remove-session="' + index +
+      '" title="' + esc(t('form.removeSession')) + '">' +
       '<span class="material-symbols-outlined text-[18px]">delete</span></button></div></div>'
     );
   }
@@ -138,21 +147,22 @@
     return (
       '<div class="grid grid-cols-12 gap-2 items-end pb-3 border-b border-border-subtle last:border-0"' +
       ' data-assessment="' + index + '" data-id="' + esc(assessment.id) + '" data-kind="' + esc(kind) + '">' +
-      '<div class="col-span-12 sm:col-span-3"><label class="bb-label">Component</label>' +
+      '<div class="col-span-12 sm:col-span-3"><label class="bb-label">' + t('form.component') + '</label>' +
       '<input class="bb-input" type="text" value="' + esc(assessment.name) + '" data-field="name"></div>' +
-      '<div class="col-span-4 sm:col-span-2"><label class="bb-label">Weight %</label>' +
+      '<div class="col-span-4 sm:col-span-2"><label class="bb-label">' + t('form.weightPercent') + '</label>' +
       '<input class="bb-input num" type="number" min="0" max="100" step="1" value="' + esc(assessment.weight) + '" data-field="weight"></div>' +
-      '<div class="col-span-4 sm:col-span-2"><label class="bb-label">Max marks</label>' +
+      '<div class="col-span-4 sm:col-span-2"><label class="bb-label">' + t('form.maxMarks') + '</label>' +
       '<input class="bb-input num" type="number" min="1" step="1" value="' + esc(assessment.max) + '" data-field="max"></div>' +
-      '<div class="col-span-4 sm:col-span-1"><label class="bb-label">Week</label>' +
+      '<div class="col-span-4 sm:col-span-1"><label class="bb-label">' + t('form.week') + '</label>' +
       '<input class="bb-input num" type="number" min="1" max="20" step="1" value="' + esc(assessment.week) + '" data-field="week"></div>' +
-      '<div class="col-span-10 sm:col-span-3"><label class="bb-label">Type</label>' +
+      '<div class="col-span-10 sm:col-span-3"><label class="bb-label">' + t('form.type') + '</label>' +
       '<select class="bb-input" data-field="kind">' +
-      '<option value="coursework"' + (kind === 'coursework' ? ' selected' : '') + '>Coursework</option>' +
-      '<option value="exam"' + (kind === 'exam' ? ' selected' : '') + '>Final exam</option>' +
+      '<option value="coursework"' + (kind === 'coursework' ? ' selected' : '') + '>' + t('form.coursework') + '</option>' +
+      '<option value="exam"' + (kind === 'exam' ? ' selected' : '') + '>' + t('form.finalExam') + '</option>' +
       '</select></div>' +
       '<div class="col-span-2 sm:col-span-1 flex justify-end">' +
-      '<button type="button" class="bb-btn bb-btn-ghost" style="width:40px;padding:0" data-remove-assessment="' + index + '" title="Remove component">' +
+      '<button type="button" class="bb-btn bb-btn-ghost" style="width:40px;padding:0" data-remove-assessment="' + index +
+      '" title="' + esc(t('form.removeComponent')) + '">' +
       '<span class="material-symbols-outlined text-[18px]">delete</span></button></div></div>'
     );
   }
@@ -167,60 +177,66 @@
       '<section class="bb-card overflow-hidden">' +
       '<div class="px-6 py-4 border-b border-border flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">badge</span>' +
-      '<div><h2 class="text-title-md font-bold text-ink">Subject Details</h2>' +
-      '<p class="text-body-sm text-muted">Core academic profile and visual indicators for timetabling.</p></div></div>' +
+      '<div><h2 class="text-title-md font-bold text-ink">' + t('form.subjectDetails') + '</h2>' +
+      '<p class="text-body-sm text-muted">' + t('form.subjectDetailsHint') + '</p></div></div>' +
       '<div class="p-6 space-y-5">' +
       '<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">' +
-      '<div><label class="bb-label" for="f-code">Subject Code *</label>' +
-      '<input id="f-code" class="bb-input num" type="text" value="' + esc(draft.id) + '" placeholder="ABC1234"></div>' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="f-name">Subject Name *</label>' +
-      '<input id="f-name" class="bb-input" type="text" value="' + esc(draft.name) + '" placeholder="Introduction to Programming"></div>' +
-      '<div><label class="bb-label" for="f-credits">Credit Hours</label>' +
+      '<div><label class="bb-label" for="f-code">' + t('form.subjectCode') + '</label>' +
+      '<input id="f-code" class="bb-input num" type="text" value="' + esc(draft.id) + '" placeholder="' +
+      esc(t('form.codePlaceholder')) + '"></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="f-name">' + t('form.subjectName') + '</label>' +
+      '<input id="f-name" class="bb-input" type="text" value="' + esc(draft.name) + '" placeholder="' +
+      esc(t('form.namePlaceholder')) + '"></div>' +
+      '<div><label class="bb-label" for="f-credits">' + t('form.creditHours') + '</label>' +
       '<input id="f-credits" class="bb-input num" type="number" min="1" max="12" step="1" value="' + esc(draft.credits) + '"></div>' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="f-lecturer">Lecturer</label>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="f-lecturer">' + t('form.lecturer') + '</label>' +
       '<input id="f-lecturer" class="bb-input" type="text" value="' + esc(draft.lecturer || '') + '"></div>' +
       '</div>' +
-      '<div><div class="bb-label">Subject Accent Color</div>' + palette(draft) +
-      '<p class="text-caption text-muted mt-2">Colour is used for timetable blocks, chips, and progress bars. ' +
-      'Tints are derived automatically from this single value.</p></div>' +
+      '<div><div class="bb-label">' + t('form.accentColor') + '</div>' + palette(draft) +
+      '<p class="text-caption text-muted mt-2">' + t('form.accentHint') + '</p></div>' +
       '</div></section>' +
 
       '<section class="bb-card overflow-hidden">' +
       '<div class="px-6 py-4 border-b border-border flex items-center justify-between gap-3">' +
       '<div class="flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">schedule</span>' +
-      '<div><h2 class="text-title-md font-bold text-ink">Class Sessions</h2>' +
-      '<p class="text-body-sm text-muted">Weekly recurring lectures, tutorials, and practical labs.</p></div></div>' +
-      '<span class="text-caption text-muted">' + draft.sessions.length + ' Sessions</span></div>' +
+      '<div><h2 class="text-title-md font-bold text-ink">' + t('form.classSessions') + '</h2>' +
+      '<p class="text-body-sm text-muted">' + t('form.classSessionsHint') + '</p></div></div>' +
+      '<span class="text-caption text-muted">' + tn('form.sessionCount', draft.sessions.length) + '</span></div>' +
       '<div class="p-6">' + draft.sessions.map(sessionRow).join('') +
       '<button type="button" id="add-session" class="bb-btn bb-btn-ghost mt-3">' +
-      '<span class="material-symbols-outlined text-[18px]">add</span>Add session</button></div></section>' +
+      '<span class="material-symbols-outlined text-[18px]">add</span>' + t('form.addSession') + '</button></div></section>' +
 
       '<section class="bb-card overflow-hidden">' +
       '<div class="px-6 py-4 border-b border-border flex items-center justify-between gap-3">' +
       '<div class="flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">grading</span>' +
-      '<div><h2 class="text-title-md font-bold text-ink">Assessment Components</h2>' +
-      '<p class="text-body-sm text-muted">Define continuous assessment weightings and submission targets.</p></div></div>' +
-      '<span class="text-caption text-muted">' + draft.assessments.length + ' Components</span></div>' +
+      '<div><h2 class="text-title-md font-bold text-ink">' + t('form.assessmentComponents') + '</h2>' +
+      '<p class="text-body-sm text-muted">' + t('form.assessmentComponentsHint') + '</p></div></div>' +
+      '<span class="text-caption text-muted">' + tn('form.componentCount', draft.assessments.length) + '</span></div>' +
       '<div class="p-6">' + draft.assessments.map(assessmentRow).join('') +
       '<div class="flex flex-wrap items-center justify-between gap-3 mt-3">' +
       '<button type="button" id="add-assessment" class="bb-btn bb-btn-ghost">' +
-      '<span class="material-symbols-outlined text-[18px]">add</span>Add component</button>' +
+      '<span class="material-symbols-outlined text-[18px]">add</span>' + t('form.addComponent') + '</button>' +
       '<span id="total-weight" class="bb-chip" style="background:' + (balanced ? 'var(--bb-success-surface)' : 'var(--bb-alert-surface)') + ';color:' +
       (balanced ? 'var(--bb-success)' : 'var(--bb-alert)') + '">' +
-      'Total Weighting: ' + total + '%' + (balanced ? '' : ' — must equal 100%') + '</span></div>' +
+      totalLabel(total, balanced) + '</span></div>' +
       '</div></section>' +
 
       (options.deleteButton
         ? '<div class="flex items-center justify-between gap-3">' +
           '<button type="button" id="delete-subject" class="bb-btn bb-btn-danger">' +
-          '<span class="material-symbols-outlined text-[18px]">delete</span>Delete subject</button>' +
+          '<span class="material-symbols-outlined text-[18px]">delete</span>' + t('form.deleteSubject') + '</button>' +
           '<div class="flex items-center gap-2">' +
-          '<a href="settings.html" class="bb-btn bb-btn-ghost">Cancel</a>' +
-          '<button type="button" id="save-subject-bottom" class="bb-btn bb-btn-primary">Save changes</button>' +
+          '<a href="settings.html" class="bb-btn bb-btn-ghost">' + t('common.cancel') + '</a>' +
+          '<button type="button" id="save-subject-bottom" class="bb-btn bb-btn-primary">' + t('form.saveChanges') + '</button>' +
           '</div></div>'
         : '');
+  }
+
+  /* 配点合計の表示文言。render と updateTotal で同じ形にする。 */
+  function totalLabel(total, balanced) {
+    return balanced ? t('form.totalWeighting', { n: total }) : t('form.totalWeightingMust', { n: total });
   }
 
   /* 入力値を draft へ書き戻す。render の前に必ず呼ぶ。
@@ -274,7 +290,7 @@
     }, 0);
     total = Math.round(total * 100) / 100;
     var balanced = inputs.length === 0 || total === 100;
-    chip.textContent = 'Total Weighting: ' + total + '%' + (balanced ? '' : ' — must equal 100%');
+    chip.textContent = totalLabel(total, balanced);
     chip.style.background = balanced ? 'var(--bb-success-surface)' : 'var(--bb-alert-surface)';
     chip.style.color = balanced ? 'var(--bb-success)' : 'var(--bb-alert)';
   }
@@ -327,7 +343,7 @@
         sync(host, draft);
         draft.assessments.push({
           id: 'a' + Date.now(),
-          name: 'New component',
+          name: t('form.newComponent'),
           weight: 0,
           max: 10,
           week: 1,
@@ -349,7 +365,7 @@
       if (event.target.id !== 'f-color') return;
       var value = event.target.value.trim();
       if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
-        BB.ui.toast('Enter a HEX colour like #003DA5');
+        BB.ui.toast(t('form.err.hex'));
         return;
       }
       sync(host, draft);
@@ -363,18 +379,18 @@
     options = options || {};
     var exceptId = options.exceptId;
 
-    if (!draft.id || !draft.name) return 'Subject code and name are required';
-    if (!draft.credits || draft.credits < 1) return 'Credit hours must be at least 1';
+    if (!draft.id || !draft.name) return t('form.err.codeAndName');
+    if (!draft.credits || draft.credits < 1) return t('form.err.credits');
 
     var owner = colorOwner(draft.color, exceptId);
-    if (owner) return 'Colour already used by ' + owner.id;
+    if (owner) return t('form.err.colorUsed', { id: owner.id });
 
-    if (draft.assessments.length && totalWeight(draft) !== 100) return 'Assessment weights must total 100%';
+    if (draft.assessments.length && totalWeight(draft) !== 100) return t('form.err.weights');
 
     var duplicate = BB.store.get().subjects.filter(function (subject) {
       return subject.id === draft.id && subject.id !== exceptId;
     });
-    if (duplicate.length) return 'Subject code ' + draft.id + ' already exists';
+    if (duplicate.length) return t('form.err.duplicate', { id: draft.id });
 
     return null;
   }

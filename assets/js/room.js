@@ -57,17 +57,28 @@
     };
   }
 
+  /* 部品語（Floor / Wing / Room / 部屋タイプ）は辞書から引く。建物名は固有名詞なので
+     そのまま。i18n.js が読まれていない場合だけ英語の既定文言にフォールバックする。 */
+  function word(key, vars, fallback) {
+    var i18n = global.BB && global.BB.i18n;
+    return i18n ? i18n.t(key, vars) : fallback;
+  }
+
   /* 表示用ラベル。解釈できない入力は null。 */
   function label(code) {
     var info = decode(code);
     if (!info) return null;
-    if (info.special) return info.building + SEPARATOR + 'Room ' + info.room;
+    if (info.special) {
+      return info.building + SEPARATOR + word('room.room', { n: info.room }, 'Room ' + info.room);
+    }
     return [
       info.building,
-      info.wing,
-      'Floor ' + info.floor,
-      'Room ' + info.room,
-      info.type
+      word('room.wing', { w: info.wing.charAt(0) }, info.wing),
+      word('room.floor', { n: info.floor }, 'Floor ' + info.floor),
+      word('room.room', { n: info.room }, 'Room ' + info.room),
+      info.type === ROOM_TYPE.X
+        ? word('room.lecture', null, info.type)
+        : word('room.tutorial', null, info.type)
     ].join(SEPARATOR);
   }
 

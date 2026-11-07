@@ -2,16 +2,25 @@
   'use strict';
 
   var BB = window.BB;
+  var t = BB.i18n.t;
   var filter = 'all';
   var formOpen = false;
 
   BB.ui.mount({
-    title: 'Deadlines',
+    title: t('dl.title'),
     head: {
-      title: 'Deadlines',
-      subtitle: 'Track assessment timelines, deliverables, and weight at stake across the trimester.'
+      title: t('dl.title'),
+      subtitle: t('dl.subtitle')
     }
   });
+
+  function esc(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
   /* High Stakes の基準。監査で「判定基準が不明」と指摘されたため 1 か所に固定する。 */
   var HIGH_STAKES_WEIGHT = 50;
@@ -35,8 +44,8 @@
         '<div class="bb-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
         '<div class="flex items-center gap-3">' +
         '<span class="material-symbols-outlined text-[20px] text-primary">add_task</span>' +
-        '<span class="text-body-sm text-muted">Add a subject first — deadlines are tracked per module.</span></div>' +
-        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-ghost shrink-0">Add a subject</a></div>';
+        '<span class="text-body-sm text-muted">' + t('dl.addFirst') + '</span></div>' +
+        '<a href="subject-edit.html?new=1" class="bb-btn bb-btn-ghost shrink-0">' + t('dl.addSubject') + '</a></div>';
       return;
     }
 
@@ -51,34 +60,36 @@
       '<button type="button" id="toggle-add" class="w-full flex items-center justify-between gap-3 px-5 py-3.5 text-left">' +
       '<span class="flex items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">add_task</span>' +
-      '<span class="text-title-md font-semibold text-ink">Add a deadline</span>' +
-      '<span class="text-caption text-muted">for anything the module outline does not list</span></span>' +
+      '<span class="text-title-md font-semibold text-ink">' + t('dl.addDeadline') + '</span>' +
+      '<span class="text-caption text-muted">' + t('dl.addDeadlineHint') + '</span></span>' +
       '<span class="material-symbols-outlined text-muted transition-transform" style="transform:rotate(' +
       (formOpen ? '90deg' : '0deg') + ')">chevron_right</span>' +
       '</button>' +
       '<div class="px-5 pb-5 border-t border-border' + (formOpen ? '' : ' hidden') + '">' +
       '<form id="deadline-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">' +
-      '<div class="sm:col-span-2"><label class="bb-label" for="d-name">Title</label>' +
-      '<input id="d-name" name="name" class="bb-input" type="text" placeholder="Lab report submission" required></div>' +
-      '<div><label class="bb-label" for="d-subject">Module</label>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="d-name">' + t('dl.titleField') + '</label>' +
+      '<input id="d-name" name="name" class="bb-input" type="text" placeholder="' +
+      esc(t('dl.titlePlaceholder')) + '" required></div>' +
+      '<div><label class="bb-label" for="d-subject">' + t('dl.module') + '</label>' +
       '<select id="d-subject" name="subjectId" class="bb-input">' + options + '</select></div>' +
-      '<div><label class="bb-label" for="d-week">Week</label>' +
+      '<div><label class="bb-label" for="d-week">' + t('dl.week') + '</label>' +
       '<input id="d-week" name="week" class="bb-input num" type="number" min="1" max="' +
       state.term.examWeek + '" step="1" value="' + BB.dash.currentWeek(new Date()) + '"></div>' +
-      '<div><label class="bb-label" for="d-weight">Weight (%)</label>' +
+      '<div><label class="bb-label" for="d-weight">' + t('dl.weight') + '</label>' +
       '<input id="d-weight" name="weight" class="bb-input num" type="number" min="0" max="100" step="1" value="0"></div>' +
-      '<div><label class="bb-label" for="d-note">Due / note</label>' +
-      '<input id="d-note" name="note" class="bb-input" type="text" placeholder="Sun 6 Dec, 23:59"></div>' +
+      '<div><label class="bb-label" for="d-note">' + t('dl.due') + '</label>' +
+      '<input id="d-note" name="note" class="bb-input" type="text" placeholder="' +
+      esc(t('dl.duePlaceholder')) + '"></div>' +
       '<div class="sm:col-span-2 flex justify-end">' +
       '<button type="submit" class="bb-btn bb-btn-primary">' +
-      '<span class="material-symbols-outlined text-[18px]">check</span>Add deadline</button></div>' +
+      '<span class="material-symbols-outlined text-[18px]">check</span>' + t('dl.submit') + '</button></div>' +
       '</form></div></div>';
   }
 
   function renderFilters() {
     var state = BB.store.get();
     var host = document.getElementById('filters');
-    var chips = [{ id: 'all', label: 'All modules', color: 'var(--bb-primary)' }].concat(
+    var chips = [{ id: 'all', label: t('dl.allModules'), color: 'var(--bb-primary)' }].concat(
       state.subjects.map(function (subject) {
         return { id: subject.id, label: subject.id, color: subject.color };
       })
@@ -96,8 +107,8 @@
         );
       })
       .join('') +
-      '<span class="w-full text-caption text-muted">High Stakes marks a week where ' + HIGH_STAKES_WEIGHT +
-      '% or more of a module\'s grade is due.</span>';
+      '<span class="w-full text-caption text-muted">' +
+      t('dl.highStakesHint', { n: HIGH_STAKES_WEIGHT }) + '</span>';
   }
 
   function renderMilestone() {
@@ -113,7 +124,7 @@
       host.innerHTML =
         '<div class="bb-card p-4 flex items-center gap-3 text-body-sm text-muted">' +
         '<span class="material-symbols-outlined text-[20px] text-primary">event_available</span>' +
-        'No upcoming deadlines for this filter.</div>';
+        t('dl.noUpcoming') + '</div>';
       return;
     }
 
@@ -122,16 +133,21 @@
       ? Math.round((range.start - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000)
       : null;
     var when = days === null
-      ? 'Week ' + next.week
-      : days <= 0 ? 'This week' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days';
+      ? t('common.week', { n: next.week })
+      : days <= 0 ? t('dl.thisWeek') : days === 1 ? t('dl.tomorrow') : t('dl.inDays', { n: days });
 
     host.innerHTML =
       '<div class="bb-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
       '<div class="flex items-center gap-3">' +
       '<span class="material-symbols-outlined text-[22px] text-primary">alarm</span>' +
-      '<div><div class="text-caption uppercase tracking-wider text-muted">Upcoming Milestone</div>' +
-      '<div class="text-body-md font-semibold text-ink">Next deadline: ' + next.subject.id + ' ' +
-      next.assessment.name + ' — Week ' + next.week + ' (' + BB.date.weekLabel(next.week) + ')</div></div></div>' +
+      '<div><div class="text-caption uppercase tracking-wider text-muted">' + t('dl.milestone') + '</div>' +
+      '<div class="text-body-md font-semibold text-ink">' +
+      t('dl.nextDeadline', {
+        code: next.subject.id,
+        name: next.assessment.name,
+        n: next.week,
+        range: BB.date.weekLabel(next.week)
+      }) + '</div></div></div>' +
       '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' + when + '</span></div>';
   }
 
@@ -141,7 +157,7 @@
 
     if (!list.length) {
       host.innerHTML =
-        '<div class="bb-card p-8 text-center text-body-sm text-muted">No assessments for this filter.</div>';
+        '<div class="bb-card p-8 text-center text-body-sm text-muted">' + t('dl.noAssessments') + '</div>';
       return;
     }
 
@@ -176,21 +192,24 @@
           .map(function (item) {
             var assessment = item.assessment;
             /* 具体的な日付・時刻が無い項目は、その週の実日付範囲を必ず併記する。 */
-            var meta = assessment.dueLabel || assessment.location || (range ? 'Due in the week of ' + range : '');
+            var meta = assessment.dueLabel || assessment.location ||
+              (range ? t('dl.dueInWeek', { range: range }) : '');
             var weight = assessment.weight > 0 ? assessment.weight + '%' : '—';
             var remove = item.custom
-              ? '<button type="button" data-remove="' + item.custom.id + '" class="text-muted hover:text-alert transition-colors" title="Remove this custom deadline">' +
+              ? '<button type="button" data-remove="' + item.custom.id + '" class="text-muted hover:text-alert transition-colors" title="' +
+                esc(t('dl.removeCustom')) + '">' +
                 '<span class="material-symbols-outlined text-[18px]">delete</span></button>'
               : '';
             return (
               '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
               '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + assessment.name +
-              (item.custom ? ' <span class="text-caption font-semibold text-muted">(custom)</span>' : '') + '</div>' +
+              (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') + '</div>' +
               (meta ? '<div class="text-caption text-muted truncate">' + meta + '</div>' : '') + '</div></div>' +
               '<div class="flex items-center gap-3 shrink-0">' +
               '<span class="text-label-md font-bold text-ink num">' + weight + '</span>' + remove +
-              '<a href="simulator.html?subject=' + item.subject.id + '" class="text-muted hover:text-primary transition-colors" title="Open Grade Simulator">' +
+              '<a href="simulator.html?subject=' + item.subject.id + '" class="text-muted hover:text-primary transition-colors" title="' +
+              esc(t('dl.openSim')) + '">' +
               '<span class="material-symbols-outlined text-[18px]">chevron_right</span></a></div></div>'
             );
           })
@@ -202,8 +221,7 @@
           })
           .map(function (group) {
             return '<div class="px-5 py-2.5 border-b border-border bg-alert-surface text-caption font-semibold text-alert">' +
-              group.subject.id + ' adds up to ' + group.total + '% this week — more than a module can carry. ' +
-              'Check the weightings in the Subject Editor.</div>';
+              t('dl.overWeighted', { id: group.subject.id, total: group.total }) + '</div>';
           })
           .join('');
 
@@ -216,17 +234,17 @@
           '<div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3 bg-canvas border-b border-border">' +
           '<div class="flex items-center gap-2">' +
           '<span class="text-label-sm font-bold text-primary uppercase tracking-wider">' +
-          (isExam ? 'Week ' + week + ' (Exam Week)' : 'Week ' + week) + '</span>' +
-          '<span class="text-caption text-muted">' + (range || 'Dates not set') + '</span>' +
+          (isExam ? t('dl.examWeek', { n: week }) : t('common.week', { n: week })) + '</span>' +
+          '<span class="text-caption text-muted">' + (range || t('dl.datesNotSet')) + '</span>' +
           highStakes
             .map(function (group) {
               return '<span class="bb-chip" style="background:var(--bb-alert-surface);color:var(--bb-alert)" title="' +
-                HIGH_STAKES_WEIGHT + '% or more of ' + group.subject.id + '\'s grade is due this week">High Stakes · ' +
-                group.subject.id + '</span>';
+                esc(t('dl.highStakesTitle', { n: HIGH_STAKES_WEIGHT, id: group.subject.id })) + '">' +
+                t('dl.highStakes', { id: group.subject.id }) + '</span>';
             })
             .join('') +
           '</div>' +
-          '<span class="text-caption text-muted">Total Weight: <strong class="text-ink num">' +
+          '<span class="text-caption text-muted">' + t('dl.totalWeight') + ' <strong class="text-ink num">' +
           groups
             .map(function (group) {
               return group.subject.id + ' ' + group.total + '%';
@@ -259,11 +277,11 @@
     var name = form.elements.name.value.trim();
     var week = Number(form.elements.week.value);
     if (!name) {
-      BB.ui.toast('Title is required');
+      BB.ui.toast(t('dl.toast.titleRequired'));
       return;
     }
     if (!isFinite(week) || week < 1) {
-      BB.ui.toast('Week must be 1 or later');
+      BB.ui.toast(t('dl.toast.week'));
       return;
     }
     BB.store.update(function (data) {
@@ -279,7 +297,7 @@
       });
     });
     formOpen = false;
-    BB.ui.toast('Deadline added');
+    BB.ui.toast(t('dl.toast.added'));
     render();
   });
 
@@ -297,9 +315,9 @@
 
     BB.ui
       .confirm({
-        title: 'Remove this deadline?',
-        message: '"' + removed.name + '" will be removed from the timeline.',
-        confirmLabel: 'Remove deadline',
+        title: t('dl.confirm.title'),
+        message: t('dl.confirm.body', { name: removed.name }),
+        confirmLabel: t('dl.confirm.ok'),
         danger: true
       })
       .then(function (ok) {
@@ -310,15 +328,15 @@
           });
         });
         render();
-        BB.ui.toast('Deadline removed', {
-          actionLabel: 'Undo',
+        BB.ui.toast(t('dl.toast.removed'), {
+          actionLabel: t('common.undo'),
           onAction: function () {
             BB.store.update(function (data) {
               data.customDeadlines = data.customDeadlines || [];
               data.customDeadlines.splice(Math.min(index, data.customDeadlines.length), 0, removed);
             });
             render();
-            BB.ui.toast('Deadline restored');
+            BB.ui.toast(t('dl.toast.restored'));
           }
         });
       });
