@@ -4,6 +4,7 @@
   'use strict';
 
   var KEY = 'mmu-beeboard';
+  var BACKUP_KEY = 'mmu-beeboard-backup';
   /* 2: 科目コードを eBwise 表記（C 付き）に変更。旧コードの保存状態は破棄して再シードする。 */
   var VERSION = 2;
   var memory = null;
@@ -77,6 +78,18 @@
     cacheRaw = raw;
   }
 
+  /* 読めなかった保存状態は、シードで上書きする前に別キーへ退避する。
+     壊れ・バージョン違いで書き戻したときに、データを復旧できるようにするため。 */
+  function backupRaw(raw) {
+    var store = storage();
+    if (!store) return;
+    try {
+      store.setItem(BACKUP_KEY, raw);
+    } catch (e) {
+      /* バックアップの失敗が本体を止めないように */
+    }
+  }
+
   /* 常に保存済みの最新状態を返す。他タブが書き換えていれば生データが変わるので読み直す。
      これがないと「開いた時点のスナップショット」を保存して他タブの編集を消してしまう。 */
   function current() {
@@ -89,6 +102,7 @@
       return cache;
     }
     /* 保存が無い・壊れている・バージョン違い → シードで作り直す */
+    if (raw) backupRaw(raw);
     cache = seedState();
     write(cache);
     return cache;

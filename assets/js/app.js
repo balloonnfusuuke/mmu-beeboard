@@ -173,13 +173,20 @@
     return null;
   }
 
+  /* 日数は「日付の差」で数える（11/7 → 11/10 は 3日）。時刻で丸めない。
+     プレビューのバナーと締切ページの「あとn日」も同じ定義に揃えてある。 */
+  function calendarDays(from, to) {
+    return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / 86400000);
+  }
+
   function countdown(target, now) {
     var mins = Math.round((target.getTime() - now.getTime()) / 60000);
     if (mins < 1) return t('countdown.now');
     if (mins < 60) return t('countdown.min', { n: mins });
     var hours = Math.round(mins / 60);
     if (hours < 24) return t('countdown.hour', { n: hours });
-    return t('countdown.days', { n: Math.round(hours / 24) });
+    var days = calendarDays(now, target);
+    return t('countdown.days', { n: days < 1 ? 1 : days });
   }
 
   /* ---------- 休講・振替 ---------- */
@@ -540,7 +547,7 @@
       host.innerHTML = '';
       return;
     }
-    var days = Math.round((startOfDay(start).getTime() - startOfDay(now).getTime()) / 86400000);
+    var days = calendarDays(now, start);
     host.innerHTML =
       '<div class="flex items-start sm:items-center gap-3 rounded-card border border-primary/25 bg-surface-sunken px-4 py-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">event_upcoming</span>' +
@@ -1179,6 +1186,28 @@
       if (note.id === id) found = note;
     });
     return found;
+  }
+
+  /* 再描画の前に入力中のメモを下書きへ戻す。
+     他タブの保存で再描画しても、開いているフォームの入力が消えないように。 */
+  function collectNoteForm() {
+    if (!noteForm) return;
+    var kind = $('#n-kind');
+    var text = $('#n-text');
+    var subject = $('#n-subject');
+    var date = $('#n-date');
+    var due = $('#n-due');
+    if (kind) noteForm.kind = kind.value === 'memo' ? 'memo' : 'homework';
+    if (text) noteForm.text = text.value;
+    if (subject) noteForm.subjectCode = subject.value || '';
+    if (date) noteForm.date = date.value;
+    if (due) noteForm.due = due.value || '';
+  }
+
+  /* 他タブの保存を取り込んだ再描画でも入力中のフォームは消さない。 */
+  function syncOpenForms() {
+    collectNoteForm();
+    collectEventForm();
   }
 
   function saveNote() {
@@ -2070,6 +2099,7 @@
     currentWeek: currentWeek,
     weekDates: weekDates,
     weekOf: weekOfClamped,
+    calendarDays: calendarDays,
     isPreview: isPreview,
     countBlocks: function () {
       return BB.store.get().subjects.reduce(function (total, subject) {
@@ -2083,12 +2113,10 @@
     bindNotes();
     bindNoteTriggers();
     bindEvents();
-    /* 言語が変わったらダッシュボードを描き直す。静的 HTML 側は i18n.js が担当する。 */
-    var lastLang = BB.i18n.lang();
+    /* 他タブの保存は storage イベントで届く。ヘッダーもページ本体も、
+       開いているフォームの入力を保ったまま描き直す。 */
     BB.store.subscribe(function () {
-      var next = BB.i18n.lang();
-      if (next === lastLang) return;
-      lastLang = next;
+      syncOpenForms();
       init();
     });
   }

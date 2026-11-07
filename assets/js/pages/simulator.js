@@ -552,6 +552,8 @@
 
   /* 他タブの保存を取り込んだら描き直す。 */
   BB.store.subscribe(function () {
+    /* 他タブの保存では、ヘッダーもページ本体も再読込なしで追いつく。 */
+    BB.ui.refreshChrome();
     render();
   });
 })();

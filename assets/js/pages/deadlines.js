@@ -155,10 +155,15 @@
       return;
     }
 
-    var range = BB.date.weekRange(next.week);
-    var days = range
-      ? Math.round((range.start - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000)
-      : null;
+    /* 日数は日付の差で数える（ダッシュボードと同じ定義）。締切日が分かる項目は
+       その日まで、週しか分からない項目はその週の月曜までを数える。 */
+    var dueDate = next.sortDue ? BB.date.parse(String(next.sortDue).slice(0, 10)) : null;
+    var range = dueDate ? null : BB.date.weekRange(next.week);
+    var days = dueDate
+      ? BB.dash.calendarDays(now, dueDate)
+      : range
+        ? BB.dash.calendarDays(now, range.start)
+        : null;
     var when = days === null
       ? t('common.week', { n: next.week })
       : days <= 0 ? t('dl.thisWeek') : days === 1 ? t('dl.tomorrow') : t('dl.inDays', { n: days });
@@ -454,6 +459,8 @@
 
   /* 他タブの保存を取り込んだら描き直す。 */
   BB.store.subscribe(function () {
+    /* 他タブの保存では、ヘッダーもページ本体も再読込なしで追いつく。 */
+    BB.ui.refreshChrome();
     render();
   });
 })();

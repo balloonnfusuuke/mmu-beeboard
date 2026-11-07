@@ -108,4 +108,12 @@
   });
 
   render();
+
+  /* 他タブの保存を取り込む。編集中の入力は draft へ戻してから描き直すので消えない
+     （フォームの行追加・行削除・色選択と同じ経路）。 */
+  BB.store.subscribe(function () {
+    form.sync(host, draft);
+    BB.ui.refreshChrome();
+    render();
+  });
 })();
