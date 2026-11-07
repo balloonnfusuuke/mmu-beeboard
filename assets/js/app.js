@@ -111,15 +111,26 @@
     for (var offset = 0; offset < LOOKAHEAD_DAYS; offset++) {
       var day = addDays(base, offset);
       var weekday = day.getDay();
+      var dayIso = isoDay(day);
       var found = [];
       state.subjects.forEach(function (subject) {
-        subject.sessions.forEach(function (session) {
+        subject.sessions.forEach(function (session, index) {
           if (session.day !== weekday) return;
+          /* 休講にした回は Next Class に出さない。 */
+          if (overrideFor(state, subject.id, index, dayIso)) return;
           var start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutesOf(session.start));
           if (start.getTime() > now.getTime()) {
             found.push({ subject: subject, session: session, start: start });
           }
         });
+      });
+      /* 振替の臨時セッションも候補に入れる。 */
+      extraSessions(state).forEach(function (extra) {
+        if (extra.date !== dayIso) return;
+        var start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutesOf(extra.start));
+        if (start.getTime() > now.getTime()) {
+          found.push({ subject: extra.subject, session: extra, start: start, transfer: true });
+        }
       });
       if (found.length) {
         found.sort(function (a, b) {
@@ -140,6 +151,58 @@
     return t('countdown.days', { n: Math.round(hours / 24) });
   }
 
+  /* ---------- 休講・振替 ---------- */
+
+  function overridesOf(state) {
+    return state.sessionOverrides || [];
+  }
+
+  /* その科目・コマ・日付に休講（振替を含む）の記録があるか。 */
+  function overrideFor(state, subjectId, sessionIndex, date) {
+    var found = null;
+    overridesOf(state).forEach(function (entry) {
+      if (entry.subjectId !== subjectId) return;
+      if (entry.sessionIndex !== sessionIndex) return;
+      if (entry.date !== date) return;
+      found = entry;
+    });
+    return found;
+  }
+
+  /* 休講にした回数。総回数から差し引く。 */
+  function noClassCount(state, subjectId) {
+    return overridesOf(state).filter(function (entry) {
+      return entry.subjectId === subjectId;
+    }).length;
+  }
+
+  /* 振替で作られた臨時セッション。定例コマの定義は書き換えない。 */
+  function extraSessions(state) {
+    var list = [];
+    overridesOf(state).forEach(function (entry) {
+      if (entry.kind !== 'transfer' || !entry.target) return;
+      var subject = null;
+      state.subjects.forEach(function (candidate) {
+        if (candidate.id === entry.subjectId) subject = candidate;
+      });
+      if (!subject) return;
+      var day = BB.date.parse(entry.target.date);
+      if (!day) return;
+      list.push({
+        subject: subject,
+        overrideId: entry.id,
+        sourceDate: entry.date,
+        date: entry.target.date,
+        day: day.getDay(),
+        start: entry.target.start,
+        end: entry.target.end,
+        room: entry.target.room || '',
+        type: t('att.transferBadge')
+      });
+    });
+    return list;
+  }
+
   function attendanceOf(subject) {
     var state = BB.store.get();
     var threshold = state.settings.attendanceThreshold;
@@ -147,7 +210,8 @@
     var held = record.held || 0;
     var attended = record.attended || 0;
     var absences = record.absences || 0;
-    var total = subject.sessions.length * state.term.weeks;
+    /* 休講にした回は総回数から外す。分母が減るので「あと何回休めるか」も追随する。 */
+    var total = Math.max(0, subject.sessions.length * state.term.weeks - noClassCount(state, subject.id));
     var rate = held > 0 ? (attended / held) * 100 : null;
     return {
       held: held,
@@ -477,6 +541,10 @@
       if (!range) return isoDay(now);
       return isoDay(addDays(range.start, day - 1));
     }
+    /* 休講・振替の照合に使う日付。学期開始日が未設定なら照合しない。 */
+    function weekDayIso(day) {
+      return range ? isoDay(addDays(range.start, day - 1)) : null;
+    }
 
     var head =
       '<div class="tt-head"><div class="tt-corner">' + t('tt.time') + '</div>' +
@@ -498,14 +566,35 @@
     var columns = [1, 2, 3, 4, 5]
       .map(function (day) {
         var blocks = [];
+        var dayIso = weekDayIso(day);
         state.subjects.forEach(function (subject) {
-          subject.sessions.forEach(function (session) {
+          subject.sessions.forEach(function (session, index) {
             if (session.day !== day) return;
             var startMin = minutesOf(session.start);
             var endMin = minutesOf(session.end);
             var blockTop = ((startMin - HOUR_START * 60) / 60) * HOUR_HEIGHT;
             var blockHeight = ((endMin - startMin) / 60) * HOUR_HEIGHT;
             var roomText = roomLabel(session.room);
+            var override = dayIso ? overrideFor(state, subject.id, index, dayIso) : null;
+            if (override) {
+              /* 休講にした回は通常のブロックを出さない。振替なら振替先も併記する。 */
+              var note = override.kind === 'transfer' && override.target
+                ? t('att.transferTo', {
+                    date: override.target.date,
+                    start: override.target.start,
+                    end: override.target.end
+                  })
+                : t('att.noClassHint');
+              blocks.push(
+                '<div class="tt-block tt-block-off" style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px"' +
+                  ' title="' + escHtml(subject.id + ' · ' + t('tt.noClass') + ' · ' + note) + '">' +
+                  '<span class="tt-block-code">' + subject.id + '</span>' +
+                  '<span class="tt-block-meta">' + t('tt.noClass') + '</span>' +
+                  '<span class="tt-block-room">' + escHtml(note) + '</span>' +
+                '</div>'
+              );
+              return;
+            }
             blocks.push(
               '<a class="tt-block" href="simulator.html?subject=' + subject.id + '"' +
                 ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + subject.color + '"' +
@@ -522,6 +611,24 @@
                 '<span class="material-symbols-outlined text-[13px]">note_add</span></button>'
             );
           });
+        });
+        /* 振替の臨時セッションは、振替先の週にだけ「振替」マーク付きで出す。 */
+        extraSessions(state).forEach(function (extra) {
+          if (!dayIso || extra.date !== dayIso) return;
+          var startMin = minutesOf(extra.start);
+          var endMin = minutesOf(extra.end);
+          var blockTop = ((startMin - HOUR_START * 60) / 60) * HOUR_HEIGHT;
+          var blockHeight = ((endMin - startMin) / 60) * HOUR_HEIGHT;
+          var roomText = roomLabel(extra.room);
+          blocks.push(
+            '<a class="tt-block tt-block-transfer" href="simulator.html?subject=' + extra.subject.id + '"' +
+              ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + extra.subject.color + '"' +
+              ' title="' + escHtml(extra.subject.id + ' · ' + t('tt.transfer') + ' · ' + extra.start + '–' + extra.end) + '">' +
+              '<span class="tt-block-code">' + extra.subject.id + '</span>' +
+              '<span class="tt-block-meta">' + t('tt.transfer') + ' · ' + (extra.room || t('att.transferRoomTbd')) + '</span>' +
+              (roomText ? '<span class="tt-block-room">' + roomText + '</span>' : '') +
+            '</a>'
+          );
         });
         return '<div class="tt-col" style="height:' + height + 'px">' + blocks.join('') + '</div>';
       })
@@ -1397,6 +1504,41 @@
     });
   }
 
+  /* 休講・振替は定例コマの定義を書き換えず、sessionOverrides に 1 件だけ持つ。
+     同じ科目・コマ・日付に二重登録しないよう、既存があれば上書きする。 */
+  function setOverride(subjectId, sessionIndex, date, kind, target) {
+    BB.store.update(function (state) {
+      state.sessionOverrides = state.sessionOverrides || [];
+      var existing = null;
+      state.sessionOverrides.forEach(function (entry) {
+        if (entry.subjectId === subjectId && entry.sessionIndex === sessionIndex && entry.date === date) {
+          existing = entry;
+        }
+      });
+      if (existing) {
+        existing.kind = kind;
+        existing.target = target || null;
+        return;
+      }
+      state.sessionOverrides.push({
+        id: 'so' + Date.now(),
+        subjectId: subjectId,
+        sessionIndex: sessionIndex,
+        date: date,
+        kind: kind,
+        target: target || null
+      });
+    });
+  }
+
+  function removeOverride(id) {
+    BB.store.update(function (state) {
+      state.sessionOverrides = (state.sessionOverrides || []).filter(function (entry) {
+        return entry.id !== id;
+      });
+    });
+  }
+
   BB.ui = {
     header: header,
     footer: footer,
@@ -1412,7 +1554,12 @@
     termLabel: termLabelOf
   };
 
-  BB.attendance = { mark: markAttendance, unmark: unmarkAttendance };
+  BB.attendance = {
+    mark: markAttendance,
+    unmark: unmarkAttendance,
+    setOverride: setOverride,
+    removeOverride: removeOverride
+  };
 
   /* Stitch のインラインタイマーをここへ吸収。ページ側は UI だけを持つ。 */
   var timerState = { startedAt: null, handle: null, tick: null };
@@ -1448,6 +1595,10 @@
     attendanceOf: attendanceOf,
     securedOf: securedOf,
     deadlineItems: deadlineItems,
+    overridesOf: overridesOf,
+    overrideFor: overrideFor,
+    noClassCount: noClassCount,
+    extraSessions: extraSessions,
     currentWeek: currentWeek,
     weekOf: weekOfClamped,
     isPreview: isPreview,

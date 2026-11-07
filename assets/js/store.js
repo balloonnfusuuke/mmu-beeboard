@@ -41,6 +41,8 @@
       studySessions: [],
       customDeadlines: [],
       notes: [],
+      /* 休講・振替は定例コマの定義を書き換えず、この別枠だけで持つ。 */
+      sessionOverrides: [],
       archive: [],
       /* 初回セットアップを終えたか（Skip でも立てる）。未完了かつ科目0件のときだけ自動表示する。 */
       setupDone: false
@@ -166,6 +168,7 @@
           studySessions: clone(state.studySessions || []),
           customDeadlines: clone(state.customDeadlines || []),
           notes: clone(state.notes || []),
+          sessionOverrides: clone(state.sessionOverrides || []),
           archivedAt: new Date().toISOString()
         });
       });
@@ -184,6 +187,7 @@
         state.studySessions = [];
         state.customDeadlines = [];
         state.notes = [];
+        state.sessionOverrides = [];
       });
     },
     /* archive の 1 件を現在の学期に戻す。今の学期は退避してから入れ替える。 */
@@ -199,6 +203,7 @@
         state.studySessions = clone(entry.studySessions || []);
         state.customDeadlines = clone(entry.customDeadlines || []);
         state.notes = clone(entry.notes || []);
+        state.sessionOverrides = clone(entry.sessionOverrides || []);
       });
     }
   };

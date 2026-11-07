@@ -9,6 +9,8 @@
   /* 記録対象のコマと日付は科目ごとに保持する。再描画で選択が戻らないように。 */
   var pickedSession = {};
   var pickedDate = {};
+  /* 振替フォームの入力途中の状態。null なら閉じている。 */
+  var transferDraft = null;
 
   function state() {
     return BB.store.get();
@@ -16,6 +18,14 @@
 
   function today() {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  function esc(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function headOptions() {
@@ -94,7 +104,8 @@
       t('att.policyBody', { t: threshold }) + '</div></div>';
   }
 
-  /* 記録するコマを選ばせる。以前は「どの授業の分か」を選べず誤タップがそのまま残った。 */
+  /* 記録するコマを選ばせる。以前は「どの授業の分か」を選べず誤タップがそのまま残った。
+     振替の臨時セッションも出席対象なので、定例コマの後ろに並べる。 */
   function sessionPicker(subject) {
     if (!subject.sessions.length) {
       return (
@@ -104,17 +115,128 @@
       );
     }
     var selected = pickedSession[subject.id];
-    if (selected === undefined) selected = 0;
+    if (selected === undefined) selected = '0';
+    var extras = BB.dash.extraSessions(state()).filter(function (extra) {
+      return extra.subject.id === subject.id;
+    });
+    var options = subject.sessions
+      .map(function (session, index) {
+        return '<option value="' + index + '"' + (String(index) === String(selected) ? ' selected' : '') + '>' +
+          esc(sessionLabel(session)) + '</option>';
+      })
+      .join('') +
+      extras
+        .map(function (extra) {
+          var key = 'x:' + extra.overrideId;
+          return '<option value="' + key + '"' + (key === String(selected) ? ' selected' : '') + '>' +
+            esc(t('att.transferBadge') + ' · ' + extra.date + ' ' + extra.start + '–' + extra.end) + '</option>';
+        })
+        .join('');
     return (
       '<div><label class="bb-label">' + t('att.session') + '</label>' +
-      '<select class="bb-input" data-session-picker="' + subject.id + '">' +
-      subject.sessions
-        .map(function (session, index) {
-          return '<option value="' + index + '"' + (index === selected ? ' selected' : '') + '>' +
-            sessionLabel(session) + '</option>';
-        })
-        .join('') +
-      '</select></div>'
+      '<select class="bb-input" data-session-picker="' + subject.id + '">' + options + '</select></div>'
+    );
+  }
+
+  /* 選択中のコマを解決する。振替の臨時セッションなら extra が入る。 */
+  function resolvePick(subject) {
+    var key = pickedSession[subject.id] === undefined ? '0' : String(pickedSession[subject.id]);
+    if (key.indexOf('x:') === 0) {
+      var id = key.slice(2);
+      var extra = null;
+      BB.dash.extraSessions(state()).forEach(function (candidate) {
+        if (candidate.overrideId === id) extra = candidate;
+      });
+      if (extra) return { extra: extra, index: -1, session: extra, date: extra.date };
+    }
+    var index = Number(key);
+    if (!isFinite(index) || index < 0) index = 0;
+    return {
+      extra: null,
+      index: index,
+      session: subject.sessions[index],
+      date: pickedDate[subject.id] || today()
+    };
+  }
+
+  /* 振替フォーム。振替先の日付・開始・終了は必須、教室だけ任意。 */
+  function transferFormHtml(subject, draft) {
+    var target = draft.target || {};
+    return (
+      '<form class="mt-3 rounded-control border border-border bg-canvas p-3 space-y-2.5" data-transfer-form="' +
+      subject.id + '">' +
+      '<div class="text-label-md font-semibold text-ink">' +
+      (draft.overrideId ? t('att.transferEditTitle') : t('att.transferTitle')) + '</div>' +
+      '<p class="text-caption text-muted">' +
+      t('att.transferSource', { date: draft.date, session: draft.sessionLabel }) + '</p>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">' +
+      '<div><label class="bb-label" for="tr-date">' + t('att.transferDate') + '</label>' +
+      '<input id="tr-date" name="date" class="bb-input num" type="date" value="' + esc(target.date) + '" required></div>' +
+      '<div><label class="bb-label" for="tr-start">' + t('att.transferStart') + '</label>' +
+      '<input id="tr-start" name="start" class="bb-input num" type="time" value="' + esc(target.start) + '" required></div>' +
+      '<div><label class="bb-label" for="tr-end">' + t('att.transferEnd') + '</label>' +
+      '<input id="tr-end" name="end" class="bb-input num" type="time" value="' + esc(target.end) + '" required></div>' +
+      '</div>' +
+      '<div><label class="bb-label" for="tr-room">' + t('att.transferRoom') + '</label>' +
+      '<input id="tr-room" name="room" class="bb-input" type="text" value="' + esc(target.room) +
+      '" placeholder="' + esc(t('att.transferRoomTbd')) + '"></div>' +
+      '<div class="flex justify-end gap-2">' +
+      '<button type="button" class="bb-btn bb-btn-ghost" data-transfer-cancel="' + subject.id + '">' +
+      t('common.cancel') + '</button>' +
+      '<button type="submit" class="bb-btn bb-btn-primary">' + t('att.transferSave') + '</button>' +
+      '</div></form>'
+    );
+  }
+
+  /* 休講・振替の一覧。振替は後から編集も取消もできる。 */
+  function overrideSection(subject) {
+    var list = BB.dash.overridesOf(state()).filter(function (entry) {
+      return entry.subjectId === subject.id;
+    });
+    var draft = transferDraft && transferDraft.subjectId === subject.id ? transferDraft : null;
+    if (!list.length && !draft) return '';
+
+    var rows = list
+      .map(function (entry) {
+        var session = subject.sessions[entry.sessionIndex];
+        var isTransfer = entry.kind === 'transfer' && entry.target;
+        var detail = isTransfer
+          ? t('att.transferTo', {
+              date: entry.target.date,
+              start: entry.target.start,
+              end: entry.target.end
+            }) + ' · ' + (entry.target.room || t('att.transferRoomTbd'))
+          : t('att.noClassHint');
+        return (
+          '<div class="flex items-start justify-between gap-3 py-2 border-b border-border-subtle last:border-0">' +
+          '<div class="min-w-0">' +
+          '<div class="flex flex-wrap items-center gap-2 text-body-sm text-ink">' +
+          '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +
+          (isTransfer ? t('att.transferBadge') : t('att.noClassBadge')) + '</span>' +
+          '<span class="num">' + esc(entry.date) + '</span></div>' +
+          (session ? '<div class="text-caption text-muted truncate">' + esc(sessionLabel(session)) + '</div>' : '') +
+          '<div class="text-caption text-muted">' + esc(detail) + '</div></div>' +
+          '<div class="flex items-center gap-1 shrink-0">' +
+          '<button type="button" class="p-1.5 rounded text-muted hover:text-primary" data-override-edit="' +
+          entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferEdit')) +
+          '" aria-label="' + esc(t('att.transferEdit')) + '">' +
+          '<span class="material-symbols-outlined text-[16px]">edit</span></button>' +
+          '<button type="button" class="p-1.5 rounded text-muted hover:text-alert" data-override-remove="' +
+          entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferRemove')) +
+          '" aria-label="' + esc(t('att.transferRemove')) + '">' +
+          '<span class="material-symbols-outlined text-[16px]">delete</span></button>' +
+          '</div></div>'
+        );
+      })
+      .join('');
+
+    return (
+      '<div class="mt-3 pt-3 border-t border-border-subtle">' +
+      '<div class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
+      t('att.overridesTitle') + '</div>' +
+      rows +
+      (draft ? transferFormHtml(subject, draft) : '') +
+      '</div>'
     );
   }
 
@@ -180,12 +302,22 @@
           t('att.lastSession', {
             value: lastEntry ? lastEntry.date + (lastEntry.session ? ' · ' + lastEntry.session : '') : '—'
           }) + '</span>' +
-          '<div class="flex items-center gap-2">' +
+          '<div class="flex flex-wrap items-center gap-2">' +
           '<button type="button" class="bb-btn bb-btn-ghost" data-mark="present" data-subject="' + subject.id + '">' +
           '<span class="material-symbols-outlined text-[18px]">check</span>' + t('att.markPresent') + '</button>' +
           '<button type="button" class="bb-btn bb-btn-ghost" data-mark="absent" data-subject="' + subject.id + '">' +
           '<span class="material-symbols-outlined text-[18px]">event_busy</span>' + t('att.markAbsent') + '</button>' +
-          '</div></div></div></div>'
+          '<button type="button" class="bb-btn bb-btn-ghost" data-mark="nocancel" data-subject="' + subject.id + '"' +
+          (subject.sessions.length ? '' : ' disabled') + '>' +
+          '<span class="material-symbols-outlined text-[18px]">event_available</span>' + t('att.markNoClass') +
+          '</button>' +
+          '<button type="button" class="bb-btn bb-btn-ghost" data-transfer-open="' + subject.id + '"' +
+          (subject.sessions.length ? '' : ' disabled') + '>' +
+          '<span class="material-symbols-outlined text-[18px]">swap_horiz</span>' + t('att.transferBadge') +
+          '</button>' +
+          '</div></div>' +
+          overrideSection(subject) +
+          '</div></div>'
         );
       })
       .join('');
@@ -248,7 +380,7 @@
   document.getElementById('subjects').addEventListener('change', function (event) {
     var picker = event.target.closest('[data-session-picker]');
     if (picker) {
-      pickedSession[picker.getAttribute('data-session-picker')] = Number(picker.value);
+      pickedSession[picker.getAttribute('data-session-picker')] = picker.value;
       return;
     }
     var dateField = event.target.closest('[data-session-date]');
@@ -257,7 +389,117 @@
     }
   });
 
+  /* 振替フォームを開く。既存の休講・振替を編集するときはその内容を引き継ぐ。 */
+  function openTransfer(subjectId, overrideId) {
+    var subject = BB.store.subject(subjectId);
+    if (!subject) return;
+    var pick = resolvePick(subject);
+    var index = pick.extra ? 0 : pick.index;
+    var date = pick.extra ? today() : pick.date;
+    var target = { date: '', start: '', end: '', room: '' };
+
+    if (overrideId) {
+      BB.dash.overridesOf(state()).forEach(function (entry) {
+        if (entry.id !== overrideId) return;
+        index = entry.sessionIndex;
+        date = entry.date;
+        if (entry.target) {
+          target = {
+            date: entry.target.date || '',
+            start: entry.target.start || '',
+            end: entry.target.end || '',
+            room: entry.target.room || ''
+          };
+        }
+      });
+    }
+
+    var session = subject.sessions[index];
+    transferDraft = {
+      subjectId: subjectId,
+      overrideId: overrideId || null,
+      sessionIndex: index,
+      date: date,
+      sessionLabel: session ? sessionLabel(session) : '',
+      target: target
+    };
+    render();
+  }
+
+  function saveTransfer(form) {
+    var draft = transferDraft;
+    if (!draft) return;
+    var target = {
+      date: form.elements.date.value.trim(),
+      start: form.elements.start.value.trim(),
+      end: form.elements.end.value.trim(),
+      room: form.elements.room.value.trim()
+    };
+    /* 振替先は必須。空のまま保存させず、理由を出す。 */
+    if (!target.date || !target.start || !target.end) {
+      BB.ui.toast(t('att.toast.transferRequired'));
+      return;
+    }
+    if (target.end <= target.start) {
+      BB.ui.toast(t('att.toast.transferRange'));
+      return;
+    }
+    BB.attendance.setOverride(draft.subjectId, draft.sessionIndex, draft.date, 'transfer', target);
+    transferDraft = null;
+    render();
+    BB.ui.toast(t('att.toast.transferSaved'));
+  }
+
+  document.getElementById('subjects').addEventListener('submit', function (event) {
+    var form = event.target.closest('[data-transfer-form]');
+    if (!form) return;
+    event.preventDefault();
+    saveTransfer(form);
+  });
+
   document.getElementById('subjects').addEventListener('click', function (event) {
+    var transferOpen = event.target.closest('[data-transfer-open]');
+    if (transferOpen) {
+      openTransfer(transferOpen.getAttribute('data-transfer-open'), null);
+      return;
+    }
+    var transferCancel = event.target.closest('[data-transfer-cancel]');
+    if (transferCancel) {
+      transferDraft = null;
+      render();
+      return;
+    }
+    var overrideEdit = event.target.closest('[data-override-edit]');
+    if (overrideEdit) {
+      openTransfer(overrideEdit.getAttribute('data-subject'), overrideEdit.getAttribute('data-override-edit'));
+      return;
+    }
+    var overrideRemove = event.target.closest('[data-override-remove]');
+    if (overrideRemove) {
+      var removeId = overrideRemove.getAttribute('data-override-remove');
+      var removeSubject = overrideRemove.getAttribute('data-subject');
+      var removed = null;
+      BB.dash.overridesOf(state()).forEach(function (entry) {
+        if (entry.id === removeId) removed = JSON.parse(JSON.stringify(entry));
+      });
+      if (!removed) return;
+      BB.attendance.removeOverride(removeId);
+      if (transferDraft && transferDraft.overrideId === removeId) transferDraft = null;
+      render();
+      BB.ui.toast(t('att.toast.transferRemoved'), {
+        actionLabel: t('common.undo'),
+        onAction: function () {
+          BB.store.update(function (data) {
+            data.sessionOverrides = data.sessionOverrides || [];
+            data.sessionOverrides.push(removed);
+          });
+          render();
+          BB.ui.toast(t('att.toast.restored'));
+        }
+      });
+      return;
+    }
+
     var button = event.target.closest('[data-mark]');
     if (!button) return;
     var subjectId = button.getAttribute('data-subject');
@@ -265,10 +507,38 @@
     var subject = BB.store.subject(subjectId);
     if (!subject) return;
 
-    var index = pickedSession[subjectId] === undefined ? 0 : pickedSession[subjectId];
-    var session = subject.sessions[index];
-    var date = pickedDate[subjectId] || today();
+    var pick = resolvePick(subject);
+    var index = pick.index;
+    var session = pick.session;
+    var date = pick.date;
     var label = session ? sessionLabel(session) : '';
+
+    /* 休講は出席ログではなく sessionOverrides に置く。総回数から外れる。 */
+    if (status === 'nocancel') {
+      /* 振替の臨時セッションは総回数の外にあるので休講にできない。取消で対応する。 */
+      if (pick.extra) {
+        BB.ui.toast(t('att.toast.noClassOnTransfer'));
+        return;
+      }
+      BB.attendance.setOverride(subjectId, index, date, 'nocancel', null);
+      render();
+      BB.ui.toast(t('att.toast.noClass') + ' · ' + date + (label ? ' · ' + label : ''), {
+        actionLabel: t('common.undo'),
+        onAction: function () {
+          var target = null;
+          BB.dash.overridesOf(state()).forEach(function (entry) {
+            if (entry.subjectId === subjectId && entry.sessionIndex === index && entry.date === date) {
+              target = entry;
+            }
+          });
+          if (!target) return;
+          BB.attendance.removeOverride(target.id);
+          render();
+          BB.ui.toast(t('att.toast.noClassRemoved'));
+        }
+      });
+      return;
+    }
 
     var entryIndex = BB.attendance.mark(subjectId, status, { date: date, session: label });
     render();

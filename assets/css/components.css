@@ -192,6 +192,22 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 .tt-block-meta { font-size: 10px; line-height: 1.2; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tt-block-room { font-size: 9px; line-height: 1.15; opacity: .82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* 休講にした回。科目色を使わず、破線の枠だけで「授業ではない」ことを示す。 */
+.tt-block-off {
+  background: var(--bb-surface-sunken);
+  color: var(--bb-text-muted);
+  border: 1px dashed var(--bb-border);
+  box-shadow: none;
+}
+.tt-block-off:hover { filter: none; }
+
+/* 振替の臨時セッション。定例コマと区別できるよう二重の縁を付ける。 */
+.tt-block-transfer {
+  outline: 2px solid var(--bb-surface);
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55), var(--bb-shadow-rest);
+}
+
 /* 時間割ブロックの「メモを追加」。ブロックの邪魔をしないよう普段は隠す。 */
 .tt-note {
   position: absolute;
