@@ -195,13 +195,21 @@
     return state.sessionOverrides || [];
   }
 
+  /* 保存値の日付は 'YYYY-MM-DD' を基本にするが、時刻付きや数値のコマ番号が
+     混ざっていても照合できるように正規化してから比べる。ここが厳密一致だけだと、
+     記録はあるのにグリッドの元コマが実線のまま残る。 */
+  function isoKey(value) {
+    return String(value === undefined || value === null ? '' : value).slice(0, 10);
+  }
+
   /* その科目・コマ・日付に休講（振替を含む）の記録があるか。 */
   function overrideFor(state, subjectId, sessionIndex, date) {
+    var wanted = isoKey(date);
     var found = null;
     overridesOf(state).forEach(function (entry) {
       if (entry.subjectId !== subjectId) return;
-      if (entry.sessionIndex !== sessionIndex) return;
-      if (entry.date !== date) return;
+      if (Number(entry.sessionIndex) !== Number(sessionIndex)) return;
+      if (isoKey(entry.date) !== wanted) return;
       found = entry;
     });
     return found;
@@ -224,13 +232,14 @@
         if (candidate.id === entry.subjectId) subject = candidate;
       });
       if (!subject) return;
-      var day = BB.date.parse(entry.target.date);
+      var targetDate = isoKey(entry.target.date);
+      var day = BB.date.parse(targetDate);
       if (!day) return;
       list.push({
         subject: subject,
         overrideId: entry.id,
-        sourceDate: entry.date,
-        date: entry.target.date,
+        sourceDate: isoKey(entry.date),
+        date: targetDate,
         day: day.getDay(),
         start: entry.target.start,
         end: entry.target.end,
@@ -644,6 +653,25 @@
       items.push(
         '<div class="flex items-center gap-1.5"><span class="tt-legend-off"></span>' +
         '<span class="text-muted">' + t('tt.noClass') + '</span></div>'
+      );
+    }
+    /* 表示中の週に無い休講・振替はグリッドに出ないのが正しいが、
+       「保存できていない」と誤解される。件数だけ凡例に出す。 */
+    var week = weekDates(new Date());
+    var weekList = [1, 2, 3, 4, 5].map(function (day) {
+      return week[day];
+    });
+    var elsewhere = overridesOf(state).filter(function (entry) {
+      var dates = [isoKey(entry.date)];
+      if (entry.target && entry.target.date) dates.push(isoKey(entry.target.date));
+      return !dates.some(function (value) {
+        return weekList.indexOf(value) >= 0;
+      });
+    }).length;
+    if (elsewhere) {
+      items.push(
+        '<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px] text-muted">event_repeat</span>' +
+        '<span class="text-muted">' + tn('tt.overridesElsewhere', elsewhere, { n: elsewhere }) + '</span></div>'
       );
     }
     host.innerHTML = items.join('');

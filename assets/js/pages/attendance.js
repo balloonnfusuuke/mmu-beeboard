@@ -18,8 +18,10 @@
     return BB.store.get();
   }
 
+  /* 端末のローカル日付。UTC で切ると、日本・マレーシアの朝は前日になり、
+     保存した日付がグリッドの列と 1 日ずれる。 */
   function today() {
-    return new Date().toISOString().slice(0, 10);
+    return isoOf(new Date());
   }
 
   function isoOf(date) {
@@ -213,6 +215,36 @@
     };
   }
 
+  /* 振替フォームを開いたままコマや日付を変えると、保存される「元の回」が
+     フォームの表示とずれる。開いた時点の値を持ち続けず、保存直前と
+     選択が変わったときに解決し直す。 */
+  function syncDraftSource() {
+    if (!transferDraft || transferDraft.overrideId) return;
+    var subject = BB.store.subject(transferDraft.subjectId);
+    if (!subject) return;
+    var pick = resolvePick(subject);
+    var index = pick.extra ? 0 : pick.index;
+    var session = subject.sessions[index];
+    transferDraft.sessionIndex = index;
+    transferDraft.date = pick.extra ? today() : pick.date;
+    transferDraft.sessionLabel = session ? sessionLabel(session) : '';
+  }
+
+  /* フォームの「元の回」表示だけを差し替える。入力途中の振替先は消さない。 */
+  function refreshDraftSource(subjectId) {
+    if (!transferDraft || transferDraft.overrideId) return;
+    if (transferDraft.subjectId !== subjectId) return;
+    syncDraftSource();
+    var lines = document.querySelectorAll('[data-transfer-source]');
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].getAttribute('data-transfer-source') !== subjectId) continue;
+      lines[i].textContent = t('att.transferSource', {
+        date: fmtDate(transferDraft.date),
+        session: transferDraft.sessionLabel
+      });
+    }
+  }
+
   /* 振替フォーム。振替先の日付・開始・終了は必須、教室だけ任意。 */
   function transferFormHtml(subject, draft) {
     var target = draft.target || {};
@@ -221,7 +253,7 @@
       subject.id + '">' +
       '<div class="text-label-md font-semibold text-ink">' +
       (draft.overrideId ? t('att.transferEditTitle') : t('att.transferTitle')) + '</div>' +
-      '<p class="text-caption text-muted">' +
+      '<p class="text-caption text-muted" data-transfer-source="' + subject.id + '">' +
       t('att.transferSource', { date: fmtDate(draft.date), session: draft.sessionLabel }) + '</p>' +
       '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">' +
       '<div><label class="bb-label" for="tr-date">' + t('att.transferDate') + '</label>' +
@@ -441,11 +473,13 @@
     var picker = event.target.closest('[data-session-picker]');
     if (picker) {
       pickedSession[picker.getAttribute('data-session-picker')] = picker.value;
+      refreshDraftSource(picker.getAttribute('data-session-picker'));
       return;
     }
     var dateField = event.target.closest('[data-session-date]');
     if (dateField) {
       pickedDate[dateField.getAttribute('data-session-date')] = dateField.value;
+      refreshDraftSource(dateField.getAttribute('data-session-date'));
     }
   });
 
@@ -512,6 +546,8 @@
   function saveTransfer(form) {
     var draft = transferDraft;
     if (!draft) return;
+    /* フォームを開いた後にコマや日付を変えていても、いま選ばれている回で保存する。 */
+    syncDraftSource();
     var target = {
       date: form.elements.date.value.trim(),
       start: form.elements.start.value.trim(),

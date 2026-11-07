@@ -172,7 +172,11 @@
         noClass: 'No class',
         transfer: 'Transfer',
         dayDate: '{d}',
-        dayDateWithMonth: '{mon} {d}'
+        dayDateWithMonth: '{mon} {d}',
+        overridesElsewhere: {
+          one: '{n} no-class or transfer in another week',
+          other: '{n} no-class or transfers in other weeks'
+        }
       },
       detail: {
         nextClass: 'Next class: {code} {name}',
@@ -1068,7 +1072,11 @@
         noClass: '休講',
         transfer: '振替',
         dayDate: '{d}日',
-        dayDateWithMonth: '{m}/{d}'
+        dayDateWithMonth: '{m}/{d}',
+        overridesElsewhere: {
+          one: 'ほかの週に休講・振替が {n} 件',
+          other: 'ほかの週に休講・振替が {n} 件'
+        }
       },
       detail: {
         nextClass: '次の授業: {code} {name}',
