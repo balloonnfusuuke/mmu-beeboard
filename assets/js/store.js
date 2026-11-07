@@ -45,6 +45,8 @@
       sessionOverrides: [],
       /* 締切の詳細（リンク・メモ）。締切本体とは分けて持つ。 */
       deadlineDetails: {},
+      /* 時間割に並べる個人予定。出席・次の授業・締切の計算には混ぜない。 */
+      personalEvents: [],
       archive: [],
       /* 初回セットアップを終えたか（Skip でも立てる）。未完了かつ科目0件のときだけ自動表示する。 */
       setupDone: false
@@ -172,6 +174,7 @@
           notes: clone(state.notes || []),
           sessionOverrides: clone(state.sessionOverrides || []),
           deadlineDetails: clone(state.deadlineDetails || {}),
+          personalEvents: clone(state.personalEvents || []),
           archivedAt: new Date().toISOString()
         });
       });
@@ -192,6 +195,7 @@
         state.notes = [];
         state.sessionOverrides = [];
         state.deadlineDetails = {};
+        state.personalEvents = [];
       });
     },
     /* archive の 1 件を現在の学期に戻す。今の学期は退避してから入れ替える。 */
@@ -209,6 +213,7 @@
         state.notes = clone(entry.notes || []);
         state.sessionOverrides = clone(entry.sessionOverrides || []);
         state.deadlineDetails = clone(entry.deadlineDetails || {});
+        state.personalEvents = clone(entry.personalEvents || []);
       });
     }
   };

@@ -432,7 +432,44 @@
     });
   }
 
+  /* ---------- 個人予定 ---------- */
+
+  /* 科目色と衝突させないため、予定は「淡い面＋左の色帯」で描く。塗りつぶしは使わない。 */
+  var EVENT_COLORS = ['#475569', '#0F766E', '#7C3AED', '#B45309'];
+
+  function personalEventsOf(state) {
+    return state.personalEvents || [];
+  }
+
+  function eventById(state, id) {
+    var found = null;
+    personalEventsOf(state).forEach(function (entry) {
+      if (entry.id === id) found = entry;
+    });
+    return found;
+  }
+
+  function minutesRange(start, end) {
+    return { start: minutesOf(start), end: minutesOf(end) };
+  }
+
+  function rangesOverlap(a, b) {
+    return a.start < b.end && b.start < a.end;
+  }
+
+  /* その曜日・その週に出る予定。once は日付が一致する週だけ、weekly は毎週。 */
+  function eventsForDay(state, day, dayIso) {
+    return personalEventsOf(state).filter(function (entry) {
+      if (entry.kind === 'weekly') return Number(entry.weekday) === day;
+      if (!dayIso || entry.date !== dayIso) return false;
+      /* 単発は日付が一致する列にだけ出す。曜日も突き合わせて取り違えを防ぐ。 */
+      var when = BB.date.parse(entry.date);
+      return !!when && when.getDay() === day;
+    });
+  }
+
   /* ---------- rendering ---------- */
+
 
   function bindHeader(state, now, preview) {
     var weeks = state.term.weeks || 14;
@@ -665,6 +702,33 @@
               '<span class="tt-block-meta">' + t('tt.transfer') + ' · ' + (extra.room || t('att.transferRoomTbd')) + '</span>' +
               (roomText ? '<span class="tt-block-room">' + roomText + '</span>' : '') +
             '</a>'
+          );
+        });
+        /* 個人予定。授業と重なる時間帯では右半分に寄せて、両方が読めるようにする。 */
+        var classRanges = [];
+        state.subjects.forEach(function (subject) {
+          subject.sessions.forEach(function (session) {
+            if (session.day !== day) return;
+            classRanges.push(minutesRange(session.start, session.end));
+          });
+        });
+        eventsForDay(state, day, dayIso).forEach(function (entry) {
+          var span = minutesRange(entry.start, entry.end);
+          if (!isFinite(span.start) || !isFinite(span.end) || span.end <= span.start) return;
+          var blockTop = ((span.start - HOUR_START * 60) / 60) * HOUR_HEIGHT;
+          var blockHeight = ((span.end - span.start) / 60) * HOUR_HEIGHT;
+          var overlaps = classRanges.some(function (range) {
+            return rangesOverlap(span, range);
+          });
+          blocks.push(
+            '<button type="button" class="tt-event' + (overlaps ? ' tt-event-shift' : '') + '"' +
+              ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;border-left-color:' +
+              (entry.color || EVENT_COLORS[0]) + '"' +
+              ' data-event-edit="' + entry.id + '"' +
+              ' title="' + escHtml(entry.title + ' · ' + entry.start + '–' + entry.end + (entry.memo ? ' · ' + entry.memo : '')) + '">' +
+              '<span class="tt-event-title">' + escHtml(entry.title) + '</span>' +
+              '<span class="tt-event-meta">' + entry.start + '–' + entry.end + '</span>' +
+            '</button>'
           );
         });
         return '<div class="tt-col" style="height:' + height + 'px">' + blocks.join('') + '</div>';
@@ -1245,6 +1309,259 @@
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span>' + t('setupCard.cta') + '</a></div>';
   }
 
+  /* ---------- 個人予定のフォーム ---------- */
+
+  var eventDraft = null;
+
+  function eventFormHtml(state) {
+    var draft = eventDraft;
+    var isOnce = draft.kind !== 'weekly';
+    var weekdayOptions = [1, 2, 3, 4, 5]
+      .map(function (day) {
+        return '<option value="' + day + '"' + (Number(draft.weekday) === day ? ' selected' : '') + '>' +
+          dayName(day) + '</option>';
+      })
+      .join('');
+    var swatches = EVENT_COLORS.map(function (color) {
+      return '<button type="button" class="w-7 h-7 rounded-full border-2" style="background:' + color +
+        ';border-color:' + (draft.color === color ? 'var(--bb-text)' : 'transparent') + '"' +
+        ' data-event-color="' + color + '" aria-label="' + color + '"></button>';
+    }).join('');
+
+    return (
+      '<form id="event-form-el" class="bb-card p-4 space-y-3">' +
+      '<div class="flex items-center justify-between">' +
+      '<h3 class="text-label-md font-bold text-ink">' + (draft.id ? t('pe.editTitle') : t('pe.title')) + '</h3>' +
+      '<button type="button" data-event-cancel class="text-muted hover:text-ink" aria-label="' + t('common.cancel') + '">' +
+      '<span class="material-symbols-outlined text-[18px]">close</span></button></div>' +
+      '<p class="text-caption text-muted">' + t('pe.subtitle') + '</p>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="pe-name">' + t('pe.name') + '</label>' +
+      '<input id="pe-name" name="title" class="bb-input" type="text" value="' + escHtml(draft.title) +
+      '" placeholder="' + escHtml(t('pe.namePlaceholder')) + '" required></div>' +
+      '<div><label class="bb-label" for="pe-kind">' + t('pe.kind') + '</label>' +
+      '<select id="pe-kind" name="kind" class="bb-input">' +
+      '<option value="once"' + (isOnce ? ' selected' : '') + '>' + t('pe.kindOnce') + '</option>' +
+      '<option value="weekly"' + (isOnce ? '' : ' selected') + '>' + t('pe.kindWeekly') + '</option></select></div>' +
+      (isOnce
+        ? '<div><label class="bb-label" for="pe-date">' + t('pe.date') + '</label>' +
+          '<input id="pe-date" name="date" class="bb-input num" type="date" value="' + escHtml(draft.date) + '"></div>'
+        : '<div><label class="bb-label" for="pe-weekday">' + t('pe.weekday') + '</label>' +
+          '<select id="pe-weekday" name="weekday" class="bb-input">' + weekdayOptions + '</select></div>') +
+      '<div><label class="bb-label" for="pe-start">' + t('pe.start') + '</label>' +
+      '<input id="pe-start" name="start" class="bb-input num" type="time" value="' + escHtml(draft.start) + '"></div>' +
+      '<div><label class="bb-label" for="pe-end">' + t('pe.end') + '</label>' +
+      '<input id="pe-end" name="end" class="bb-input num" type="time" value="' + escHtml(draft.end) + '"></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label">' + t('pe.color') + '</label>' +
+      '<div class="flex items-center gap-2">' + swatches + '</div></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="pe-memo">' + t('pe.memo') + '</label>' +
+      '<textarea id="pe-memo" name="memo" class="bb-input" rows="2" placeholder="' +
+      escHtml(t('pe.memoPlaceholder')) + '">' + escHtml(draft.memo) + '</textarea></div>' +
+      '</div>' +
+      '<div class="flex flex-wrap items-center justify-between gap-2">' +
+      (draft.id
+        ? '<button type="button" class="bb-btn bb-btn-ghost" data-event-delete="' + draft.id + '">' +
+          '<span class="material-symbols-outlined text-[18px]">delete</span>' + t('pe.remove') + '</button>'
+        : '<span></span>') +
+      '<div class="flex items-center gap-2">' +
+      '<button type="button" class="bb-btn bb-btn-ghost" data-event-cancel>' + t('common.cancel') + '</button>' +
+      '<button type="submit" class="bb-btn bb-btn-primary">' + t('pe.save') + '</button></div></div>' +
+      '</form>'
+    );
+  }
+
+  /* 再描画の前に、入力中の値を下書きへ戻す。種別を切り替えても入力が消えないように。 */
+  function collectEventForm() {
+    var form = $('#event-form-el');
+    if (!form || !eventDraft) return;
+    if (form.elements.title) eventDraft.title = form.elements.title.value;
+    if (form.elements.date) eventDraft.date = form.elements.date.value;
+    if (form.elements.weekday) eventDraft.weekday = Number(form.elements.weekday.value) || 1;
+    if (form.elements.start) eventDraft.start = form.elements.start.value;
+    if (form.elements.end) eventDraft.end = form.elements.end.value;
+    if (form.elements.memo) eventDraft.memo = form.elements.memo.value;
+  }
+
+  function renderEventForm(state) {
+    var host = $('#event-form');
+    if (!host) return;
+    host.innerHTML = eventDraft ? eventFormHtml(state) : '';
+  }
+
+  function openEventForm(id) {
+    var state = BB.store.get();
+    if (id) {
+      var found = eventById(state, id);
+      if (!found) return;
+      eventDraft = {
+        id: found.id,
+        title: found.title || '',
+        kind: found.kind === 'weekly' ? 'weekly' : 'once',
+        date: found.date || isoDay(new Date()),
+        weekday: Number(found.weekday) || 1,
+        start: found.start || '09:00',
+        end: found.end || '10:00',
+        color: found.color || EVENT_COLORS[0],
+        memo: found.memo || ''
+      };
+    } else {
+      eventDraft = {
+        id: null,
+        title: '',
+        kind: 'once',
+        date: isoDay(new Date()),
+        weekday: 1,
+        start: '09:00',
+        end: '10:00',
+        color: EVENT_COLORS[0],
+        memo: ''
+      };
+    }
+    renderEventForm(state);
+    var field = $('#pe-name');
+    if (field) field.focus();
+  }
+
+  function saveEvent(form) {
+    var draft = eventDraft;
+    if (!draft) return;
+    var title = form.elements.title.value.trim();
+    if (!title) {
+      BB.ui.toast(t('pe.nameRequired'));
+      return;
+    }
+    var kind = form.elements.kind.value === 'weekly' ? 'weekly' : 'once';
+    var date = kind === 'once' ? form.elements.date.value.trim() : '';
+    if (kind === 'once' && !date) {
+      BB.ui.toast(t('pe.dateRequired'));
+      return;
+    }
+    var start = form.elements.start.value.trim();
+    var end = form.elements.end.value.trim();
+    if (!start || !end || end <= start) {
+      BB.ui.toast(t('pe.timeInvalid'));
+      return;
+    }
+    var weekday = kind === 'weekly' ? Number(form.elements.weekday.value) : 0;
+    var memo = form.elements.memo.value.trim();
+    var id = draft.id;
+
+    BB.store.update(function (state) {
+      state.personalEvents = state.personalEvents || [];
+      var entry = null;
+      state.personalEvents.forEach(function (candidate) {
+        if (candidate.id === id) entry = candidate;
+      });
+      if (!entry) {
+        entry = { id: 'pe' + Date.now() };
+        state.personalEvents.push(entry);
+      }
+      entry.title = title;
+      entry.kind = kind;
+      entry.date = date;
+      entry.weekday = weekday;
+      entry.start = start;
+      entry.end = end;
+      entry.color = draft.color;
+      entry.memo = memo;
+    });
+
+    eventDraft = null;
+    init();
+    BB.ui.toast(t('pe.saved'));
+  }
+
+  function deleteEvent(id) {
+    var state = BB.store.get();
+    var found = eventById(state, id);
+    if (!found) return;
+    var removed = JSON.parse(JSON.stringify(found));
+    BB.ui
+      .confirm({
+        title: t('pe.confirmTitle'),
+        message: t('pe.confirmBody', { name: removed.title }),
+        confirmLabel: t('pe.confirmOk'),
+        danger: true
+      })
+      .then(function (ok) {
+        if (!ok) return;
+        BB.store.update(function (data) {
+          data.personalEvents = (data.personalEvents || []).filter(function (entry) {
+            return entry.id !== id;
+          });
+        });
+        eventDraft = null;
+        init();
+        BB.ui.toast(t('pe.deleted'), {
+          actionLabel: t('common.undo'),
+          onAction: function () {
+            BB.store.update(function (data) {
+              data.personalEvents = data.personalEvents || [];
+              data.personalEvents.push(removed);
+            });
+            init();
+            BB.ui.toast(t('pe.restored'));
+          }
+        });
+      });
+  }
+
+  function bindEvents() {
+    var addButton = $('#tt-add-event');
+    if (addButton && addButton.getAttribute('data-bound') !== '1') {
+      addButton.setAttribute('data-bound', '1');
+      addButton.addEventListener('click', function () {
+        openEventForm(null);
+      });
+    }
+
+    var grid = $('#timetable');
+    if (grid && grid.getAttribute('data-bound') !== '1') {
+      grid.setAttribute('data-bound', '1');
+      grid.addEventListener('click', function (event) {
+        var trigger = event.target.closest('[data-event-edit]');
+        if (!trigger) return;
+        event.preventDefault();
+        openEventForm(trigger.getAttribute('data-event-edit'));
+      });
+    }
+
+    var host = $('#event-form');
+    if (!host || host.getAttribute('data-bound') === '1') return;
+    host.setAttribute('data-bound', '1');
+
+    host.addEventListener('click', function (event) {
+      if (event.target.closest('[data-event-cancel]')) {
+        eventDraft = null;
+        renderEventForm(BB.store.get());
+        return;
+      }
+      var swatch = event.target.closest('[data-event-color]');
+      if (swatch) {
+        collectEventForm();
+        if (eventDraft) eventDraft.color = swatch.getAttribute('data-event-color');
+        renderEventForm(BB.store.get());
+        return;
+      }
+      var remove = event.target.closest('[data-event-delete]');
+      if (remove) deleteEvent(remove.getAttribute('data-event-delete'));
+    });
+
+    host.addEventListener('change', function (event) {
+      if (event.target.id !== 'pe-kind' || !eventDraft) return;
+      /* 単発と毎週で必要な入力が変わる。選び直したら描き直す。 */
+      collectEventForm();
+      eventDraft.kind = event.target.value === 'weekly' ? 'weekly' : 'once';
+      renderEventForm(BB.store.get());
+    });
+
+    host.addEventListener('submit', function (event) {
+      if (event.target.id !== 'event-form-el') return;
+      event.preventDefault();
+      saveEvent(event.target);
+    });
+  }
+
   function init() {
     var state = BB.store.get();
 
@@ -1268,6 +1585,7 @@
     renderTopics(state);
     renderSummaries(state, now, next);
     renderNotes(state, now);
+    renderEventForm(state);
     renderGrades(state);
   }
 
@@ -1638,6 +1956,8 @@
     deadlineDetail: deadlineDetail,
     hasDeadlineDetail: hasDeadlineDetail,
     setDeadlineDetail: setDeadlineDetail,
+    eventsForDay: eventsForDay,
+    personalEventsOf: personalEventsOf,
     overridesOf: overridesOf,
     overrideFor: overrideFor,
     noClassCount: noClassCount,
@@ -1656,6 +1976,7 @@
     init();
     bindNotes();
     bindNoteTriggers();
+    bindEvents();
     /* 言語が変わったらダッシュボードを描き直す。静的 HTML 側は i18n.js が担当する。 */
     var lastLang = BB.i18n.lang();
     BB.store.subscribe(function () {
