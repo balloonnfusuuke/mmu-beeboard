@@ -4,11 +4,17 @@
 
    ■ アイコン名の洗い出し方（手で数えない）
      1. node tools/collect-icons.js          使用アイコン名を全量で出力する
-     2. node tools/collect-icons.js --check  下の ICON_NAMES と照合し、不足があれば exit 1
+     2. node tools/collect-icons.js --check  下の ICON_NAMES と woff2 本体を照合し、
+                                             不足があれば exit 1
    収集対象は静的 HTML のマークアップだけではない。JS のテンプレート文字列、
    三項演算子（例: atRisk ? 'warning' : 'check_circle'）、アイコンを引数に取る
    ヘルパー呼び出し（detailPill / section / cardShell）も走査する。
    ヘルパーを増やしたら tools/collect-icons.js の ICON_ARG に追記すること。
+
+   --check は下の一覧だけでなく assets/fonts/material-symbols-outlined.woff2 の
+   GSUB（合字）も読み、名前がフォントに実在するかまで見る。一覧だけの照合だと、
+   古い名前でサブセットし直したフォントでも通ってしまい、アイコンが生テキストで
+   表示される（verified / grade / assignment_late がこれで漏れた）。
 
    ■ フォントの取り直し
      1. node tools/collect-icons.js の出力（カンマ区切り・アルファベット順）を
@@ -17,6 +23,8 @@
         https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=<ICON_NAMES>&display=block
      3. 取得した CSS の fonts.gstatic.com の URL から woff2 をダウンロードする
      4. グリフ数が「アイコン数 + 26（a–z のリガチャ用）」であることを確認する
+     5. node tools/collect-icons.js --check が exit 0 になることを確認する
+        （woff2 を差し替え忘れると "missing from woff2: ..." で落ちる）
 
    ICON_NAMES（アルファベット順・この並びでないと 400 が返る）:
    add,add_link,add_task,alarm,arrow_back,arrow_forward,assignment_late,badge,bar_chart,
