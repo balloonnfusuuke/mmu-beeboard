@@ -40,6 +40,7 @@
       }),
       studySessions: [],
       customDeadlines: [],
+      notes: [],
       archive: [],
       /* 初回セットアップを終えたか（Skip でも立てる）。未完了かつ科目0件のときだけ自動表示する。 */
       setupDone: false
@@ -164,6 +165,7 @@
           subjects: clone(state.subjects),
           studySessions: clone(state.studySessions || []),
           customDeadlines: clone(state.customDeadlines || []),
+          notes: clone(state.notes || []),
           archivedAt: new Date().toISOString()
         });
       });
@@ -181,6 +183,7 @@
         });
         state.studySessions = [];
         state.customDeadlines = [];
+        state.notes = [];
       });
     },
     /* archive の 1 件を現在の学期に戻す。今の学期は退避してから入れ替える。 */
@@ -195,6 +198,7 @@
         state.subjects = clone(entry.subjects);
         state.studySessions = clone(entry.studySessions || []);
         state.customDeadlines = clone(entry.customDeadlines || []);
+        state.notes = clone(entry.notes || []);
       });
     }
   };

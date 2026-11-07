@@ -204,7 +204,11 @@
               '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
               '<div class="min-w-0"><div class="text-body-md font-semibold text-ink truncate">' + assessment.name +
-              (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') + '</div>' +
+              (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') +
+              (assessment.homework
+                ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' +
+                  t('dl.homework') + '</span>'
+                : '') + '</div>' +
               (meta ? '<div class="text-caption text-muted truncate">' + meta + '</div>' : '') + '</div></div>' +
               '<div class="flex items-center gap-3 shrink-0">' +
               '<span class="text-label-md font-bold text-ink num">' + weight + '</span>' + remove +

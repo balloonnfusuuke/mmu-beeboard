@@ -192,6 +192,27 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 .tt-block-meta { font-size: 10px; line-height: 1.2; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tt-block-room { font-size: 9px; line-height: 1.15; opacity: .82; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* 時間割ブロックの「メモを追加」。ブロックの邪魔をしないよう普段は隠す。 */
+.tt-note {
+  position: absolute;
+  right: 7px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, .92);
+  color: var(--bb-primary);
+  box-shadow: var(--bb-shadow-rest);
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+.tt-col:hover .tt-note,
+.tt-note:focus-visible { opacity: 1; }
+@media (hover: none) { .tt-note { opacity: 1; } }
+
 /* ---------- toast ---------- */
 
 /* フォームの上に重ならないよう、ヘッダー直下の右上へ出す。 */

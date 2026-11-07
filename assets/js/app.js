@@ -186,6 +186,7 @@
         subject: subject,
         week: entry.week,
         custom: entry,
+        sortDue: entry.date || '',
         assessment: {
           id: entry.id,
           name: entry.name,
@@ -196,8 +197,17 @@
         }
       });
     });
+    homeworkDeadlineItems(state).forEach(function (item) {
+      items.push(item);
+    });
     items.sort(function (a, b) {
-      return a.week - b.week;
+      if (a.week !== b.week) return a.week - b.week;
+      var ad = a.sortDue || '';
+      var bd = b.sortDue || '';
+      if (ad === bd) return 0;
+      if (!ad) return 1;
+      if (!bd) return -1;
+      return ad < bd ? -1 : 1;
     });
     return items;
   }
@@ -226,6 +236,87 @@
   function hoursLabel(minutes) {
     var m = minutes % 60;
     return t('duration.hm', { h: Math.floor(minutes / 60), m: m, mm: pad2(m) });
+  }
+
+  /* ---------- notes & homework ---------- */
+
+  function notesOf(state) {
+    return state.notes || [];
+  }
+
+  function isoDay(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function subjectByCode(state, code) {
+    var found = null;
+    if (!code) return null;
+    state.subjects.forEach(function (subject) {
+      if (subject.id === code) found = subject;
+    });
+    return found;
+  }
+
+  /* 'YYYY-MM-DDTHH:mm' を表示用にする。時刻が無ければ日付だけ。 */
+  function dueLabel(due) {
+    if (!due) return '';
+    var parts = String(due).split('T');
+    var day = BB.date.parse(parts[0]);
+    if (!day) return '';
+    return fmtDate(day) + (parts[1] ? ' ' + parts[1] : '');
+  }
+
+  /* 締切の近い順。締切なしは最後に回す。 */
+  function byDue(a, b) {
+    if (!a.due && !b.due) return 0;
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+  }
+
+  function openHomework(state) {
+    return notesOf(state)
+      .filter(function (note) {
+        return note.kind === 'homework' && !note.done;
+      })
+      .sort(byDue);
+  }
+
+  function todayMemos(state, now) {
+    var today = isoDay(now);
+    return notesOf(state).filter(function (note) {
+      return note.kind === 'memo' && note.date === today;
+    });
+  }
+
+  /* 科目を持たない宿題は Deadlines 側で科目チップが要る。表示専用の代理を返す。 */
+  function placeholderSubject() {
+    return { id: '—', name: '', color: 'var(--bb-text-muted)', credits: 0, sessions: [], assessments: [] };
+  }
+
+  /* 締切のある未完了の宿題だけ Deadlines に合流させる。締切なしのメモは出さない。 */
+  function homeworkDeadlineItems(state) {
+    return openHomework(state)
+      .filter(function (note) {
+        return !!note.due;
+      })
+      .map(function (note) {
+        var day = BB.date.parse(String(note.due).split('T')[0]);
+        return {
+          subject: subjectByCode(state, note.subjectCode) || placeholderSubject(),
+          week: day ? weekOfClamped(day) : currentWeek(new Date()),
+          note: note,
+          sortDue: note.due,
+          assessment: {
+            id: note.id,
+            name: note.text,
+            weight: 0,
+            kind: 'homework',
+            dueLabel: dueLabel(note.due),
+            homework: true
+          }
+        };
+      });
   }
 
   /* ---------- rendering ---------- */
@@ -336,6 +427,11 @@
       '<span class="material-symbols-outlined text-[18px]">calculate</span><span>' + t('next.openSimulator') + '</span></a>' +
       '<a href="attendance.html" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors">' +
       '<span class="material-symbols-outlined text-[18px] text-muted">rule</span><span>' + t('next.attendance') + '</span></a>' +
+      '<button type="button" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors"' +
+      ' data-note-for="' + subject.id + '" data-note-date="' + isoDay(next.start) + '"' +
+      ' title="' + escHtml(t('notes.addFromClass')) + '">' +
+      '<span class="material-symbols-outlined text-[18px] text-muted">note_add</span>' +
+      '<span>' + t('notes.addFromClass') + '</span></button>' +
       '</div></div></div>';
   }
 
@@ -362,6 +458,13 @@
     if (!host) return;
     var height = (HOUR_END - HOUR_START) * HOUR_HEIGHT;
     host.style.setProperty('--tt-hour', HOUR_HEIGHT + 'px');
+
+    /* 表示中の週の各曜日の実日付。メモ追加の初期値に使う。 */
+    var range = BB.date.weekRange(currentWeek(now));
+    function dateOfWeekday(day) {
+      if (!range) return isoDay(now);
+      return isoDay(addDays(range.start, day - 1));
+    }
 
     var head =
       '<div class="tt-head"><div class="tt-corner">' + t('tt.time') + '</div>' +
@@ -399,7 +502,12 @@
                 '<span class="tt-block-code">' + subject.id + '</span>' +
                 '<span class="tt-block-meta">' + session.type + ' · ' + session.room + '</span>' +
                 (roomText ? '<span class="tt-block-room">' + roomText + '</span>' : '') +
-              '</a>'
+              '</a>' +
+              '<button type="button" class="tt-note" style="top:' + (blockTop + 3) + 'px"' +
+                ' data-note-for="' + subject.id + '" data-note-date="' + dateOfWeekday(day) + '"' +
+                ' title="' + escHtml(t('notes.addFromClass')) + '"' +
+                ' aria-label="' + escHtml(t('notes.addFromClass')) + '">' +
+                '<span class="material-symbols-outlined text-[13px]">note_add</span></button>'
             );
           });
         });
@@ -630,6 +738,286 @@
     return cardShell('studylog.html', t('card.studyLog.title'), 'menu_book', 'var(--bb-primary)', body, footer);
   }
 
+  /* ---------- notes card ---------- */
+
+  /* 追加・編集中の下書き。null ならフォームを閉じている。 */
+  var noteForm = null;
+
+  function noteFormHtml(state) {
+    var draft = noteForm;
+    var subjectOptions =
+      '<option value="">' + t('notes.noSubject') + '</option>' +
+      state.subjects
+        .map(function (subject) {
+          return '<option value="' + subject.id + '"' +
+            (subject.id === draft.subjectCode ? ' selected' : '') + '>' +
+            subject.id + ' ' + subject.name + '</option>';
+        })
+        .join('');
+
+    return (
+      '<form id="note-form" class="rounded-control border border-primary/25 bg-surface-sunken p-4 space-y-3">' +
+      '<div class="flex items-center justify-between">' +
+      '<h3 class="text-label-md font-bold text-ink">' +
+      (draft.id ? t('notes.editTitle') : t('notes.addTitle')) + '</h3>' +
+      '<button type="button" data-note-cancel class="text-muted hover:text-ink" aria-label="' + t('notes.cancel') + '">' +
+      '<span class="material-symbols-outlined text-[18px]">close</span></button></div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+      '<div><label class="bb-label" for="n-kind">' + t('notes.kind') + '</label>' +
+      '<select id="n-kind" class="bb-input">' +
+      '<option value="homework"' + (draft.kind === 'homework' ? ' selected' : '') + '>' +
+      t('notes.kindHomework') + '</option>' +
+      '<option value="memo"' + (draft.kind === 'memo' ? ' selected' : '') + '>' +
+      t('notes.kindMemo') + '</option></select></div>' +
+      '<div><label class="bb-label" for="n-subject">' + t('notes.subject') + '</label>' +
+      '<select id="n-subject" class="bb-input">' + subjectOptions + '</select></div>' +
+      '<div class="sm:col-span-2"><label class="bb-label" for="n-text">' + t('notes.text') + '</label>' +
+      '<input id="n-text" class="bb-input" type="text" value="' + escHtml(draft.text) + '" placeholder="' +
+      escHtml(t('notes.textPlaceholder')) + '" required></div>' +
+      '<div><label class="bb-label" for="n-date">' + t('notes.date') + '</label>' +
+      '<input id="n-date" class="bb-input" type="date" value="' + escHtml(draft.date) + '"></div>' +
+      '<div><label class="bb-label" for="n-due">' + t('notes.due') + '</label>' +
+      '<input id="n-due" class="bb-input" type="datetime-local" value="' + escHtml(draft.due) + '"></div>' +
+      '</div>' +
+      '<div class="flex justify-end gap-2">' +
+      '<button type="button" data-note-cancel class="bb-btn bb-btn-ghost">' + t('notes.cancel') + '</button>' +
+      '<button type="submit" class="bb-btn bb-btn-primary">' + t('notes.save') + '</button></div>' +
+      '</form>'
+    );
+  }
+
+  function noteRow(note, state, now) {
+    var subject = subjectByCode(state, note.subjectCode);
+    var isHomework = note.kind === 'homework';
+    var overdue = isHomework && note.due && !note.done && String(note.due) < isoDay(now) + 'T23:59';
+    var meta = [];
+    if (subject) meta.push(subject.id);
+    if (isHomework) {
+      meta.push(note.due ? t('notes.dueOn', { when: dueLabel(note.due) }) : t('notes.noDue'));
+    }
+    var toggleLabel = note.done ? t('notes.markOpen') : t('notes.markDone');
+
+    return (
+      '<div class="flex items-start gap-3 py-2.5">' +
+      '<button type="button" class="mt-0.5 w-5 h-5 rounded border flex items-center justify-center shrink-0 ' +
+      (note.done ? 'bg-success border-success text-white' : 'border-border text-transparent hover:border-primary') + '"' +
+      ' data-note-toggle="' + note.id + '" aria-label="' + toggleLabel + '" title="' + toggleLabel + '">' +
+      '<span class="material-symbols-outlined text-[14px]">check</span></button>' +
+      '<div class="min-w-0 flex-1">' +
+      '<div class="text-body-sm ' + (note.done ? 'line-through text-muted' : 'text-ink') + '">' +
+      escHtml(note.text) + '</div>' +
+      '<div class="flex flex-wrap items-center gap-2 text-caption text-muted mt-0.5">' +
+      (subject ? '<span class="font-semibold" style="color:' + subject.color + '">' + subject.id + '</span>' : '') +
+      '<span class="' + (overdue ? 'text-alert font-semibold' : '') + '">' + meta.join(' · ') + '</span>' +
+      (overdue
+        ? '<span class="bb-chip" style="background:var(--bb-alert-surface);color:var(--bb-alert)">' +
+          t('notes.overdue') + '</span>'
+        : '') +
+      '</div></div>' +
+      '<div class="flex items-center gap-1 shrink-0">' +
+      '<button type="button" class="p-1.5 rounded text-muted hover:text-primary" data-note-edit="' + note.id +
+      '" title="' + t('notes.edit') + '" aria-label="' + t('notes.edit') + '">' +
+      '<span class="material-symbols-outlined text-[16px]">edit</span></button>' +
+      '<button type="button" class="p-1.5 rounded text-muted hover:text-alert" data-note-delete="' + note.id +
+      '" title="' + t('notes.delete') + '" aria-label="' + t('notes.delete') + '">' +
+      '<span class="material-symbols-outlined text-[16px]">delete</span></button>' +
+      '</div></div>'
+    );
+  }
+
+  function notesGroup(title, list, state, now, emptyText) {
+    var rows = list.length
+      ? list
+          .map(function (note) {
+            return noteRow(note, state, now);
+          })
+          .join('')
+      : '<p class="text-body-sm text-muted py-2">' + emptyText + '</p>';
+
+    return (
+      '<div>' +
+      '<div class="flex items-center justify-between pb-2 border-b border-border-subtle">' +
+      '<h3 class="text-caption font-bold text-ink uppercase tracking-wider">' + title + '</h3>' +
+      '<span class="text-caption text-muted num">' + list.length + '</span></div>' +
+      '<div class="divide-y divide-border-subtle">' + rows + '</div></div>'
+    );
+  }
+
+  function renderNotes(state, now) {
+    var host = $('#notes-body');
+    if (!host) return;
+    host.innerHTML =
+      (noteForm ? noteFormHtml(state) : '') +
+      notesGroup(t('notes.todayMemos'), todayMemos(state, now), state, now, t('notes.noMemos')) +
+      notesGroup(t('notes.openHomework'), openHomework(state), state, now, t('notes.noHomework'));
+  }
+
+  function findNote(id) {
+    var found = null;
+    notesOf(BB.store.get()).forEach(function (note) {
+      if (note.id === id) found = note;
+    });
+    return found;
+  }
+
+  function saveNote() {
+    var text = $('#n-text').value.trim();
+    if (!text) {
+      toast(t('notes.toastTextRequired'));
+      return;
+    }
+    var kind = $('#n-kind').value === 'memo' ? 'memo' : 'homework';
+    var subjectCode = $('#n-subject').value || null;
+    var date = $('#n-date').value || isoDay(new Date());
+    var due = kind === 'homework' ? $('#n-due').value || '' : '';
+    var editing = noteForm && noteForm.id;
+
+    BB.store.update(function (state) {
+      state.notes = state.notes || [];
+      if (editing) {
+        state.notes.forEach(function (note) {
+          if (note.id !== editing) return;
+          note.text = text;
+          note.kind = kind;
+          note.subjectCode = subjectCode;
+          note.date = date;
+          note.due = due;
+        });
+        return;
+      }
+      state.notes.push({
+        id: 'n' + Date.now(),
+        date: date,
+        subjectCode: subjectCode,
+        text: text,
+        kind: kind,
+        due: due,
+        done: false
+      });
+    });
+
+    noteForm = null;
+    toast(t('notes.toastSaved'));
+    init();
+  }
+
+  function openNoteForm(prefill) {
+    noteForm = {
+      id: '',
+      kind: (prefill && prefill.kind) || 'homework',
+      text: '',
+      subjectCode: (prefill && prefill.subjectCode) || '',
+      date: (prefill && prefill.date) || isoDay(new Date()),
+      due: ''
+    };
+    renderNotes(BB.store.get(), new Date());
+    var host = $('#notes');
+    if (host && host.scrollIntoView) host.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /* 時間割ブロックと Next Class の「メモを追加」導線。 */
+  function bindNoteTriggers() {
+    document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('[data-note-for]');
+      if (!trigger) return;
+      event.preventDefault();
+      openNoteForm({
+        subjectCode: trigger.getAttribute('data-note-for'),
+        date: trigger.getAttribute('data-note-date')
+      });
+    });
+  }
+
+  function bindNotes() {
+    var host = $('#notes');
+    if (!host || host.getAttribute('data-bound') === '1') return;
+    host.setAttribute('data-bound', '1');
+
+    host.addEventListener('click', function (event) {
+      if (event.target.closest('[data-note-add]')) {
+        openNoteForm(null);
+        return;
+      }
+      if (event.target.closest('[data-note-cancel]')) {
+        noteForm = null;
+        renderNotes(BB.store.get(), new Date());
+        return;
+      }
+
+      var toggle = event.target.closest('[data-note-toggle]');
+      if (toggle) {
+        var toggleId = toggle.getAttribute('data-note-toggle');
+        BB.store.update(function (state) {
+          (state.notes || []).forEach(function (note) {
+            if (note.id === toggleId) note.done = !note.done;
+          });
+        });
+        init();
+        return;
+      }
+
+      var edit = event.target.closest('[data-note-edit]');
+      if (edit) {
+        var found = findNote(edit.getAttribute('data-note-edit'));
+        if (!found) return;
+        noteForm = {
+          id: found.id,
+          kind: found.kind,
+          text: found.text,
+          subjectCode: found.subjectCode || '',
+          date: found.date || isoDay(new Date()),
+          due: found.due || ''
+        };
+        renderNotes(BB.store.get(), new Date());
+        return;
+      }
+
+      var remove = event.target.closest('[data-note-delete]');
+      if (remove) {
+        var removeId = remove.getAttribute('data-note-delete');
+        var notes = notesOf(BB.store.get());
+        var index = -1;
+        notes.forEach(function (note, position) {
+          if (note.id === removeId) index = position;
+        });
+        if (index < 0) return;
+        var removed = JSON.parse(JSON.stringify(notes[index]));
+
+        confirmAction({
+          title: t('notes.deleteTitle'),
+          message: t('notes.deleteBody', { text: removed.text }),
+          confirmLabel: t('notes.deleteOk'),
+          danger: true
+        }).then(function (ok) {
+          if (!ok) return;
+          BB.store.update(function (state) {
+            state.notes = (state.notes || []).filter(function (note) {
+              return note.id !== removeId;
+            });
+          });
+          init();
+          toast(t('notes.toastDeleted'), {
+            actionLabel: t('common.undo'),
+            onAction: function () {
+              BB.store.update(function (state) {
+                state.notes = state.notes || [];
+                state.notes.splice(Math.min(index, state.notes.length), 0, removed);
+              });
+              init();
+              toast(t('notes.toastRestored'));
+            }
+          });
+        });
+      }
+    });
+
+    host.addEventListener('submit', function (event) {
+      if (event.target.id !== 'note-form') return;
+      event.preventDefault();
+      saveNote();
+    });
+  }
+
   function renderGrades(state) {
     var host = $('#grades');
     if (!host) return;
@@ -720,6 +1108,7 @@
     renderClassDetail(next, state, now);
     renderTopics(state);
     renderSummaries(state, now, next);
+    renderNotes(state, now);
     renderGrades(state);
   }
 
@@ -1059,6 +1448,8 @@
 
   if (typeof document !== 'undefined' && document.body && document.body.dataset.page === 'dashboard') {
     init();
+    bindNotes();
+    bindNoteTriggers();
     /* 言語が変わったらダッシュボードを描き直す。静的 HTML 側は i18n.js が担当する。 */
     var lastLang = BB.i18n.lang();
     BB.store.subscribe(function () {
