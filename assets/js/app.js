@@ -72,6 +72,14 @@
     });
   }
 
+  /* 'YYYY-MM-DD'（日時付きでも可）を言語に追随した表示にする。保存値は ISO のまま。
+     日付を保存時に整形すると、言語を切り替えても片方の言語のまま残る。 */
+  function fmtIsoDate(value) {
+    var raw = String(value === undefined || value === null ? '' : value);
+    var day = BB.date.parse(raw.slice(0, 10));
+    return day ? fmtDate(day) : raw;
+  }
+
   function durationLabel(session) {
     var hours = (minutesOf(session.end) - minutesOf(session.start)) / 60;
     return hours === 1 ? t('duration.hour') : t('duration.hours', { n: hours });
@@ -295,7 +303,10 @@
           weight: entry.weight || 0,
           kind: 'custom',
           customKind: entry.kind || 'other',
-          dueLabel: entry.date ? fmtDateTime(entry.date) : entry.note || '',
+          /* 日付が無いときに note を日付欄へ流用しない。note は自由記述で、
+             過去には整形済みの日付文字列が入っていた。日付が無ければ
+             一覧側が週の範囲を併記する。 */
+          dueLabel: entry.date ? fmtDateTime(entry.date) : '',
           custom: true
         }
       });
@@ -360,13 +371,11 @@
     return found;
   }
 
-  /* 'YYYY-MM-DDTHH:mm' を表示用にする。時刻が無ければ日付だけ。 */
+  /* 'YYYY-MM-DDTHH:mm' を表示用にする。時刻が無ければ日付だけ。
+     締切行は作成経路（科目の評価・手動追加・宿題）によらずこの書式に揃える。 */
   function dueLabel(due) {
     if (!due) return '';
-    var parts = String(due).split('T');
-    var day = BB.date.parse(parts[0]);
-    if (!day) return '';
-    return fmtDate(day) + (parts[1] ? ' ' + parts[1] : '');
+    return fmtDateTime(due) || String(due);
   }
 
   /* 締切の近い順。締切なしは最後に回す。 */
@@ -2013,6 +2022,10 @@
     nextClass: nextClass,
     attendanceOf: attendanceOf,
     securedOf: securedOf,
+    fmtDate: fmtDate,
+    fmtDateFull: fmtDateFull,
+    fmtDateTime: fmtDateTime,
+    fmtIsoDate: fmtIsoDate,
     deadlineItems: deadlineItems,
     deadlineDetail: deadlineDetail,
     hasDeadlineDetail: hasDeadlineDetail,

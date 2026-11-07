@@ -5,6 +5,8 @@
   var t = BB.i18n.t;
   var tn = BB.i18n.tn;
   var DAY_KEYS = ['day.sun', 'day.mon', 'day.tue', 'day.wed', 'day.thu', 'day.fri', 'day.sat'];
+  /* 日付は保存値（ISO）から描画時に整形する。保存時に整形すると言語に追随しない。 */
+  var fmtDate = BB.dash.fmtIsoDate;
 
   /* 記録対象のコマと日付は科目ごとに保持する。再描画で選択が戻らないように。 */
   var pickedSession = {};
@@ -82,9 +84,20 @@
   }
 
   /* 記録済みの行は、保存済みの文字列ではなく元のコマ情報から組み立て直す。
-     言語を切り替えても英語の曜日が残らない。 */
-  function entryLabel(entry) {
+     言語を切り替えても英語の曜日が残らない。
+     sessionMeta を持たない古い記録は、保存された日付の曜日から科目のコマを
+     引き当てる。それも無ければ最後の手段として保存文字列を使う。 */
+  function entryLabel(entry, subject) {
     if (entry.sessionMeta) return sessionLabel(entry.sessionMeta);
+    var day = BB.date.parse(String(entry.date || '').slice(0, 10));
+    if (day && subject && subject.sessions) {
+      var weekday = day.getDay();
+      var match = null;
+      subject.sessions.forEach(function (session) {
+        if (Number(session.day) === weekday) match = session;
+      });
+      if (match) return sessionLabel(match);
+    }
     return entry.session || '';
   }
 
@@ -170,7 +183,7 @@
         .map(function (extra) {
           var key = 'x:' + extra.overrideId;
           return '<option value="' + key + '"' + (key === String(selected) ? ' selected' : '') + '>' +
-            esc(t('att.transferBadge') + ' · ' + extra.date + ' ' + extra.start + '–' + extra.end) + '</option>';
+            esc(t('att.transferBadge') + ' · ' + fmtDate(extra.date) + ' ' + extra.start + '–' + extra.end) + '</option>';
         })
         .join('');
     return (
@@ -209,7 +222,7 @@
       '<div class="text-label-md font-semibold text-ink">' +
       (draft.overrideId ? t('att.transferEditTitle') : t('att.transferTitle')) + '</div>' +
       '<p class="text-caption text-muted">' +
-      t('att.transferSource', { date: draft.date, session: draft.sessionLabel }) + '</p>' +
+      t('att.transferSource', { date: fmtDate(draft.date), session: draft.sessionLabel }) + '</p>' +
       '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">' +
       '<div><label class="bb-label" for="tr-date">' + t('att.transferDate') + '</label>' +
       '<input id="tr-date" name="date" class="bb-input num" type="date" value="' + esc(target.date) + '" required></div>' +
@@ -235,7 +248,7 @@
     var isTransfer = entry.kind === 'transfer' && entry.target;
     var detail = isTransfer
       ? t('att.transferTo', {
-          date: entry.target.date,
+          date: fmtDate(entry.target.date),
           start: entry.target.start,
           end: entry.target.end
         }) + ' · ' + (entry.target.room || t('att.transferRoomTbd'))
@@ -251,7 +264,7 @@
       (session ? '<div class="text-caption text-muted truncate">' + esc(sessionLabel(session)) + '</div>' : '') +
       '<div class="text-caption text-muted">' + esc(detail) + '</div></div></div>' +
       '<div class="flex items-center gap-3 shrink-0">' +
-      '<span class="text-caption text-muted num">' + esc(entry.date) + '</span>' +
+      '<span class="text-caption text-muted num">' + esc(fmtDate(entry.date)) + '</span>' +
       '<button type="button" class="text-muted hover:text-primary transition-colors" data-override-edit="' +
       entry.id + '" data-subject="' + subject.id + '" title="' + esc(t('att.transferEdit')) +
       '" aria-label="' + esc(t('att.transferEdit')) + '">' +
@@ -350,7 +363,7 @@
           '<div class="text-caption text-muted">' +
           t('att.lastSession', {
             value: lastEntry
-              ? lastEntry.date + (entryLabel(lastEntry) ? ' · ' + entryLabel(lastEntry) : '')
+              ? fmtDate(lastEntry.date) + (entryLabel(lastEntry, subject) ? ' · ' + entryLabel(lastEntry, subject) : '')
               : '—'
           }) + '</div>' +
           transferFormSection(subject) +
@@ -390,11 +403,11 @@
               '<div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-border-subtle last:border-0">' +
               '<div class="flex items-center gap-3 min-w-0">' + BB.ui.solidChip(item.subject.color, item.subject.id) +
               '<div class="min-w-0"><div class="text-body-sm text-body truncate">' + item.subject.name + '</div>' +
-              (entryLabel(item.entry)
-                ? '<div class="text-caption text-muted truncate">' + esc(entryLabel(item.entry)) + '</div>'
+              (entryLabel(item.entry, item.subject)
+                ? '<div class="text-caption text-muted truncate">' + esc(entryLabel(item.entry, item.subject)) + '</div>'
                 : '') + '</div></div>' +
               '<div class="flex items-center gap-3 shrink-0">' +
-              '<span class="text-caption text-muted num">' + item.entry.date + '</span>' +
+              '<span class="text-caption text-muted num">' + esc(fmtDate(item.entry.date)) + '</span>' +
               '<span class="bb-chip" style="background:' + (present ? 'var(--bb-success-surface)' : 'var(--bb-alert-surface)') + ';color:' +
               (present ? 'var(--bb-success)' : 'var(--bb-alert)') + '">' +
               (present ? t('att.present') : t('att.absent')) + '</span>' +
@@ -600,7 +613,7 @@
     render();
 
     BB.ui.toast(
-      (status === 'present' ? t('att.toast.present') : t('att.toast.absent')) + ' · ' + date +
+      (status === 'present' ? t('att.toast.present') : t('att.toast.absent')) + ' · ' + fmtDate(date) +
         (label ? ' · ' + label : ''),
       {
         actionLabel: t('common.undo'),
@@ -639,7 +652,7 @@
         title: t('att.confirm.title'),
         message: t('att.confirm.body', {
           code: subject.id,
-          date: entry.date,
+          date: fmtDate(entry.date),
           session: entry.session ? ' · ' + entry.session : '',
           status: entry.status === 'present' ? t('att.present') : t('att.absent')
         }),

@@ -4,6 +4,8 @@
   var BB = window.BB;
   var t = BB.i18n.t;
   var tn = BB.i18n.tn;
+  /* 日付は保存値（ISO）から描画時に整形する。保存時に整形すると言語に追随しない。 */
+  var fmtDate = BB.dash.fmtIsoDate;
 
   function headOptions() {
     return { title: t('settings.title'), subtitle: t('settings.subtitle') };
@@ -272,9 +274,9 @@
               '<div><div class="text-body-sm font-semibold text-ink">' + esc(entry.term.label) + '</div>' +
               '<div class="text-caption text-muted">' +
               t('settings.term.archivedMeta', {
-                date: entry.term.startDate || t('common.notSet'),
+                date: fmtDate(entry.term.startDate) || t('common.notSet'),
                 modules: tn('common.moduleCount', entry.subjects.length),
-                when: String(entry.archivedAt).slice(0, 10)
+                when: fmtDate(entry.archivedAt)
               }) + '</div></div>' +
               '<button type="button" data-restore-term="' + index + '" class="bb-btn bb-btn-ghost" style="height:32px;font-size:.75rem">' +
               t('settings.term.restore') + '</button></div>'
@@ -293,7 +295,7 @@
         '<div class="text-title-md font-bold text-ink">' + esc(BB.ui.termLabel(data)) + '</div>' +
         '<div class="text-body-sm text-muted">' +
         (data.term.startDate
-          ? t('settings.term.starts', { date: esc(data.term.startDate) })
+          ? t('settings.term.starts', { date: esc(fmtDate(data.term.startDate)) })
           : t('settings.term.startNotSet')) + ' • ' +
         t('settings.term.weeksExam', {
           weeks: data.term.weeks || 14,
