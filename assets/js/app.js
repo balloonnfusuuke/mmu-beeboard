@@ -724,11 +724,16 @@
         .join('') +
       '</div>';
 
+    /* ラベルは各時間帯の「上端の線」に乗せる（translateY(-50%) で線上に中央揃え）。
+       ブロックは同じ線基準で置かれているので、ラベルと位置がずれて
+       「30分早く始まるように見える」のを防ぐ。 */
     var times = '';
     for (var hour = HOUR_START; hour < HOUR_END; hour++) {
-      var top = (hour - HOUR_START) * HOUR_HEIGHT + HOUR_HEIGHT / 2;
+      var top = (hour - HOUR_START) * HOUR_HEIGHT;
       times += '<span style="top:' + top + 'px">' + pad2(hour) + ':00</span>';
     }
+    /* 底辺は 18:00 の閉じラベルで軸を 10 帯として閉じる。 */
+    times += '<span style="top:' + height + 'px">' + pad2(HOUR_END) + ':00</span>';
 
     var columns = [1, 2, 3, 4, 5]
       .map(function (day) {
