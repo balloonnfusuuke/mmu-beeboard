@@ -173,7 +173,9 @@
       '<div class="flex items-center gap-3">' +
       '<span class="material-symbols-outlined text-[22px] text-primary">alarm</span>' +
       '<div><div class="text-caption uppercase tracking-wider text-muted">' + t('dl.milestone') + '</div>' +
-      '<div class="text-body-md font-semibold text-ink break-words">' +
+      /* break-words で長い名前を裂くと「<」などが行末に孤立することがあるので、
+         語の区切り（空白）だけで折り返す。 */
+      '<div class="text-body-md font-semibold text-ink">' +
       (BB.date.weekLabel(next.week)
         ? t('dl.nextDeadline', {
             code: esc(next.subject.id),

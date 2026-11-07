@@ -157,8 +157,9 @@
       '<div class="pt-3">' +
       '<div class="text-caption text-muted">' +
       t('sl.targetMeta', { n: state().settings.weeklyStudyTarget, w: BB.dash.currentWeek(new Date()) }) + '</div>' +
+      /* スラッシュは目標側にくっつける。折り返しで孤立した「/」が出ないように。 */
       '<div class="text-headline-sm font-extrabold text-ink num mt-1">' +
-      '<span class="whitespace-nowrap">' + hoursLabel(total) + ' /</span>' +
+      '<span class="whitespace-nowrap">' + hoursLabel(total) + '</span>' +
       ' <span class="text-body-sm font-normal text-muted whitespace-nowrap">' +
       t('sl.target', { n: state().settings.weeklyStudyTarget }) + '</span></div>' +
       '<div class="w-full bg-border h-2 rounded-full overflow-hidden mt-2">' +

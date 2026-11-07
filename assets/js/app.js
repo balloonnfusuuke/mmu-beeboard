@@ -981,10 +981,13 @@
     var body =
       '<div class="py-3 space-y-1.5">' +
       '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.deadlines.nextUpcoming') + '</div>' +
+      /* 長いタイトルは break-words で裂くと「<」だけが行末に立つことがあるので、
+         丸め記号＋title で全文を見せる 1 行にする。 */
       '<div class="text-body-lg font-bold text-ink flex items-start gap-2">' +
       (nextItem
         ? '<a href="deadline-detail.html?id=' + encodeURIComponent(nextItem.key || '') +
-          '" class="min-w-0 break-words hover:text-primary transition-colors">' +
+          '" class="min-w-0 truncate hover:text-primary transition-colors" title="' +
+          escHtml(nextItem.subject.id + ' ' + nextItem.assessment.name) + '">' +
           escHtml(nextItem.subject.id + ' ' + nextItem.assessment.name) + '</a>'
         : '<span>—</span>') +
       (nextItem ? '<span class="shrink-0 text-caption font-semibold px-2 py-0.5 rounded bg-surface-sunken text-primary">' +
@@ -1076,8 +1079,10 @@
     var body =
       '<div class="py-3 space-y-2">' +
       '<div class="text-caption uppercase tracking-wider text-muted">' + t('card.studyLog.currentWeek') + '</div>' +
+      /* スラッシュは目標側にくっつける。折り返しで行末に孤立した「/」が出ない
+         代わりに、行が変われば「/ 目標20時間」の頭で次行へ折れる。 */
       '<div class="text-headline-sm font-extrabold text-ink num">' +
-      '<span class="whitespace-nowrap">' + hoursLabel(minutes) + ' /</span>' +
+      '<span class="whitespace-nowrap">' + hoursLabel(minutes) + '</span>' +
       ' <span class="text-body-sm font-normal text-muted whitespace-nowrap">' +
       t('card.studyLog.target', { n: target }) + '</span></div>' +
       '<p class="text-body-sm text-muted">' +
