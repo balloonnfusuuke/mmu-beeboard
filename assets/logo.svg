@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="MMU BeeBoard">
+  <rect width="32" height="32" rx="8" fill="#003DA5"/>
+  <path d="M16 6.4 24.31 11.2v9.6L16 25.6 7.69 20.8v-9.6z" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M16 10.8 20.5 13.4v5.2L16 21.2 11.5 18.6v-5.2z" fill="#FFFFFF"/>
+</svg>

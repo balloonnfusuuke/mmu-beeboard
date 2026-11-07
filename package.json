@@ -1,0 +1,14 @@
+{
+  "name": "mmu-beeboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MMU BeeBoard — personal study dashboard",
+  "scripts": {
+    "build:css": "tailwindcss -i ./assets/css/tailwind.src.css -o ./assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i ./assets/css/tailwind.src.css -o ./assets/css/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.9",
+    "tailwindcss": "^3.4.17"
+  }
+}

@@ -1,0 +1,5 @@
+/* Tailwind の入力ファイル。`npm run build:css` で assets/css/app.css を生成する。
+   生成物はコミット対象。CDN は使わない。 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

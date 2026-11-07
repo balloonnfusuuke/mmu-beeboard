@@ -1,0 +1,197 @@
+/* MMU BeeBoard — 共通コンポーネント。色・角丸・影は tokens.css の変数のみ参照する。 */
+
+/* アイコンはローカルのサブセットフォント。ligature 名をそのまま書いて表示する。
+   Google Fonts の CSS が与えていたリセットをここで持つ（外部 CSS を読まないため）。 */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- surfaces ---------- */
+
+.bb-card {
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-card);
+  box-shadow: var(--bb-shadow-rest);
+}
+
+.bb-card-hover:hover {
+  box-shadow: var(--bb-shadow-hover);
+  border-color: color-mix(in srgb, var(--bb-primary) 40%, var(--bb-border));
+}
+
+/* ---------- controls ---------- */
+
+.bb-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bb-text-muted);
+  margin-bottom: 0.375rem;
+}
+
+.bb-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 1rem;
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-control);
+  color: var(--bb-text-body);
+  font-size: 0.9375rem;
+  font-family: inherit;
+}
+
+/* @tailwindcss/forms の base は [type='text'] などに白背景と灰色境界を当てるため、
+   要素セレクタを併記して上書きする（テーマ変数を効かせるため）。 */
+input.bb-input,
+select.bb-input,
+textarea.bb-input {
+  background-color: var(--bb-surface);
+  border-color: var(--bb-border);
+  border-radius: var(--bb-radius-control);
+  color: var(--bb-text-body);
+}
+
+.bb-input:focus {
+  outline: none;
+  border-color: var(--bb-primary);
+  box-shadow: 0 0 0 3px rgb(var(--bb-primary-rgb) / 0.12);
+}
+
+/* forms プラグインの [type='text']:focus リング（青）を打ち消す */
+input.bb-input:focus,
+select.bb-input:focus,
+textarea.bb-input:focus {
+  outline: none;
+  border-color: var(--bb-primary);
+  box-shadow: 0 0 0 3px rgb(var(--bb-primary-rgb) / 0.12);
+}
+
+.bb-input::placeholder { color: var(--bb-text-placeholder); }
+
+.bb-input:disabled {
+  background: var(--bb-surface-subtle);
+  color: var(--bb-text-muted);
+  cursor: not-allowed;
+}
+
+textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
+
+.bb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 40px;
+  padding: 0 1rem;
+  border-radius: var(--bb-radius-control);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.bb-btn-primary { background: var(--bb-primary); color: var(--bb-on-primary); }
+.bb-btn-primary:hover { background: var(--bb-primary-hover); }
+.bb-btn-primary:active { background: var(--bb-primary-pressed); }
+
+.bb-btn-ghost {
+  background: transparent;
+  color: var(--bb-text-body);
+  border: 1px solid var(--bb-border);
+}
+.bb-btn-ghost:hover { background: var(--bb-surface-subtle); }
+
+.bb-btn-danger { background: var(--bb-alert); color: var(--bb-on-alert); }
+.bb-btn-danger:hover { background: var(--bb-alert-hover); }
+
+.bb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- status ---------- */
+
+.bb-status-ok {
+  background: var(--bb-success-surface);
+  color: var(--bb-success);
+  border: 1px solid rgb(var(--bb-success-rgb) / 0.2);
+}
+
+.bb-status-alert {
+  background: var(--bb-alert-surface);
+  color: var(--bb-alert);
+  border: 1px solid rgb(var(--bb-alert-rgb) / 0.2);
+}
+
+.bb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 28px;
+  padding: 0 0.5rem;
+  border-radius: var(--bb-radius-control);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* ---------- weekly timetable ---------- */
+
+.tt-head, .tt-body { display: grid; grid-template-columns: 68px repeat(5, minmax(0, 1fr)); }
+.tt-head { border-bottom: 1px solid var(--bb-border); padding-bottom: 6px; }
+.tt-corner { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--bb-text-muted); font-weight: 600; padding-left: 4px; }
+.tt-day { text-align: center; font-size: 13px; font-weight: 600; color: var(--bb-text); padding: 4px 0; }
+.tt-day.is-today { background: var(--bb-surface-sunken); border-radius: 6px; color: var(--bb-primary); }
+.tt-body { position: relative; }
+.tt-times { position: relative; }
+.tt-times span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--bb-text-muted); font-variant-numeric: tabular-nums; }
+.tt-col { position: relative; border-left: 1px solid var(--bb-border-subtle); }
+.tt-col::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, var(--bb-border-subtle) 0 1px, transparent 1px var(--tt-hour, 52px));
+}
+.tt-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: var(--bb-radius-control);
+  padding: 5px 7px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  box-shadow: var(--bb-shadow-rest);
+  transition: filter .15s ease;
+}
+.tt-block:hover { filter: brightness(1.1); }
+.tt-block-code { font-size: 11px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+.tt-block-meta { font-size: 10px; line-height: 1.2; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- misc ---------- */
+
+.bb-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
+.bb-scroll::-webkit-scrollbar-thumb { background-color: var(--bb-border); border-radius: 4px; }

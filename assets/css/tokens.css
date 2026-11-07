@@ -1,0 +1,107 @@
+/* MMU BeeBoard — design tokens.
+   色の唯一の正は RGB トリプレット（--bb-*-rgb）。hex 形式は派生値。
+   Tailwind 側はトリプレットを <alpha-value> 付きで参照するため、
+   bg-primary/90 のような不透明度修飾子が両テーマで機能する。 */
+
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --bb-primary-rgb: 0 61 165;
+  --bb-primary-hover-rgb: 0 46 122;
+  --bb-primary-pressed-rgb: 0 41 117;
+  --bb-on-primary-rgb: 255 255 255;
+  --bb-alert-rgb: 200 16 46;
+  --bb-alert-hover-rgb: 165 13 37;
+  --bb-on-alert-rgb: 255 255 255;
+  --bb-success-rgb: 22 101 52;
+  --bb-success-surface-rgb: 232 245 233;
+  --bb-alert-surface-rgb: 254 226 226;
+
+  /* Surfaces */
+  --bb-canvas-rgb: 249 249 255;
+  --bb-surface-rgb: 255 255 255;
+  --bb-surface-subtle-rgb: 241 243 245;
+  --bb-surface-sunken-rgb: 240 243 255;
+  --bb-border-rgb: 226 232 240;
+  --bb-border-subtle-rgb: 233 236 239;
+
+  /* Text */
+  --bb-text-rgb: 17 28 45;
+  --bb-text-body-rgb: 30 41 59;
+  --bb-text-muted-rgb: 100 116 139;
+  --bb-text-placeholder-rgb: 148 163 184;
+
+  /* Derived values for inline styles and components.css */
+  --bb-primary: rgb(var(--bb-primary-rgb));
+  --bb-primary-hover: rgb(var(--bb-primary-hover-rgb));
+  --bb-primary-pressed: rgb(var(--bb-primary-pressed-rgb));
+  --bb-on-primary: rgb(var(--bb-on-primary-rgb));
+  --bb-alert: rgb(var(--bb-alert-rgb));
+  --bb-alert-hover: rgb(var(--bb-alert-hover-rgb));
+  --bb-on-alert: rgb(var(--bb-on-alert-rgb));
+  --bb-success: rgb(var(--bb-success-rgb));
+  --bb-success-surface: rgb(var(--bb-success-surface-rgb));
+  --bb-alert-surface: rgb(var(--bb-alert-surface-rgb));
+  --bb-canvas: rgb(var(--bb-canvas-rgb));
+  --bb-surface: rgb(var(--bb-surface-rgb));
+  --bb-surface-subtle: rgb(var(--bb-surface-subtle-rgb));
+  --bb-surface-sunken: rgb(var(--bb-surface-sunken-rgb));
+  --bb-border: rgb(var(--bb-border-rgb));
+  --bb-border-subtle: rgb(var(--bb-border-subtle-rgb));
+  --bb-text: rgb(var(--bb-text-rgb));
+  --bb-text-body: rgb(var(--bb-text-body-rgb));
+  --bb-text-muted: rgb(var(--bb-text-muted-rgb));
+  --bb-text-placeholder: rgb(var(--bb-text-placeholder-rgb));
+
+  /* Shape */
+  --bb-radius-card: 12px;
+  --bb-radius-control: 8px;
+  --bb-radius-pill: 9999px;
+
+  /* Elevation */
+  --bb-shadow-rest: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --bb-shadow-hover: 0 4px 12px 0 rgba(15, 23, 42, 0.06);
+  --bb-shadow-float: 0 10px 25px -5px rgba(15, 23, 42, 0.08),
+    0 8px 10px -6px rgba(15, 23, 42, 0.04);
+
+  /* Type */
+  --bb-font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ダークモード: 背景・カード・文字・境界のみ差し替える。
+   科目色（data.js の color）は両テーマ共通で変更しない。 */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bb-canvas-rgb: 11 18 32;
+  --bb-surface-rgb: 19 28 46;
+  --bb-surface-subtle-rgb: 27 36 55;
+  --bb-surface-sunken-rgb: 24 34 56;
+  --bb-border-rgb: 38 51 73;
+  --bb-border-subtle-rgb: 31 42 61;
+
+  --bb-text-rgb: 232 237 247;
+  --bb-text-body-rgb: 203 213 225;
+  --bb-text-muted-rgb: 148 163 184;
+  --bb-text-placeholder-rgb: 100 116 139;
+
+  /* 明るい面の上でしか読めないブランド色は、暗い面用に明度を反転する */
+  --bb-primary-rgb: 143 180 255;
+  --bb-primary-hover-rgb: 169 198 255;
+  --bb-primary-pressed-rgb: 122 163 245;
+  --bb-on-primary-rgb: 11 18 32;
+
+  --bb-alert-rgb: 255 138 148;
+  --bb-alert-hover-rgb: 255 163 171;
+  --bb-on-alert-rgb: 42 5 9;
+
+  --bb-success-rgb: 110 231 168;
+  --bb-success-surface-rgb: 20 48 31;
+  --bb-alert-surface-rgb: 58 22 32;
+
+  --bb-shadow-rest: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --bb-shadow-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.45);
+  --bb-shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.55),
+    0 8px 10px -6px rgba(0, 0, 0, 0.4);
+}

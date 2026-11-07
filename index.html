@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MMU BeeBoard — Dashboard</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/fonts.css">
+<link rel="stylesheet" href="assets/css/tokens.css">
+<link rel="stylesheet" href="assets/css/components.css">
+<script src="assets/js/theme.js"></script>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body data-page="dashboard" class="bg-canvas text-ink font-sans antialiased min-h-screen">
+
+<header class="sticky top-0 z-30 w-full bg-surface border-b border-border shadow-rest">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <img src="assets/logo.svg" alt="MMU BeeBoard" class="w-8 h-8 rounded-lg flex-shrink-0">
+        <span class="flex flex-col leading-none">
+          <span class="text-title-md text-primary tracking-tight"><span class="font-bold">MMU</span> <span class="font-normal">BeeBoard</span></span>
+          <span class="text-[11px] text-muted font-medium mt-0.5">Personal study dashboard</span>
+        </span>
+      </a>
+      <div class="hidden md:block h-4 w-px bg-border"></div>
+      <div class="hidden md:flex items-center gap-2 text-muted text-label-md">
+        <span class="material-symbols-outlined text-[18px] text-primary">calendar_today</span>
+        <span data-bind="term.label"></span>
+        <span class="text-border">•</span>
+        <span class="font-medium text-ink" data-bind="term.week"></span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-canvas text-muted text-label-sm shadow-rest">
+        <span class="material-symbols-outlined text-alert text-[16px]">military_tech</span>
+        <span class="hidden sm:inline">Scholarship Target:</span>
+        <span class="font-semibold text-ink num" data-bind="settings.cgpaTarget"></span>
+      </div>
+      <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary text-on-primary text-label-sm font-bold shadow-rest">
+        <span>CGPA:</span><span class="text-body-sm font-extrabold num" data-bind="cgpa.value"></span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-full bg-primary text-on-primary text-label-sm font-bold flex items-center justify-center flex-shrink-0" aria-hidden="true" data-bind="student.initials"></span>
+        <div class="hidden lg:block text-left leading-tight">
+          <div class="text-label-md font-semibold text-ink" data-bind="student.name"></div>
+          <div class="text-caption text-muted" data-bind="student.programme"></div>
+        </div>
+      </div>
+      <a href="settings.html" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-control border border-transparent hover:border-border text-muted hover:text-primary hover:bg-surface-subtle text-label-sm font-medium transition-colors" title="Language &amp; region">
+        <span class="material-symbols-outlined text-[18px]">language</span>
+        <span class="font-semibold" data-bind="settings.language"></span>
+      </a>
+      <a href="settings.html" class="p-2 text-muted hover:text-primary hover:bg-surface-subtle rounded-control border border-transparent hover:border-border transition-colors" aria-label="Settings" title="Settings">
+        <span class="material-symbols-outlined text-[20px]">settings</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+  <div id="preview-banner"></div>
+
+  <section id="next-class" aria-label="Next class"></section>
+
+  <section class="bg-surface border border-border rounded-card shadow-rest overflow-hidden" aria-label="Weekly timetable">
+    <div class="px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-title-md font-bold text-ink">Weekly Timetable</h2>
+        <p class="text-body-sm text-muted" data-bind="timetable.subtitle"></p>
+      </div>
+      <div id="legend" class="flex flex-wrap items-center gap-3 text-caption"></div>
+    </div>
+    <div class="overflow-x-auto p-4 sm:p-6">
+      <div id="timetable" class="min-w-[760px]"></div>
+    </div>
+    <div id="class-detail" class="border-t border-border bg-canvas/80 p-5 sm:p-6"></div>
+  </section>
+
+  <section aria-label="This week's topics">
+    <div class="flex items-center justify-between mb-2.5">
+      <h2 class="text-title-md font-bold text-ink flex items-center gap-2">
+        <span>This Week's Topics</span>
+        <span class="text-caption font-semibold px-2 py-0.5 rounded-full bg-surface-sunken text-primary" data-bind="topics.week"></span>
+      </h2>
+      <span class="text-caption text-muted">Trimester Syllabus Roadmap</span>
+    </div>
+    <div id="topics" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5"></div>
+  </section>
+
+  <section id="summaries" class="grid grid-cols-1 md:grid-cols-3 gap-5" aria-label="Academic summary"></section>
+
+  <section class="bg-surface border border-border rounded-card shadow-rest overflow-hidden" aria-label="Grades and assessments">
+    <div class="p-6 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div>
+        <h2 class="text-headline-sm font-bold text-ink">Grades &amp; Assessments</h2>
+        <p class="text-body-sm text-muted">Tap any subject row to open its Grade Simulator</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-caption text-muted">Target Grade:</span>
+        <span class="px-2.5 py-1 rounded bg-surface-sunken text-primary text-label-sm font-bold border border-primary/20">A (80%+)</span>
+      </div>
+    </div>
+    <div id="grades" class="divide-y divide-border"></div>
+  </section>
+
+  <footer class="pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between text-caption text-muted gap-2 border-t border-border">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-success"></span>
+      <span>MMU BeeBoard — a personal study dashboard. Not an official MMU system.</span>
+    </div>
+    <div class="num"><span data-bind="term.label"></span><span data-bind="student.idSuffix"></span></div>
+  </footer>
+</main>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
