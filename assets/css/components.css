@@ -164,6 +164,9 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 .tt-corner { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--bb-text-muted); font-weight: 600; padding-left: 4px; }
 .tt-day { text-align: center; font-size: 13px; font-weight: 600; color: var(--bb-text); padding: 4px 0; }
 .tt-day.is-today { background: var(--bb-surface-sunken); border-radius: 6px; color: var(--bb-primary); }
+/* 曜日見出しの実日付。今日は曜日と同じ強調で「今日」と分かるようにする。 */
+.tt-day-date { font-size: 11px; font-weight: 600; color: var(--bb-text-muted); font-variant-numeric: tabular-nums; }
+.tt-day.is-today .tt-day-date { color: var(--bb-primary); font-weight: 700; }
 .tt-body { position: relative; }
 .tt-times { position: relative; }
 .tt-times span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--bb-text-muted); font-variant-numeric: tabular-nums; }

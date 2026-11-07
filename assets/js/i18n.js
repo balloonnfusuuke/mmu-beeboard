@@ -166,7 +166,14 @@
         openSimulator: 'Open Course Simulator',
         attendance: 'Attendance'
       },
-      tt: { time: 'Time', today: '(Today)', noClass: 'No class', transfer: 'Transfer' },
+      tt: {
+        time: 'Time',
+        today: '(Today)',
+        noClass: 'No class',
+        transfer: 'Transfer',
+        dayDate: '{d}',
+        dayDateWithMonth: '{mon} {d}'
+      },
       detail: {
         nextClass: 'Next class: {code} {name}',
         lecturer: 'Lecturer: {name}',
@@ -1052,7 +1059,14 @@
         openSimulator: '成績シミュレーターを開く',
         attendance: '出席'
       },
-      tt: { time: '時刻', today: '(今日)', noClass: '休講', transfer: '振替' },
+      tt: {
+        time: '時刻',
+        today: '(今日)',
+        noClass: '休講',
+        transfer: '振替',
+        dayDate: '{d}日',
+        dayDateWithMonth: '{m}/{d}'
+      },
       detail: {
         nextClass: '次の授業: {code} {name}',
         lecturer: '担当: {name}',

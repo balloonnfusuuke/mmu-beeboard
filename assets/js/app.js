@@ -681,12 +681,44 @@
       return weekDayDates[day] || null;
     }
 
+    /* 曜日見出しに付ける実日付。学期開始日が未設定なら出さない（例外で落ちない。
+       週の半ばで月が変わる週では、月が変わった日とその週の月曜にも月を出す。 */
+    var startGiven = !!state.term.startDate;
+    var weekMonths = [1, 2, 3, 4, 5].map(function (day) {
+      var iso = weekDayDates[day];
+      var date = iso ? BB.date.parse(String(iso).slice(0, 10)) : null;
+      return date ? date.getMonth() : -1;
+    });
+    var weekSpansMonths = weekMonths.some(function (month, index) {
+      return index > 0 && month >= 0 && weekMonths[index - 1] >= 0 && month !== weekMonths[index - 1];
+    });
+
+    function dayDateText(day) {
+      if (!startGiven) return '';
+      var iso = weekDayDates[day];
+      var date = iso ? BB.date.parse(String(iso).slice(0, 10)) : null;
+      if (!date) return '';
+      var dayOfMonth = date.getDate();
+      var month = date.getMonth();
+      var withMonth = weekSpansMonths &&
+        (day === 1 || weekMonths[day - 2] !== month);
+      var dateText = withMonth
+        ? t('tt.dayDateWithMonth', {
+            mon: t('month.' + MONTH_KEYS[month]),
+            m: month + 1,
+            d: dayOfMonth
+          })
+        : t('tt.dayDate', { d: dayOfMonth });
+      return ' <span class="tt-day-date">' + dateText + '</span>';
+    }
+
     var head =
       '<div class="tt-head"><div class="tt-corner">' + t('tt.time') + '</div>' +
       [1, 2, 3, 4, 5]
         .map(function (day) {
           var today = now.getDay() === day;
           return '<div class="tt-day' + (today ? ' is-today' : '') + '">' + dayName(day) +
+            dayDateText(day) +
             (today ? ' ' + t('tt.today') : '') + '</div>';
         })
         .join('') +
