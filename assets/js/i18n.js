@@ -30,7 +30,8 @@
         subjectEdit: 'MMU BeeBoard — Edit Subject',
         deadlineDetail: 'MMU BeeBoard — Deadline details',
         notes: 'MMU BeeBoard — Notes',
-        guide: 'MMU BeeBoard — How to use'
+        guide: 'MMU BeeBoard — How to use',
+        faq: 'MMU BeeBoard — FAQ'
       },
       brand: { tagline: 'Personal study dashboard' },
       nav: { settings: 'Settings', backToDashboard: 'Back to dashboard' },
@@ -1136,6 +1137,165 @@
           contact: 'Ask the developer'
         }
       },
+      faq: {
+        title: 'Frequently asked questions',
+        subtitle: 'Short answers to the questions that come up most often.',
+        searchPlaceholder: 'Search questions',
+        searchAria: 'Search questions',
+        all: 'All',
+        count: {
+          one: '1 question',
+          other: '{n} questions'
+        },
+        empty: 'No question matches that search.',
+        clear: 'Clear the filters',
+        categories: {
+          start: 'Getting started',
+          data: 'Data and privacy',
+          grades: 'Grades',
+          attendance: 'Attendance',
+          install: 'Install and updates',
+          trouble: 'When something is wrong'
+        },
+        items: {
+          q1: {
+            q: 'Is BeeBoard an official MMU system?',
+            a:
+              'No. It is a personal study aid and is not connected to MMU or to any official portal. Treat the ' +
+              'figures here as your own notes, and check official sources for anything that counts.'
+          },
+          q2: {
+            q: 'Do I need an account?',
+            a:
+              'No. There is no sign-up and no login. The app opens straight into your dashboard and keeps ' +
+              'everything in this browser.'
+          },
+          q3: {
+            q: 'Where is my data stored?',
+            a:
+              'In this browser, on this device, using local storage. Nothing is uploaded to a server, and there ' +
+              'is no account that could hold a copy.',
+            link: 'Open the data settings'
+          },
+          q4: {
+            q: 'Can I use the same data on my phone and on my PC?',
+            a:
+              'Not automatically. Each browser keeps its own copy. To move data, export a file on one device and ' +
+              'import it on the other.'
+          },
+          q5: {
+            q: 'How do I back up, or move to a new device?',
+            a:
+              'Open Settings, export your data, and keep the JSON file somewhere safe. On the new device, open ' +
+              'Settings and import that file.',
+            link: 'Open settings'
+          },
+          q6: {
+            q: 'Can I get my data back if I clear the browser data?',
+            a:
+              'No. Clearing site data removes everything, and there is no server copy to restore from. Export a ' +
+              'backup before you clear anything.'
+          },
+          q7: {
+            q: 'Does it work offline?',
+            a:
+              'Yes, after the first visit. The pages are cached, so the app opens without a connection. Changes ' +
+              'are saved locally as usual.'
+          },
+          q8: {
+            q: 'How do I install it?',
+            a:
+              'Open Settings and press Install app when the button appears. On a phone, use Add to home screen ' +
+              'from the browser menu.',
+            link: 'Open settings'
+          },
+          q9: {
+            q: 'The update does not show up. What now?',
+            a:
+              'Reload twice. The first reload downloads the new version in the background, and the second one ' +
+              'shows it. If it still looks old, close the installed app and open it again.'
+          },
+          q10: {
+            q: 'Why does the simulator say undetermined?',
+            a:
+              'Some assessment components have no mark yet. While they are empty the final mark you need cannot ' +
+              'be stated exactly, so the app shows the highest score still reachable instead.',
+            link: 'Open the simulator'
+          },
+          q11: {
+            q: 'What does unreachable mean?',
+            a:
+              'It means the target cannot be reached even if every remaining component scores full marks. Lower ' +
+              'the target grade, or check that the weightings and marks are entered correctly.',
+            link: 'Open the simulator'
+          },
+          q12: {
+            q: 'I typed a mark above the full score.',
+            a:
+              'It is clamped to the maximum, and a toast tells you when that happens. The stored value never ' +
+              'exceeds the full marks, so the weighted total stays correct.'
+          },
+          q13: {
+            q: 'The needed final mark is not shown.',
+            a:
+              'The simulator needs one component with the type Final exam. Open the subject editor and set the ' +
+              'type of the final assessment.',
+            link: 'Open the subject editor'
+          },
+          q14: {
+            q: 'Do the weightings have to add up to 100%?',
+            a:
+              'They should. The editor warns when the total is not 100%, and the simulator assumes the weights ' +
+              'are the real ones. A total above 100% makes the needed mark look easier than it is.'
+          },
+          q15: {
+            q: 'How is attendance calculated, and can I change the threshold?',
+            a:
+              'Attendance is the share of classes you attended, counted per subject. The threshold defaults to ' +
+              '80% and can be changed in Settings.',
+            link: 'Open settings'
+          },
+          q16: {
+            q: 'How do cancelled and replacement classes affect attendance?',
+            a:
+              'A cancelled class leaves the denominator, so it cannot hurt your percentage. A replacement class ' +
+              'counts in the week it is actually held.'
+          },
+          q17: {
+            q: 'What do the room codes mean?',
+            a:
+              'A code such as CQAR3002 reads as campus, building, wing, floor and room. Building letters are Q ' +
+              'for FCI, R for FOM, L for FAIE, J for FCM and N for CNMX, the large lecture hall.'
+          },
+          q18: {
+            q: 'How do I change the language?',
+            a:
+              'Open Settings and pick English or Japanese. The choice is saved in this browser and applies to ' +
+              'every page.',
+            link: 'Open settings'
+          },
+          q19: {
+            q: 'How do I start the next trimester, or restore a past one?',
+            a:
+              'Open Settings and archive the current term, then start a new one with its own label and first ' +
+              'Monday. Archived terms can be restored from the same section.',
+            link: 'Open settings'
+          },
+          q20: {
+            q: 'Where do I report a bug or ask a question?',
+            a:
+              'Use the contact page. It builds a GitHub issue for you, with a template you can review before ' +
+              'anything is posted.',
+            link: 'Open the contact page'
+          },
+          q21: {
+            q: 'The page looks broken or nothing responds.',
+            a:
+              'Reload once, then reload again to pick up the latest version. If it persists, open the browser ' +
+              'console and note any error message before reporting it.'
+          }
+        }
+      },
     },
 
     ja: {
@@ -1150,7 +1310,8 @@
         subjectEdit: 'MMU BeeBoard — 科目の編集',
         deadlineDetail: 'MMU BeeBoard — 締切の詳細',
         notes: 'MMU BeeBoard — メモ',
-        guide: 'MMU BeeBoard — 使い方ガイド'
+        guide: 'MMU BeeBoard — 使い方ガイド',
+        faq: 'MMU BeeBoard — よくある質問'
       },
       brand: { tagline: '個人用学習ダッシュボード' },
       nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る' },
@@ -2227,6 +2388,142 @@
           body: 'よくある質問は FAQ にまとめています。そこに無いときは GitHub で Issue を立ててください。',
           faq: 'FAQを見る',
           contact: '開発者に質問する'
+        }
+      },
+      faq: {
+        title: 'よくある質問',
+        subtitle: 'よく出る疑問に、短く答えます。',
+        searchPlaceholder: '質問を検索',
+        searchAria: '質問を検索',
+        all: 'すべて',
+        count: {
+          one: '1件の質問',
+          other: '{n}件の質問'
+        },
+        empty: '条件に合う質問がありません。',
+        clear: '絞り込みを解除',
+        categories: {
+          start: 'はじめる',
+          data: 'データとプライバシー',
+          grades: '成績',
+          attendance: '出席',
+          install: 'インストールと更新',
+          trouble: '困ったとき'
+        },
+        items: {
+          q1: {
+            q: 'BeeBoard は MMU の公式システムですか？',
+            a:
+              'いいえ。個人用の学習補助ツールで、MMU や公式ポータルとは接続していません。ここに出る数字は自分用のメモとして扱い、' +
+              '評価に関わることは公式の情報で確認してください。'
+          },
+          q2: {
+            q: 'アカウントは必要ですか？',
+            a: 'いいえ。登録もログインもありません。開くとすぐダッシュボードになり、データはこのブラウザに保存されます。'
+          },
+          q3: {
+            q: 'データはどこに保存されますか？',
+            a:
+              'この端末の、このブラウザの中です（ローカルストレージ）。サーバーへの送信はなく、コピーを持つアカウントもありません。',
+            link: 'データ設定を開く'
+          },
+          q4: {
+            q: 'スマホとPCで同じデータは使えますか？',
+            a: '自動では同期しません。ブラウザごとに別のデータを持ちます。移すときは、片方でエクスポートし、もう片方でインポートします。'
+          },
+          q5: {
+            q: 'バックアップと機種変更の方法は？',
+            a:
+              '設定を開いてデータをエクスポートし、JSON ファイルを安全な場所に保管します。新しい端末では、設定からそのファイルを' +
+              'インポートします。',
+            link: '設定を開く'
+          },
+          q6: {
+            q: 'ブラウザのデータを消したら復元できますか？',
+            a: 'できません。サイトデータを消すとすべて失われ、復元できるサーバー側のコピーはありません。消す前にエクスポートしてください。'
+          },
+          q7: {
+            q: 'オフラインで使えますか？',
+            a: '一度開いたあとなら使えます。ページがキャッシュされるので、通信がなくても起動します。変更はこれまでどおりローカルに保存されます。'
+          },
+          q8: {
+            q: 'インストール方法は？',
+            a: '設定を開き、ボタンが出ていれば「アプリをインストール」を押します。スマホではブラウザのメニューから「ホーム画面に追加」を使います。',
+            link: '設定を開く'
+          },
+          q9: {
+            q: '更新が反映されません。',
+            a:
+              '2回再読み込みしてください。1回目で新しい版を裏で取得し、2回目で表示が切り替わります。それでも古いままなら、' +
+              'インストールしたアプリを閉じて開き直します。'
+          },
+          q10: {
+            q: 'シミュレーターが「未確定」と出るのはなぜですか？',
+            a:
+              'まだ点数を入れていない評価項目があるためです。空の項目がある間は必要Final点を断定できないので、' +
+              '代わりに到達可能な最大点を示します。',
+            link: 'シミュレーターを開く'
+          },
+          q11: {
+            q: '「到達できません」の意味は？',
+            a:
+              '残りの項目がすべて満点でも目標に届かない、という意味です。目標グレードを下げるか、配点と点数の入力が' +
+              '正しいか確認してください。',
+            link: 'シミュレーターを開く'
+          },
+          q12: {
+            q: '満点を超える点数を入れてしまいました。',
+            a: '満点に丸められ、そのときにトーストで知らせます。保存される値が満点を超えることはないので、加重の合計は正しいままです。'
+          },
+          q13: {
+            q: '「期末試験の点数」が出ません。',
+            a: '種別が「期末試験」の項目が1つ必要です。科目エディタを開き、期末の評価項目の種別を「期末試験」にしてください。',
+            link: '科目エディタを開く'
+          },
+          q14: {
+            q: '配点は合計100%でないといけませんか？',
+            a:
+              'そろえるべきです。100%でないとエディタが警告します。シミュレーターは入力された配点をそのまま本当の配点として' +
+              '計算するため、100%を超えると必要点が実際より低く見えます。'
+          },
+          q15: {
+            q: '出席はどう計算され、しきい値は変えられますか？',
+            a: '出席率は、科目ごとに出席したコマの割合です。しきい値の既定は80%で、設定から変更できます。',
+            link: '設定を開く'
+          },
+          q16: {
+            q: '休講と振替は出席にどう影響しますか？',
+            a: '休講は分母から外れるので、出席率を下げません。振替は、実際に実施した週のコマとして数えます。'
+          },
+          q17: {
+            q: '教室コードの意味は？',
+            a:
+              'CQAR3002 のようなコードは、キャンパス・建物・ウイング・階・部屋を表します。建物の記号は Q が FCI、' +
+              'R が FOM、L が FAIE、J が FCM、N が CNMX（大講義棟）です。'
+          },
+          q18: {
+            q: '言語はどう切り替えますか？',
+            a: '設定を開き、English か 日本語 を選びます。選択はこのブラウザに保存され、すべてのページに反映されます。',
+            link: '設定を開く'
+          },
+          q19: {
+            q: '次の学期の始め方と、過去学期の復元は？',
+            a:
+              '設定を開いて現在の学期をアーカイブし、学期名と最初の月曜日を入れて次の学期を始めます。' +
+              'アーカイブした学期は同じ場所から復元できます。',
+            link: '設定を開く'
+          },
+          q20: {
+            q: '不具合の報告や質問はどこへ？',
+            a: '開発者への質問ページを使ってください。GitHub の Issue の文面を組み立てるので、投稿前に内容を確認できます。',
+            link: '開発者への質問を開く'
+          },
+          q21: {
+            q: '画面が崩れる、操作しても反応しません。',
+            a:
+              'まず再読み込みし、もう一度再読み込みして最新版を反映してください。それでも直らないときは、' +
+              'ブラウザのコンソールにエラーが出ていないか確認してから報告してください。'
+          }
         }
       },
     }
