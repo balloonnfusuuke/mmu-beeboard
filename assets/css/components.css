@@ -305,6 +305,32 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 .tt-note:focus-visible { opacity: 1; }
 @media (hover: none) { .tt-note { opacity: 1; } }
 
+/* 狭い画面（sm 未満）は時間軸と文字を詰め、月〜金の週全体を横スクロールなしで見せる。
+   640px 以上は従来の寸法のまま（時間軸 68px・曜日見出し 13px）。 */
+@media (max-width: 639px) {
+  .tt-head, .tt-body { grid-template-columns: 38px repeat(5, minmax(0, 1fr)); }
+  .tt-corner { font-size: 9px; padding-left: 2px; }
+  .tt-day { font-size: 10px; padding: 3px 0; }
+  .tt-day-date { font-size: 9px; }
+  .tt-times span { right: 4px; font-size: 9px; }
+  .tt-block { left: 2px; right: 2px; padding: 3px 4px; gap: 1px; }
+  .tt-block-code { font-size: 9px; padding-right: 12px; }
+  .tt-block-meta { font-size: 8px; }
+  /* 注記は1行に省略する。2行クランプのままだと低いブロックで2行目が途中で切れる。 */
+  .tt-block-room {
+    display: block;
+    font-size: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tt-note { width: 14px; height: 14px; right: 3px; }
+  .tt-note .material-symbols-outlined { font-size: 10px; }
+  .tt-event { left: 2px; right: 2px; padding: 3px 4px; }
+  .tt-event-title { font-size: 9px; }
+  .tt-event-meta { font-size: 8px; }
+}
+
 /* ---------- toast ---------- */
 
 /* フォームの上に重ならないよう、ヘッダー直下の右上へ出す。 */
