@@ -31,7 +31,8 @@
         deadlineDetail: 'MMU BeeBoard — Deadline details',
         notes: 'MMU BeeBoard — Notes',
         guide: 'MMU BeeBoard — How to use',
-        faq: 'MMU BeeBoard — FAQ'
+        faq: 'MMU BeeBoard — FAQ',
+        contact: 'MMU BeeBoard — Ask the developer'
       },
       brand: { tagline: 'Personal study dashboard' },
       nav: { settings: 'Settings', backToDashboard: 'Back to dashboard' },
@@ -1296,6 +1297,86 @@
           }
         }
       },
+      contact: {
+        title: 'Ask the developer',
+        subtitle: 'This app has no server, so nothing is sent from here. Build the text, then post it on GitHub.',
+        form: {
+          type: 'Type',
+          typeQuestion: 'Question',
+          typeBug: 'Bug report',
+          typeFeature: 'Feature request',
+          typeOther: 'Something else',
+          title: 'Title',
+          titlePlaceholder: 'One line that sums it up',
+          details: 'Details',
+          detailsPlaceholder: 'What happened, and what you expected instead',
+          page: 'Page',
+          pageOther: 'Not sure',
+          repro: 'Steps to reproduce',
+          reproPlaceholder: '1. Open the simulator\n2. Enter 80 for Quiz\n3. ...',
+          reproHint: 'Optional. Numbered steps are the easiest to follow.',
+          optional: 'Optional'
+        },
+        pages: {
+          dashboard: 'Dashboard',
+          simulator: 'Grade simulator',
+          deadlines: 'Deadlines',
+          deadlineDetail: 'Deadline details',
+          attendance: 'Attendance',
+          studylog: 'Study log',
+          notes: 'Notes',
+          settings: 'Settings',
+          subjectEdit: 'Subject editor',
+          setup: 'First-time setup',
+          guide: 'How to use guide',
+          faq: 'FAQ',
+          contact: 'Ask the developer',
+          other: 'Not sure'
+        },
+        privacy: {
+          title: 'Before you post',
+          body:
+            'GitHub Issues are public. Anyone can read them, and search engines can index them. Do not include your ' +
+            'student ID, your name, your marks, or a screenshot that shows personal information.',
+          check: 'I have not included any personal information',
+          hint: 'The button stays disabled until this is checked.'
+        },
+        actions: {
+          open: 'Open the issue on GitHub',
+          copy: 'Copy the text',
+          copyDiagnostics: 'Copy diagnostics',
+          copied: 'Copied to the clipboard',
+          copyFailed: 'Could not copy. Select the text and copy it by hand.',
+          needCheck: 'Confirm that the text has no personal information first.'
+        },
+        template: {
+          type: 'Type',
+          page: 'Page',
+          details: 'Details',
+          repro: 'Steps to reproduce'
+        },
+        links: {
+          title: 'Other places to look',
+          repo: 'GitHub repository',
+          repoBody: 'Source code, releases and the issue tracker.',
+          faq: 'FAQ',
+          faqBody: 'Short answers to the questions that come up most often.',
+          guide: 'How to use guide',
+          guideBody: 'A step-by-step tour of every screen.'
+        },
+        diagnostics: {
+          title: 'Diagnostics',
+          body:
+            'Copies the page name, language, browser user agent, window size and the service worker cache name. ' +
+            'It never reads your subjects, marks, notes or any other saved data.',
+          copied: 'Diagnostics copied',
+          page: 'Page',
+          lang: 'Language',
+          width: 'Window',
+          ua: 'User agent',
+          cache: 'Service worker cache'
+        }
+      },
     },
 
     ja: {
@@ -1311,7 +1392,8 @@
         deadlineDetail: 'MMU BeeBoard — 締切の詳細',
         notes: 'MMU BeeBoard — メモ',
         guide: 'MMU BeeBoard — 使い方ガイド',
-        faq: 'MMU BeeBoard — よくある質問'
+        faq: 'MMU BeeBoard — よくある質問',
+        contact: 'MMU BeeBoard — 開発者への質問'
       },
       brand: { tagline: '個人用学習ダッシュボード' },
       nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る' },
@@ -2524,6 +2606,86 @@
               'まず再読み込みし、もう一度再読み込みして最新版を反映してください。それでも直らないときは、' +
               'ブラウザのコンソールにエラーが出ていないか確認してから報告してください。'
           }
+        }
+      },
+      contact: {
+        title: '開発者への質問',
+        subtitle: 'このアプリはサーバーを持たないので、ここから何かが送信されることはありません。文面を作って GitHub に投稿します。',
+        form: {
+          type: '種別',
+          typeQuestion: '質問',
+          typeBug: '不具合報告',
+          typeFeature: '機能リクエスト',
+          typeOther: 'その他',
+          title: 'タイトル',
+          titlePlaceholder: 'ひとことで表すと',
+          details: '詳細',
+          detailsPlaceholder: '何が起きたか、どうなってほしかったか',
+          page: '起きたページ',
+          pageOther: 'わからない',
+          repro: '再現手順',
+          reproPlaceholder: '1. シミュレーターを開く\n2. Quiz に 80 を入れる\n3. …',
+          reproHint: '任意です。番号付きの手順が一番伝わります。',
+          optional: '任意'
+        },
+        pages: {
+          dashboard: 'ダッシュボード',
+          simulator: '成績シミュレーター',
+          deadlines: '締切',
+          deadlineDetail: '締切の詳細',
+          attendance: '出席',
+          studylog: '学習ログ',
+          notes: 'メモ',
+          settings: '設定',
+          subjectEdit: '科目エディタ',
+          setup: '初回セットアップ',
+          guide: '使い方ガイド',
+          faq: 'FAQ',
+          contact: '開発者への質問',
+          other: 'わからない'
+        },
+        privacy: {
+          title: '投稿する前に',
+          body:
+            'GitHub の Issue は公開されます。誰でも読めて、検索エンジンにも拾われます。学籍番号・氏名・成績・' +
+            '個人が写ったスクリーンショットは入れないでください。',
+          check: '個人情報を入れていません',
+          hint: 'チェックするまでボタンは押せません。'
+        },
+        actions: {
+          open: 'GitHubでIssueを開く',
+          copy: '文面をコピー',
+          copyDiagnostics: '診断情報をコピー',
+          copied: 'クリップボードにコピーしました',
+          copyFailed: 'コピーできませんでした。テキストを選択して手動でコピーしてください。',
+          needCheck: '先に、個人情報が入っていないことを確認してください。'
+        },
+        template: {
+          type: '種別',
+          page: 'ページ',
+          details: '詳細',
+          repro: '再現手順'
+        },
+        links: {
+          title: 'ほかの見どころ',
+          repo: 'GitHub リポジトリ',
+          repoBody: 'ソースコード・リリース・Issue の一覧。',
+          faq: 'FAQ',
+          faqBody: 'よく出る疑問への短い答え。',
+          guide: '使い方ガイド',
+          guideBody: '全画面をステップごとに案内します。'
+        },
+        diagnostics: {
+          title: '診断情報',
+          body:
+            'ページ名・言語・ブラウザのユーザーエージェント・画面幅・Service Worker のキャッシュ名をコピーします。' +
+            '科目・点数・メモなど、保存されているデータは一切読みません。',
+          copied: '診断情報をコピーしました',
+          page: 'ページ',
+          lang: '言語',
+          width: '画面',
+          ua: 'ユーザーエージェント',
+          cache: 'Service Worker のキャッシュ'
         }
       },
     }
