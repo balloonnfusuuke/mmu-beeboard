@@ -4,7 +4,7 @@
    更新を配るときは CACHE の版を上げる。古いキャッシュは activate で削除する。 */
 'use strict';
 
-var CACHE = 'mmu-beeboard-v3';
+var CACHE = 'mmu-beeboard-v4';
 
 /* 初回訪問でここをまとめてキャッシュする。1 つでも 404 すると install が失敗するので、
    実行時に読み込むファイルだけを列挙する（tailwind.src.css はビルド入力なので含めない）。 */
@@ -15,6 +15,7 @@ var ASSETS = [
   './simulator.html',
   './deadlines.html',
   './deadline-detail.html',
+  './session-detail.html',
   './attendance.html',
   './studylog.html',
   './settings.html',
@@ -37,6 +38,7 @@ var ASSETS = [
   './assets/js/subject-form.js',
   './assets/js/pages/attendance.js',
   './assets/js/pages/deadline-detail.js',
+  './assets/js/pages/session-detail.js',
   './assets/js/pages/deadlines.js',
   './assets/js/pages/notes.js',
   './assets/js/pages/settings.js',

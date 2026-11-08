@@ -232,6 +232,24 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55), var(--bb-shadow-rest);
 }
 
+/* 授業ブロックはセッション詳細へのリンク。見た目は変えず、フォーカスと
+   休講ブロックのホバーだけで押せることに気づけるようにする。 */
+a.tt-block:focus-visible { outline: 2px solid var(--bb-primary); outline-offset: 2px; }
+a.tt-block-off:hover { border-color: var(--bb-primary); color: var(--bb-text); }
+
+/* オンラインで実施される回。教室名と併記する。 */
+.tt-block-online {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .92);
+  color: var(--bb-primary);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
 /* 個人予定。科目色の塗りつぶしとは別の見た目（淡い面＋左の色帯）にして、
    授業ブロックと取り違えないようにする。 */
 .tt-event {

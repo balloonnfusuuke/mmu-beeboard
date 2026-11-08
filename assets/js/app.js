@@ -152,7 +152,7 @@
           if (skip && skip.kind !== 'online') return;
           var start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutesOf(session.start));
           if (start.getTime() > now.getTime()) {
-            found.push({ subject: subject, session: session, start: start });
+            found.push({ subject: subject, session: session, sessionIndex: index, start: start });
           }
         });
       });
@@ -161,7 +161,14 @@
         if (extra.date !== dayIso) return;
         var start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutesOf(extra.start));
         if (start.getTime() > now.getTime()) {
-          found.push({ subject: extra.subject, session: extra, start: start, transfer: true });
+          found.push({
+            subject: extra.subject,
+            session: extra,
+            sessionIndex: extra.sessionIndex,
+            sourceDate: extra.sourceDate,
+            start: start,
+            transfer: true
+          });
         }
       });
       if (found.length) {
@@ -247,6 +254,7 @@
       list.push({
         subject: subject,
         overrideId: entry.id,
+        sessionIndex: Number(entry.sessionIndex),
         sourceDate: isoKey(entry.date),
         date: targetDate,
         day: day.getDay(),
@@ -604,6 +612,10 @@
     var badge = preview ? t('next.termStarts', { date: fmtDate(termStart()) }) : countdown(next.start, now);
     var dayText = fmtDate(next.start) + (isSameDay(next.start, now) ? ' • ' + t('next.today') : '');
     var roomText = roomLabel(session.room);
+    /* 振替の臨時セッションは、元の回の詳細を開く。 */
+    var detailHref = next.transfer
+      ? sessionHref(subject.id, next.sessionIndex, next.sourceDate)
+      : sessionHref(subject.id, next.sessionIndex, isoDay(next.start));
 
     host.innerHTML =
       '<div class="relative bg-surface border border-border rounded-card p-5 sm:p-6 shadow-rest hover:shadow-hover transition-shadow overflow-hidden">' +
@@ -617,7 +629,9 @@
       chip.background + ';color:' + chip.color + ';border:1px solid ' + chip.borderColor + '">' + session.type + '</span>' +
       '<span class="text-muted text-caption">' + dayText + '</span>' +
       '</div>' +
-      '<h1 class="text-headline-sm font-bold text-ink tracking-tight">' + subject.id + ' ' + subject.name + '</h1>' +
+      '<h1 class="text-headline-sm font-bold text-ink tracking-tight">' +
+      '<a href="' + detailHref + '" class="hover:text-primary transition-colors" title="' +
+      escHtml(t('next.details')) + '">' + subject.id + ' ' + subject.name + '</a></h1>' +
       '<div class="flex flex-wrap items-center gap-4 text-muted text-body-sm pt-0.5">' +
       '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span>' +
       '<span class="font-semibold text-ink num">' + session.start + ' – ' + session.end + '</span>' +
@@ -800,25 +814,28 @@
                   })
                 : t('att.noClassHint');
               blocks.push(
-                '<div class="tt-block tt-block-off" style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px"' +
+                '<a class="tt-block tt-block-off" href="' + sessionHref(subject.id, index, dayIso || dateOfWeekday(day)) + '"' +
+                  ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px"' +
                   ' title="' + escHtml(subject.id + ' · ' + t('tt.noClass') + ' · ' + note) + '">' +
                   '<span class="tt-block-code">' + subject.id + '</span>' +
                   '<span class="tt-block-meta">' + t('tt.noClass') + '</span>' +
                   '<span class="tt-block-room">' + escHtml(note) + '</span>' +
-                '</div>'
+                '</a>'
               );
               return;
             }
             /* 教室が空のときに区切り記号だけが残らないよう、要素を集めてから繋ぐ。 */
             var blockTitle = [subject.id, session.type, session.start + '–' + session.end];
+            if (online) blockTitle.push(t('tt.online'));
             if (session.room) blockTitle.push(session.room);
             if (roomText) blockTitle.push(roomText);
             blocks.push(
-              '<a class="tt-block" href="simulator.html?subject=' + subject.id + '"' +
+              '<a class="tt-block" href="' + sessionHref(subject.id, index, dayIso || dateOfWeekday(day)) + '"' +
                 ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + subject.color + '"' +
                 ' title="' + escHtml(blockTitle.join(' · ')) + '">' +
                 '<span class="tt-block-code">' + subject.id + '</span>' +
                 '<span class="tt-block-meta">' + session.type +
+                (online ? ' · <span class="tt-block-online">' + t('tt.online') + '</span>' : '') +
                 (session.room ? ' · ' + escHtml(session.room) : '') + '</span>' +
                 (roomText ? '<span class="tt-block-room" title="' + escHtml(roomText) + '">' + roomText + '</span>' : '') +
               '</a>' +
@@ -839,7 +856,8 @@
           var blockHeight = ((endMin - startMin) / 60) * HOUR_HEIGHT;
           var roomText = roomLabel(extra.room);
           blocks.push(
-            '<a class="tt-block tt-block-transfer" href="simulator.html?subject=' + extra.subject.id + '"' +
+            '<a class="tt-block tt-block-transfer" href="' +
+              sessionHref(extra.subject.id, extra.sessionIndex, extra.sourceDate) + '"' +
               ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + extra.subject.color + '"' +
               ' title="' + escHtml(extra.subject.id + ' · ' + t('tt.transfer') + ' · ' + extra.start + '–' + extra.end) + '">' +
               '<span class="tt-block-code">' + extra.subject.id + '</span>' +

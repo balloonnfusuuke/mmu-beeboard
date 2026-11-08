@@ -169,6 +169,7 @@
         roomWord: 'Room',
         roomTbd: 'Room TBD',
         openSimulator: 'Open Course Simulator',
+        details: 'Session details',
         attendance: 'Attendance'
       },
       tt: {
@@ -176,6 +177,7 @@
         today: '(Today)',
         noClass: 'No class',
         transfer: 'Transfer',
+        online: 'Online',
         dayDate: '{d}',
         dayDateWithMonth: '{mon} {d}',
         overridesElsewhere: {
@@ -1581,6 +1583,7 @@
         roomWord: '教室',
         roomTbd: '教室未定',
         openSimulator: '成績シミュレーターを開く',
+        details: 'セッション詳細',
         attendance: '出席'
       },
       tt: {
@@ -1588,6 +1591,7 @@
         today: '(今日)',
         noClass: '休講',
         transfer: '振替',
+        online: 'オンライン',
         dayDate: '{d}日',
         dayDateWithMonth: '{m}/{d}',
         overridesElsewhere: {
