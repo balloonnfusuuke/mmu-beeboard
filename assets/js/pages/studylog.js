@@ -26,6 +26,13 @@
     return BB.store.get();
   }
 
+  /* 暦日は現地時刻で決める。toISOString は UTC に直すため、UTC+8 の早朝に
+     前日が初期値になってしまう（他ページの isoDay と同じ組み立て方に揃える）。 */
+  function isoDay(date) {
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' +
+      String(date.getDate()).padStart(2, '0');
+  }
+
   function subjectById(id) {
     var found = null;
     state().subjects.forEach(function (subject) {
@@ -174,7 +181,7 @@
         return '<option value="' + subject.id + '">' + subject.name + ' (' + subject.id + ')</option>';
       })
       .join('');
-    var today = new Date().toISOString().slice(0, 10);
+    var today = isoDay(new Date());
 
     if (!options) {
       document.getElementById('manual-entry').innerHTML =
