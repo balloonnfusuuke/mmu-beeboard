@@ -1855,8 +1855,11 @@
     var termLabel = preview && preview.termLabel !== undefined ? preview.termLabel : termLabelOf(state);
     return (
       '<footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 flex flex-col sm:flex-row items-center justify-between text-caption text-muted gap-2 border-t border-border">' +
-      '<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-success"></span>' +
-      '<span>' + t('dash.footer') + '</span></div>' +
+      '<div class="flex flex-wrap items-center gap-2"><span class="w-2 h-2 rounded-full bg-success"></span>' +
+      '<span>' + t('dash.footer') + '</span>' +
+      '<span class="text-border">•</span>' +
+      '<a href="guide.html" class="hover:text-primary hover:underline">' +
+      escHtml(t('nav.guide')) + '</a></div>' +
       '<div class="num">' + escHtml(termLabel) +
       (state.student.studentId ? t('header.studentIdSuffix', { id: state.student.studentId }) : '') +
       '</div></footer>'

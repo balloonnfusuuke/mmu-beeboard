@@ -35,7 +35,7 @@
         contact: 'MMU BeeBoard — Ask the developer'
       },
       brand: { tagline: 'Personal study dashboard' },
-      nav: { settings: 'Settings', backToDashboard: 'Back to dashboard' },
+      nav: { settings: 'Settings', backToDashboard: 'Back to dashboard', guide: 'How to use' },
       common: {
         cancel: 'Cancel',
         confirm: 'Confirm',
@@ -486,6 +486,13 @@
             'working offline.',
           button: 'Install app',
           toastInstalled: 'App installed'
+        },
+        help: {
+          title: 'Help and support',
+          subtitle: 'Guides, answers, and a way to reach the developer.',
+          guide: 'How to use guide',
+          faq: 'FAQ',
+          contact: 'Ask the developer'
         },
         toast: {
           fillAll: 'Fill in label, start date and weeks',
@@ -1396,7 +1403,7 @@
         contact: 'MMU BeeBoard — 開発者への質問'
       },
       brand: { tagline: '個人用学習ダッシュボード' },
-      nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る' },
+      nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る', guide: '使い方' },
       common: {
         cancel: 'キャンセル',
         confirm: '実行',
@@ -1841,6 +1848,13 @@
             'ホーム画面やデスクトップに追加すると、単独のウィンドウで開き、オフラインでも使えます。',
           button: 'アプリをインストール',
           toastInstalled: 'アプリをインストールしました'
+        },
+        help: {
+          title: 'ヘルプとサポート',
+          subtitle: '使い方・よくある質問・開発者への連絡。',
+          guide: '使い方ガイド',
+          faq: 'FAQ',
+          contact: '開発者への質問'
         },
         toast: {
           fillAll: '学期名・開始日・週数を入力してください',

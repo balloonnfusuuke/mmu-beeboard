@@ -377,6 +377,26 @@
     );
   }
 
+  /* ヘルプ系 3 ページへの導線。設定の最後にまとめて置く。 */
+  function helpSection() {
+    return section(
+      'help',
+      t('settings.help.title'),
+      t('settings.help.subtitle'),
+      '<div class="flex flex-col sm:flex-row sm:flex-wrap gap-2">' +
+        '<a href="guide.html" class="bb-btn bb-btn-ghost">' +
+        '<span class="material-symbols-outlined text-[18px]">menu_book</span>' +
+        t('settings.help.guide') + '</a>' +
+        '<a href="faq.html" class="bb-btn bb-btn-ghost">' +
+        '<span class="material-symbols-outlined text-[18px]">help</span>' +
+        t('settings.help.faq') + '</a>' +
+        '<a href="contact.html" class="bb-btn bb-btn-ghost">' +
+        '<span class="material-symbols-outlined text-[18px]">forum</span>' +
+        t('settings.help.contact') + '</a>' +
+        '</div>'
+    );
+  }
+
   function render() {
     document.getElementById('settings').innerHTML =
       profileSection() +
@@ -388,7 +408,8 @@
       timetableSection() +
       termSection() +
       dataSection() +
-      installSection();
+      installSection() +
+      helpSection();
   }
 
   document.addEventListener('submit', function (event) {
