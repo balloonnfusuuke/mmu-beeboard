@@ -104,6 +104,8 @@
     var secured = 0;
     var possible = 0;
     var entered = 0;
+    var unenteredWeight = 0;
+    var unenteredNonFinal = 0;
     var exam = finalOf(subject);
     var examScore = null;
 
@@ -114,11 +116,18 @@
         secured += (score / assessment.max) * assessment.weight;
         entered += 1;
         if (exam && assessment.id === exam.id) examScore = score;
+      } else {
+        unenteredWeight += assessment.weight;
+        if (!exam || assessment.id !== exam.id) unenteredNonFinal += 1;
       }
     });
 
     var withoutExam = secured;
     if (exam && examScore !== null) withoutExam -= (examScore / exam.max) * exam.weight;
+
+    /* 未入力の項目を満点で取った場合の上限。未入力は 0 点ではなく「まだ取れる点」として扱う。
+       ここでも目標に届かないときだけ「到達できません」と言い切れる。 */
+    var maxReachable = secured + unenteredWeight;
 
     var predicted = entered > 0 && entered === subject.assessments.length ? gradeFor(secured) : null;
     var needed = null;
@@ -128,8 +137,11 @@
         percent: required * 100,
         marks: (required * exam.max),
         max: exam.max,
-        reachable: required <= 1,
-        secured: required <= 0
+        reachable: maxReachable >= target - 1e-9,
+        secured: required <= 0,
+        /* 未入力の非 Final 項目がある間は、必要 Final 点を断定できない。 */
+        undetermined: unenteredNonFinal > 0,
+        maxReachablePercent: possible > 0 ? (maxReachable / possible) * 100 : 0
       };
     }
 
@@ -267,6 +279,11 @@
     }
     if (needed.secured) return '<span class="text-success font-bold">' + t('sim.alreadySecured') + '</span>';
     if (!needed.reachable) return '<span class="text-alert font-bold">' + t('sim.notReachable') + '</span>';
+    if (needed.undetermined) {
+      return '<span class="text-muted font-semibold">' + t('sim.undetermined') + '</span>' +
+        ' <span class="text-caption text-muted num">' +
+        t('sim.reachableMax', { n: needed.maxReachablePercent.toFixed(1) }) + '</span>';
+    }
     return '<span class="text-primary font-bold num">' + needed.marks.toFixed(1) + ' / ' + needed.max + '</span>';
   }
 
