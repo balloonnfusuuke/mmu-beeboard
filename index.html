@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title data-i18n="page.dashboard">MMU BeeBoard — Dashboard</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#003DA5">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="assets/css/fonts.css">
 <link rel="stylesheet" href="assets/css/tokens.css">
 <link rel="stylesheet" href="assets/css/components.css">
@@ -106,9 +109,14 @@
         <h2 class="text-title-md font-bold text-ink" data-i18n="notes.title">Notes &amp; Homework</h2>
         <p class="text-body-sm text-muted" data-i18n="notes.subtitle">Quick memos for today and homework with a due date.</p>
       </div>
-      <button type="button" data-note-add class="bb-btn bb-btn-primary">
-        <span class="material-symbols-outlined text-[18px]">add</span><span data-i18n="notes.add">Add</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <a href="notes.html" class="bb-btn bb-btn-ghost">
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span><span data-i18n="notes.viewAll">View all notes</span>
+        </a>
+        <button type="button" data-note-add class="bb-btn bb-btn-primary">
+          <span class="material-symbols-outlined text-[18px]">add</span><span data-i18n="notes.add">Add</span>
+        </button>
+      </div>
     </div>
     <div id="notes-body" class="p-5 sm:p-6 space-y-5"></div>
   </section>

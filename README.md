@@ -117,11 +117,14 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 ├── index.html            # dashboard
 ├── simulator.html        # grade simulator
 ├── deadlines.html        # deadline timeline
+├── notes.html            # every memo and homework, newest first
 ├── attendance.html       # attendance tracker
 ├── studylog.html         # study log
 ├── settings.html         # preferences, trimester switching, data export
 ├── subject-edit.html     # per-module editor
 ├── setup.html            # first-time setup wizard
+├── manifest.webmanifest  # PWA manifest
+├── sw.js                 # service worker (bump CACHE to ship an update)
 ├── assets/
 │   ├── css/
 │   │   ├── fonts.css     # @font-face for the self-hosted fonts
@@ -130,6 +133,7 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 │   │   ├── tailwind.src.css  # Tailwind input
 │   │   └── app.css       # built Tailwind output (committed)
 │   ├── fonts/            # woff2, self-hosted
+│   ├── icons/            # PWA icons (192, 512, maskable, apple-touch)
 │   ├── js/
 │   │   ├── data.js       # seed data — the single source of truth
 │   │   ├── store.js      # localStorage persistence + colour/date helpers
@@ -142,6 +146,16 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 ├── tailwind.config.js
 └── package.json
 ```
+
+## Install and offline
+
+The app is a PWA. Chrome and Edge show an install icon in the address bar; Android Chrome
+offers "Add to Home screen". The install button on Settings appears only when the browser
+fires `beforeinstallprompt`, and disappears once the app is installed.
+
+`sw.js` precaches every page and asset into a versioned cache (`mmu-beeboard-v1`) and serves
+them cache-first, so the app opens offline after the first visit. When you ship a change,
+bump `CACHE` in `sw.js`; the old cache is deleted on activate.
 
 ## Building the CSS
 

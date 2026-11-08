@@ -3,3 +3,5 @@ data/raw/
 *.log
 .DS_Store
 Thumbs.db
+/audit-report-2026-11-07.md
+/logo.svg

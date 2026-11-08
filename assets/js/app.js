@@ -2097,6 +2097,81 @@
     });
   }
 
+  /* ---------- install prompt + service worker ---------- */
+
+  /* beforeinstallprompt のイベントは 1 回しか prompt() に使えない。受け取ったら保持し、
+     Settings のボタンからだけ呼ぶ（ダッシュボードには何も出さない）。 */
+  var installPrompt = null;
+  var installListeners = [];
+
+  function isStandalone() {
+    if (global.navigator && global.navigator.standalone === true) return true;
+    return !!(global.matchMedia && global.matchMedia('(display-mode: standalone)').matches);
+  }
+
+  function notifyInstall() {
+    installListeners.slice().forEach(function (listener) {
+      try {
+        listener();
+      } catch (e) {
+        /* 1 つの購読者が落ちても他は動かす */
+      }
+    });
+  }
+
+  if (global.addEventListener) {
+    global.addEventListener('beforeinstallprompt', function (event) {
+      event.preventDefault();
+      installPrompt = event;
+      notifyInstall();
+    });
+    global.addEventListener('appinstalled', function () {
+      installPrompt = null;
+      notifyInstall();
+    });
+  }
+
+  var install = {
+    /* インストール済み（単独ウィンドウ）なら、プロンプトが残っていても出さない。 */
+    available: function () {
+      return !!installPrompt && !isStandalone();
+    },
+    isInstalled: isStandalone,
+    prompt: function () {
+      if (!installPrompt) return Promise.resolve(false);
+      var event = installPrompt;
+      installPrompt = null;
+      event.prompt();
+      return event.userChoice
+        .then(function (choice) {
+          notifyInstall();
+          return !!choice && choice.outcome === 'accepted';
+        })
+        .catch(function () {
+          notifyInstall();
+          return false;
+        });
+    },
+    subscribe: function (listener) {
+      installListeners.push(listener);
+      return function () {
+        installListeners = installListeners.filter(function (item) {
+          return item !== listener;
+        });
+      };
+    }
+  };
+
+  /* Service Worker は全ページ共通のこのファイルから 1 回だけ登録する。
+     各ページに登録コードを置くと、ページごとに重複して持つことになる。 */
+  if (global.navigator && 'serviceWorker' in global.navigator) {
+    global.addEventListener('load', function () {
+      global.navigator.serviceWorker.register('./sw.js').catch(function () {
+        /* 登録できなくてもアプリは動く。オフライン対応だけが効かない。 */
+      });
+    });
+  }
+
   BB.ui = {
     header: header,
     footer: footer,
@@ -2118,6 +2193,8 @@
     setOverride: setOverride,
     removeOverride: removeOverride
   };
+
+  BB.install = install;
 
   /* Stitch のインラインタイマーをここへ吸収。ページ側は UI だけを持つ。 */
   var timerState = { startedAt: null, handle: null, tick: null };

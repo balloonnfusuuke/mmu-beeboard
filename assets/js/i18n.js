@@ -28,7 +28,8 @@
         simulator: 'MMU BeeBoard — Grade Simulator',
         studylog: 'MMU BeeBoard — Study Log',
         subjectEdit: 'MMU BeeBoard — Edit Subject',
-        deadlineDetail: 'MMU BeeBoard — Deadline details'
+        deadlineDetail: 'MMU BeeBoard — Deadline details',
+        notes: 'MMU BeeBoard — Notes'
       },
       brand: { tagline: 'Personal study dashboard' },
       nav: { settings: 'Settings', backToDashboard: 'Back to dashboard' },
@@ -261,7 +262,20 @@
         dueOn: 'Due {when}',
         noDue: 'No due date',
         overdue: 'Overdue',
-        homeworkBadge: 'Homework'
+        homeworkBadge: 'Homework',
+        listTitle: 'All notes',
+        listSubtitle: 'Every memo and homework, newest first.',
+        listAria: 'All notes',
+        viewAll: 'View all notes',
+        filterSubject: 'Subject',
+        filterKind: 'Type',
+        allSubjects: 'All subjects',
+        allKinds: 'All types',
+        dateHeading: '{date} ({day})',
+        noDate: 'No date',
+        done: 'Done',
+        empty: 'No notes yet.',
+        emptyFiltered: 'No notes match these filters.'
       },
       grades: {
         empty: 'No subjects to grade yet.',
@@ -460,6 +474,15 @@
           import: 'Import data',
           reset: 'Reset all data',
           hint: 'All data is stored locally in this browser. Nothing is sent to MMU.'
+        },
+        install: {
+          title: 'Install app',
+          subtitle: 'Open BeeBoard in its own window, without the browser frame.',
+          body:
+            'Add MMU BeeBoard to your home screen or desktop. It opens in its own window and keeps ' +
+            'working offline.',
+          button: 'Install app',
+          toastInstalled: 'App installed'
         },
         toast: {
           fillAll: 'Fill in label, start date and weeks',
@@ -928,7 +951,8 @@
         simulator: 'MMU BeeBoard — 成績シミュレーター',
         studylog: 'MMU BeeBoard — 学習ログ',
         subjectEdit: 'MMU BeeBoard — 科目の編集',
-        deadlineDetail: 'MMU BeeBoard — 締切の詳細'
+        deadlineDetail: 'MMU BeeBoard — 締切の詳細',
+        notes: 'MMU BeeBoard — メモ'
       },
       brand: { tagline: '個人用学習ダッシュボード' },
       nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る' },
@@ -1161,7 +1185,20 @@
         dueOn: '締切 {when}',
         noDue: '締切なし',
         overdue: '期限切れ',
-        homeworkBadge: '宿題'
+        homeworkBadge: '宿題',
+        listTitle: 'すべてのメモ',
+        listSubtitle: '過去のメモも宿題も、新しい順にすべて表示します。',
+        listAria: 'すべてのメモ',
+        viewAll: 'すべてのメモを見る',
+        filterSubject: '科目',
+        filterKind: '種別',
+        allSubjects: 'すべての科目',
+        allKinds: 'すべての種別',
+        dateHeading: '{date}（{day}）',
+        noDate: '日付なし',
+        done: '完了',
+        empty: 'メモはまだありません。',
+        emptyFiltered: '条件に合うメモはありません。'
       },
       grades: {
         empty: '採点対象の科目がまだありません。',
@@ -1355,6 +1392,14 @@
           import: 'データを読み込む',
           reset: '全データをリセット',
           hint: 'データはすべてこのブラウザ内に保存されます。MMU に送信されることはありません。'
+        },
+        install: {
+          title: 'アプリをインストール',
+          subtitle: 'ブラウザの枠なしで、単独のウィンドウで開きます。',
+          body:
+            'ホーム画面やデスクトップに追加すると、単独のウィンドウで開き、オフラインでも使えます。',
+          button: 'アプリをインストール',
+          toastInstalled: 'アプリをインストールしました'
         },
         toast: {
           fillAll: '学期名・開始日・週数を入力してください',

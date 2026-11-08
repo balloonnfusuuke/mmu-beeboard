@@ -362,6 +362,21 @@
     );
   }
 
+  function installSection() {
+    /* プロンプトが無い・インストール済みのときは、押せないボタンを置かない。 */
+    if (!BB.install.available()) return '';
+    return section(
+      'download',
+      t('settings.install.title'),
+      t('settings.install.subtitle'),
+      '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">' +
+        '<p class="text-body-sm text-muted">' + t('settings.install.body') + '</p>' +
+        '<button type="button" id="install-app" class="bb-btn bb-btn-primary shrink-0">' +
+        '<span class="material-symbols-outlined text-[18px]">download</span>' +
+        t('settings.install.button') + '</button></div>'
+    );
+  }
+
   function render() {
     document.getElementById('settings').innerHTML =
       profileSection() +
@@ -372,7 +387,8 @@
       goalsSection() +
       timetableSection() +
       termSection() +
-      dataSection();
+      dataSection() +
+      installSection();
   }
 
   document.addEventListener('submit', function (event) {
@@ -484,6 +500,14 @@
       return;
     }
 
+    if (event.target.closest('#install-app')) {
+      BB.install.prompt().then(function (accepted) {
+        if (accepted) BB.ui.toast(t('settings.install.toastInstalled'));
+        render();
+      });
+      return;
+    }
+
     if (event.target.closest('#export-data')) {
       var blob = new Blob([JSON.stringify(state(), null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);
@@ -546,6 +570,11 @@
     }
     applyTheme(state().settings.theme);
     BB.ui.refreshChrome();
+    render();
+  });
+
+  /* インストールの可否が変わったら（appinstalled など）ボタンを出し入れする。 */
+  BB.install.subscribe(function () {
     render();
   });
 })();
