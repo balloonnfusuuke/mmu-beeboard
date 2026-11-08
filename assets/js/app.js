@@ -620,12 +620,12 @@
       (subject.lecturer ? '<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px] text-muted">person</span>' +
       '<span>' + subject.lecturer + '</span></div>' : '') +
       '</div></div>' +
-      '<div class="flex items-center gap-3 shrink-0 pt-2 md:pt-0">' +
-      '<a href="simulator.html?subject=' + subject.id + '" class="inline-flex items-center gap-2 px-4 py-2 rounded-control bg-primary text-on-primary text-label-md font-semibold hover:bg-primary-hover transition-colors shadow-rest">' +
+      '<div class="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0 pt-2 md:pt-0">' +
+      '<a href="simulator.html?subject=' + subject.id + '" class="inline-flex items-center justify-center sm:justify-start gap-2 px-4 py-2 rounded-control bg-primary text-on-primary text-label-md font-semibold hover:bg-primary-hover transition-colors shadow-rest">' +
       '<span class="material-symbols-outlined text-[18px]">calculate</span><span>' + t('next.openSimulator') + '</span></a>' +
-      '<a href="attendance.html" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors">' +
+      '<a href="attendance.html" class="inline-flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors">' +
       '<span class="material-symbols-outlined text-[18px] text-muted">rule</span><span>' + t('next.attendance') + '</span></a>' +
-      '<button type="button" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors"' +
+      '<button type="button" class="inline-flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2 rounded-control border border-border bg-surface text-ink hover:bg-surface-subtle text-label-md font-medium transition-colors"' +
       ' data-note-for="' + subject.id + '" data-note-date="' + isoDay(next.start) + '"' +
       ' title="' + escHtml(t('notes.addFromClass')) + '">' +
       '<span class="material-symbols-outlined text-[18px] text-muted">note_add</span>' +
