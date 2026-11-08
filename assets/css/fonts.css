@@ -1,6 +1,6 @@
 /* MMU BeeBoard — self-hosted fonts. 外部 CDN に依存しない。
    Plus Jakarta Sans: 可変フォント (wght 400–800)、Google Fonts のサブセットをそのまま同梱。
-   Material Symbols Outlined: 実際に使う 59 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
+   Material Symbols Outlined: 実際に使う 77 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
 
    ■ アイコン名の洗い出し方（手で数えない）
      1. node tools/collect-icons.js          使用アイコン名を全量で出力する
@@ -28,12 +28,15 @@
 
    ICON_NAMES（アルファベット順・この並びでないと 400 が返る）:
    add,add_link,add_task,alarm,arrow_back,arrow_forward,assignment_late,badge,bar_chart,
-   calculate,calendar_month,calendar_today,check,check_circle,chevron_right,close,dark_mode,
-   database,delete,desktop_windows,download,edit,edit_note,event,event_available,event_busy,
-   event_repeat,event_upcoming,flag,gavel,grade,grading,history,history_toggle_off,
-   hourglass_empty,info,light_mode,link,menu_book,military_tech,note_add,palette,person,
-   play_arrow,room,rule,save,schedule,search_off,settings,stop,swap_horiz,task_alt,timer,
-   translate,upload,verified,verified_user,warning */
+   bug_report,calculate,calendar_month,calendar_today,check,check_circle,chevron_left,
+   chevron_right,close,cloud_off,code,content_copy,dark_mode,dashboard,database,delete,
+   desktop_windows,download,edit,edit_note,event,event_available,event_busy,event_repeat,
+   event_upcoming,expand_more,flag,forum,gavel,grade,grading,help,history,
+   history_toggle_off,hourglass_empty,info,light_mode,link,lock,menu_book,military_tech,
+   note_add,open_in_new,palette,person,person_off,play_arrow,play_circle,
+   radio_button_unchecked,restart_alt,room,rule,save,schedule,search,search_off,settings,
+   stop,swap_horiz,task_alt,timer,translate,undo,upload,verified,verified_user,videocam,
+   warning */
 
 
 /* ---------- Plus Jakarta Sans ---------- */

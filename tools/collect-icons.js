@@ -17,7 +17,8 @@ const zlib = require('zlib');
 
 const ROOT = path.resolve(__dirname, '..');
 
-/* アイコン名を第何引数で受け取るヘルパー。新しいヘルパーを足したらここに追加する。 */
+/* アイコン名を第何引数で受け取るヘルパー。ふつうは下の iconHelpers() が
+   本体から自動で見つけるので、ここに書くのは自動判定できない形のときだけ。 */
 const ICON_ARG = {
   detailPill: 0,
   section: 0,
@@ -82,6 +83,53 @@ function argsOf(src, openIndex) {
   return args;
 }
 
+/* 開き波括弧の位置から、対応する閉じ波括弧までの本体を返す。 */
+function bodyOf(src, openIndex) {
+  let depth = 0;
+  let quote = null;
+  for (let i = openIndex; i < src.length; i++) {
+    const ch = src[i];
+    if (quote) {
+      if (ch === '\\') i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) return src.slice(openIndex + 1, i);
+    }
+  }
+  return null;
+}
+
+/* アイコン名を引数で受け取るヘルパーを本体から見つける。
+   material-symbols-outlined の span を組み立て、その中身に引数をそのまま
+   差し込んでいる関数が対象。ヘルパーを増やすたびに ICON_ARG へ書き足す運用は
+   漏れる（button / promise / linkCard がこれで漏れた）ので自動判定にする。 */
+function iconHelpers(src) {
+  const map = {};
+  const re = /function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const body = bodyOf(src, m.index + m[0].length - 1);
+    if (!body || body.indexOf('material-symbols-outlined') === -1) continue;
+    m[2].split(',').forEach(function (param, index) {
+      const name = param.replace(/=.*$/, '').trim();
+      if (!name) return;
+      const injected = new RegExp(
+        'material-symbols-outlined[^>]*>\\s*\'\\s*\\+\\s*' + name + '\\s*\\+\\s*\''
+      );
+      if (injected.test(body)) map[m[1]] = index;
+    });
+  }
+  return map;
+}
+
 function literalsIn(expression) {
   const out = [];
   const re = /'([a-z][a-z0-9_]*)'|"([a-z][a-z0-9_]*)"/g;
@@ -101,12 +149,13 @@ function collectFrom(src, found) {
   while ((m = markup.exec(src))) found.add(m[1]);
 
   /* 2. アイコンを引数に取るヘルパー呼び出し */
-  Object.keys(ICON_ARG).forEach(function (name) {
+  const helpers = Object.assign({}, ICON_ARG, iconHelpers(src));
+  Object.keys(helpers).forEach(function (name) {
     const re = new RegExp('\\b' + name + '\\s*\\(', 'g');
     let call;
     while ((call = re.exec(src))) {
       const args = argsOf(src, call.index + call[0].length - 1);
-      const arg = args[ICON_ARG[name]];
+      const arg = args[helpers[name]];
       if (!arg) continue;
       literalsIn(arg).forEach(function (literal) {
         found.add(literal);
@@ -124,6 +173,24 @@ function collectFrom(src, found) {
       });
     }
   });
+
+  /* 4. span の中身が式になっている場合（三項演算子など）。
+     material-symbols-outlined の開始タグから閉じタグまでを切り出し、その中の
+     文字列リテラルを拾う。t() / esc() の引数はアイコン名ではないので除く。 */
+  const spanRe = /material-symbols-outlined/g;
+  let span;
+  while ((span = spanRe.exec(src))) {
+    const open = src.indexOf('>', span.index);
+    if (open === -1) continue;
+    const close = src.indexOf('</span>', open);
+    if (close === -1 || close - open > 400) continue;
+    const inner = src
+      .slice(open + 1, close)
+      .replace(/\b(?:t|esc|escHtml)\s*\([^()]*\)/g, '');
+    literalsIn(inner).forEach(function (literal) {
+      found.add(literal);
+    });
+  }
 }
 
 function collect() {
