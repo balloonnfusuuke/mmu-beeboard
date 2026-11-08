@@ -531,8 +531,14 @@
     var input = event.target.closest('[data-assessment]');
     if (!input) return;
     var subjectId = input.getAttribute('data-subject');
-    var clamped = saveMark(subjectId, input.getAttribute('data-assessment'), input.value.trim());
-    if (clamped !== null) input.value = clamped;
+    var raw = input.value.trim();
+    var clamped = saveMark(subjectId, input.getAttribute('data-assessment'), raw);
+    if (clamped !== null) {
+      input.value = clamped;
+      /* 満点を超えた入力を黙って書き換えると、直されたことに気づけない。
+         0 未満の丸めは入力欄の min で防げるので、知らせるのは上限だけ。 */
+      if (Number(raw) > clamped) BB.ui.toast(t('sim.toastCapped'));
+    }
     refreshLive(subjectId);
   });
 
