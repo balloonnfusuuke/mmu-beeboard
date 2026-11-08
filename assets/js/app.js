@@ -202,6 +202,14 @@
     return String(value === undefined || value === null ? '' : value).slice(0, 10);
   }
 
+  /* セッション詳細へのリンク。回の同一性は (subjectId, sessionIndex, date) だけで表す。
+     振替先のブロックからも、元の回を指すこの URL を使う。 */
+  function sessionHref(subjectId, sessionIndex, date) {
+    return 'session-detail.html?subject=' + encodeURIComponent(subjectId) +
+      '&session=' + encodeURIComponent(sessionIndex) +
+      '&date=' + encodeURIComponent(isoKey(date));
+  }
+
   /* その科目・コマ・日付に休講（振替を含む）の記録があるか。 */
   function overrideFor(state, subjectId, sessionIndex, date) {
     var wanted = isoKey(date);
@@ -2244,6 +2252,7 @@
     personalEventsOf: personalEventsOf,
     overridesOf: overridesOf,
     overrideFor: overrideFor,
+    sessionHref: sessionHref,
     noClassCount: noClassCount,
     extraSessions: extraSessions,
     currentWeek: currentWeek,
