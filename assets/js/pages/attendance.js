@@ -415,6 +415,8 @@
     });
     /* 休講・振替も同じ一覧に並べる。押した記録が消えたように見えないように。 */
     BB.dash.overridesOf(data).forEach(function (entry) {
+      /* オンラインは開催される回。休講・振替の一覧には出さない。 */
+      if (entry.kind === 'online') return;
       var subject = null;
       data.subjects.forEach(function (candidate) {
         if (candidate.id === entry.subjectId) subject = candidate;

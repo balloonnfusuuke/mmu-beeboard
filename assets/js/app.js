@@ -147,8 +147,9 @@
       state.subjects.forEach(function (subject) {
         subject.sessions.forEach(function (session, index) {
           if (session.day !== weekday) return;
-          /* 休講にした回は Next Class に出さない。 */
-          if (overrideFor(state, subject.id, index, dayIso)) return;
+          /* 休講にした回は Next Class に出さない。オンラインは開催されるので残す。 */
+          var skip = overrideFor(state, subject.id, index, dayIso);
+          if (skip && skip.kind !== 'online') return;
           var start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutesOf(session.start));
           if (start.getTime() > now.getTime()) {
             found.push({ subject: subject, session: session, start: start });
@@ -223,10 +224,10 @@
     return found;
   }
 
-  /* 休講にした回数。総回数から差し引く。 */
+  /* 休講にした回数。総回数から差し引く。オンラインは開催される回なので数えない。 */
   function noClassCount(state, subjectId) {
     return overridesOf(state).filter(function (entry) {
-      return entry.subjectId === subjectId;
+      return entry.subjectId === subjectId && entry.kind !== 'online';
     }).length;
   }
 
@@ -657,7 +658,10 @@
         '<span class="text-muted">' + t('pe.legend') + '</span></div>'
       );
     }
-    if (overridesOf(state).length) {
+    var noClassOverrides = overridesOf(state).filter(function (entry) {
+      return entry.kind !== 'online';
+    });
+    if (noClassOverrides.length) {
       items.push(
         '<div class="flex items-center gap-1.5"><span class="tt-legend-off"></span>' +
         '<span class="text-muted">' + t('tt.noClass') + '</span></div>'
@@ -669,7 +673,7 @@
     var weekList = [1, 2, 3, 4, 5].map(function (day) {
       return week[day];
     });
-    var elsewhere = overridesOf(state).filter(function (entry) {
+    var elsewhere = noClassOverrides.filter(function (entry) {
       var dates = [isoKey(entry.date)];
       if (entry.target && entry.target.date) dates.push(isoKey(entry.target.date));
       return !dates.some(function (value) {
@@ -784,7 +788,9 @@
             var blockHeight = ((endMin - startMin) / 60) * HOUR_HEIGHT;
             var roomText = roomLabel(session.room);
             var override = dayIso ? overrideFor(state, subject.id, index, dayIso) : null;
-            if (override) {
+            /* オンラインは開催される回。休講と同じ扱いで通常ブロックを消さない。 */
+            var online = !!override && override.kind === 'online';
+            if (override && !online) {
               /* 休講にした回は通常のブロックを出さない。振替なら振替先も併記する。 */
               var note = override.kind === 'transfer' && override.target
                 ? t('att.transferTo', {

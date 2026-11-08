@@ -11,6 +11,9 @@
   var subjectId = params.get('subject') || '';
   var sessionParam = params.get('session');
   var dateParam = params.get('date') || '';
+  /* 開いている例外フォーム。null なら閉じている。入力途中の値は draft に持つ。 */
+  var editor = null;
+  var draft = null;
 
   function esc(value) {
     return String(value === undefined || value === null ? '' : value)
@@ -210,15 +213,103 @@
     );
   }
 
+  function field(name, label, type, value) {
+    return (
+      '<div><label class="bb-label" for="sd-' + name + '">' + label + '</label>' +
+      '<input id="sd-' + name + '" name="' + name + '" class="bb-input num" type="' + type +
+      '" value="' + esc(value) + '" required></div>'
+    );
+  }
+
+  /* 振替フォーム。必須と「終了＞開始」の検証は出席ページと同じ。 */
+  function transferFormHtml() {
+    var target = draft || {};
+    return (
+      '<form class="mt-3 rounded-control border border-border bg-canvas p-3 space-y-2.5" data-transfer-form>' +
+      '<div class="text-label-md font-semibold text-ink">' + t('att.transferTitle') + '</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2">' +
+      field('date', t('att.transferDate'), 'date', target.date) +
+      field('start', t('att.transferStart'), 'time', target.start) +
+      field('end', t('att.transferEnd'), 'time', target.end) +
+      '</div>' +
+      '<div><label class="bb-label" for="sd-room">' + t('att.transferRoom') + '</label>' +
+      '<input id="sd-room" name="room" class="bb-input" type="text" value="' + esc(target.room) +
+      '" placeholder="' + esc(t('att.transferRoomTbd')) + '"></div>' +
+      '<div class="flex justify-end gap-2">' +
+      '<button type="button" class="bb-btn bb-btn-ghost" data-editor-cancel>' + t('common.cancel') + '</button>' +
+      '<button type="submit" class="bb-btn bb-btn-primary">' + t('att.transferSave') + '</button>' +
+      '</div></form>'
+    );
+  }
+
+  /* オンラインフォーム。URL は必須にしない（空で保存されたら例外を作らない）。 */
+  function onlineFormHtml() {
+    var url = draft && draft.url !== undefined ? draft.url : '';
+    return (
+      '<form class="mt-3 rounded-control border border-border bg-canvas p-3 space-y-2.5" data-online-form>' +
+      '<div class="text-label-md font-semibold text-ink">' + t('sd.onlineTitle') + '</div>' +
+      '<div><label class="bb-label" for="sd-url">' + t('sd.onlineUrl') + '</label>' +
+      '<input id="sd-url" name="url" class="bb-input" type="url" value="' + esc(url) +
+      '" placeholder="' + esc(t('sd.onlineUrlPlaceholder')) + '"></div>' +
+      '<div class="flex justify-end gap-2">' +
+      '<button type="button" class="bb-btn bb-btn-ghost" data-editor-cancel>' + t('common.cancel') + '</button>' +
+      '<button type="submit" class="bb-btn bb-btn-primary">' + t('sd.onlineSave') + '</button>' +
+      '</div></form>'
+    );
+  }
+
+  function editorHtml() {
+    if (editor === 'transfer') return transferFormHtml();
+    if (editor === 'online') return onlineFormHtml();
+    return '';
+  }
+
+  function exceptionActionsHtml(override) {
+    return (
+      '<div class="flex flex-wrap gap-2 mt-3">' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-override-cancel>' +
+      '<span class="material-symbols-outlined text-[16px]">event_busy</span>' + t('att.markNoClass') + '</button>' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-override-transfer>' +
+      '<span class="material-symbols-outlined text-[16px]">swap_horiz</span>' + t('att.transferBadge') + '</button>' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-override-online>' +
+      '<span class="material-symbols-outlined text-[16px]">videocam</span>' + t('sd.online') + '</button>' +
+      (override
+        ? '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-override-remove>' +
+          '<span class="material-symbols-outlined text-[16px]">delete</span>' + t('sd.removeException') + '</button>'
+        : '') +
+      '</div>' + editorHtml()
+    );
+  }
+
+  function attendanceActionsHtml(found) {
+    return (
+      '<div class="flex flex-wrap gap-2 mt-3">' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-mark="present">' +
+      '<span class="material-symbols-outlined text-[16px]">check</span>' + t('att.markPresent') + '</button>' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-mark="absent">' +
+      '<span class="material-symbols-outlined text-[16px]">event_busy</span>' + t('att.markAbsent') + '</button>' +
+      (attendanceEntry(found)
+        ? '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-unmark>' +
+          '<span class="material-symbols-outlined text-[16px]">undo</span>' + t('sd.removeRecord') + '</button>'
+        : '') +
+      '</div>'
+    );
+  }
+
   function statusHtml(found) {
     var override = BB.dash.overrideFor(BB.store.get(), found.subject.id, found.index, found.date);
     return (
-      '<div class="bb-card p-5 space-y-3">' +
+      '<div class="bb-card p-5 space-y-4">' +
       '<h3 class="text-title-md font-bold text-ink">' + t('sd.status') + '</h3>' +
+      '<div>' +
+      '<div class="text-caption uppercase tracking-wider text-muted mb-1.5">' + t('sd.exception') + '</div>' +
       (override ? overrideHtml(override) : '<p class="text-body-sm text-muted">' + t('sd.noException') + '</p>') +
+      exceptionActionsHtml(override) +
+      '</div>' +
       '<div class="pt-3 border-t border-border-subtle">' +
       '<div class="text-caption uppercase tracking-wider text-muted mb-1.5">' + t('att.title') + '</div>' +
       attendanceHtml(found) +
+      attendanceActionsHtml(found) +
       '</div></div>'
     );
   }
@@ -383,6 +474,203 @@
       overviewHtml(found) +
       navHtml(found);
   }
+
+  /* ---------- 記録・編集 ---------- */
+
+  /* 出席は出席ページと同じ BB.attendance.mark を通す。保存形式も集計も共通。 */
+  function mark(status) {
+    var found = resolve();
+    if (!found) return;
+    BB.attendance.mark(found.subject.id, status, {
+      date: found.date,
+      session: sessionLabel(found.session),
+      sessionMeta: {
+        day: found.session.day,
+        start: found.session.start,
+        end: found.session.end,
+        type: found.session.type,
+        room: found.session.room
+      }
+    });
+    render();
+    BB.ui.toast(status === 'present' ? t('att.toast.present') : t('att.toast.absent'));
+  }
+
+  function unmark() {
+    var found = resolve();
+    if (!found) return;
+    var record = attendanceEntry(found);
+    if (!record) return;
+    BB.attendance.unmark(found.subject.id, record.index);
+    render();
+    BB.ui.toast(t('att.toast.removed'));
+  }
+
+  function currentOverride(found) {
+    return BB.dash.overrideFor(BB.store.get(), found.subject.id, found.index, found.date);
+  }
+
+  function setCancel() {
+    var found = resolve();
+    if (!found) return;
+    BB.attendance.setOverride(found.subject.id, found.index, found.date, 'cancel', null);
+    editor = null;
+    draft = null;
+    render();
+    BB.ui.toast(t('att.toast.noClass'));
+  }
+
+  function removeOverride() {
+    var found = resolve();
+    if (!found) return;
+    var override = currentOverride(found);
+    if (!override) return;
+    BB.attendance.removeOverride(override.id);
+    editor = null;
+    draft = null;
+    render();
+    BB.ui.toast(
+      override.kind === 'online'
+        ? t('sd.toast.onlineRemoved')
+        : override.kind === 'transfer'
+          ? t('att.toast.transferRemoved')
+          : t('att.toast.noClassRemoved')
+    );
+  }
+
+  function openTransfer() {
+    var found = resolve();
+    if (!found) return;
+    var override = currentOverride(found);
+    var target = { date: '', start: '', end: '', room: '' };
+    if (override && override.kind === 'transfer' && override.target) {
+      target = {
+        date: override.target.date || '',
+        start: override.target.start || '',
+        end: override.target.end || '',
+        room: override.target.room || ''
+      };
+    }
+    editor = 'transfer';
+    draft = target;
+    render();
+  }
+
+  function openOnline() {
+    var found = resolve();
+    if (!found) return;
+    var override = currentOverride(found);
+    editor = 'online';
+    draft = {
+      url: override && override.kind === 'online' && override.target ? override.target.url || '' : ''
+    };
+    render();
+  }
+
+  function saveTransfer(form) {
+    var found = resolve();
+    if (!found) return;
+    var target = {
+      date: form.elements.date.value.trim(),
+      start: form.elements.start.value.trim(),
+      end: form.elements.end.value.trim(),
+      room: form.elements.room.value.trim()
+    };
+    /* 振替先は必須。空のまま保存させず、理由を出す。 */
+    if (!target.date || !target.start || !target.end) {
+      BB.ui.toast(t('att.toast.transferRequired'));
+      return;
+    }
+    if (target.end <= target.start) {
+      BB.ui.toast(t('att.toast.transferRange'));
+      return;
+    }
+    BB.attendance.setOverride(found.subject.id, found.index, found.date, 'transfer', target);
+    editor = null;
+    draft = null;
+    render();
+    BB.ui.toast(t('att.toast.transferSaved'));
+  }
+
+  function saveOnline(form) {
+    var found = resolve();
+    if (!found) return;
+    var url = form.elements.url.value.trim();
+    /* URL が空なら例外を作らない。教室表示のままにする。 */
+    if (!url) {
+      BB.ui.toast(t('sd.toast.urlRequired'));
+      return;
+    }
+    BB.attendance.setOverride(found.subject.id, found.index, found.date, 'online', { url: url });
+    editor = null;
+    draft = null;
+    render();
+    BB.ui.toast(t('sd.toast.onlineSaved'));
+  }
+
+  var detail = document.getElementById('detail');
+
+  detail.addEventListener('click', function (event) {
+    var markButton = event.target.closest('[data-mark]');
+    if (markButton) {
+      mark(markButton.getAttribute('data-mark'));
+      return;
+    }
+    if (event.target.closest('[data-unmark]')) {
+      unmark();
+      return;
+    }
+    if (event.target.closest('[data-override-cancel]')) {
+      setCancel();
+      return;
+    }
+    if (event.target.closest('[data-override-transfer]')) {
+      openTransfer();
+      return;
+    }
+    if (event.target.closest('[data-override-online]')) {
+      openOnline();
+      return;
+    }
+    if (event.target.closest('[data-override-remove]')) {
+      removeOverride();
+      return;
+    }
+    if (event.target.closest('[data-editor-cancel]')) {
+      editor = null;
+      draft = null;
+      render();
+    }
+  });
+
+  /* 入力途中の値を draft へ戻す。出席の記録などで再描画されても消えない。 */
+  detail.addEventListener('input', function (event) {
+    if (!draft) return;
+    var transfer = event.target.closest('[data-transfer-form]');
+    if (transfer) {
+      draft.date = transfer.elements.date.value;
+      draft.start = transfer.elements.start.value;
+      draft.end = transfer.elements.end.value;
+      draft.room = transfer.elements.room.value;
+      return;
+    }
+    var online = event.target.closest('[data-online-form]');
+    if (online) draft.url = online.elements.url.value;
+  });
+
+  detail.addEventListener('submit', function (event) {
+    var transfer = event.target.closest('[data-transfer-form]');
+    if (transfer) {
+      event.preventDefault();
+      saveTransfer(transfer);
+      return;
+    }
+    var online = event.target.closest('[data-online-form]');
+    if (online) {
+      event.preventDefault();
+      saveOnline(online);
+    }
+  });
 
   render();
 
