@@ -441,3 +441,225 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 
 .bb-scroll::-webkit-scrollbar { height: 4px; width: 4px; }
 .bb-scroll::-webkit-scrollbar-thumb { background-color: var(--bb-border); border-radius: 4px; }
+
+/* ---------- guide: tour ---------- */
+
+.gd-progress {
+  height: 6px;
+  background: var(--bb-surface-sunken);
+  border-radius: var(--bb-radius-pill);
+  overflow: hidden;
+}
+
+.gd-progress-bar {
+  display: block;
+  height: 100%;
+  background: var(--bb-primary);
+  border-radius: inherit;
+  transition: width 240ms ease;
+}
+
+/* ステップの差し替えはフェード＋わずかな縦移動だけにする。 */
+.gd-stage {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.gd-stage-out {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.gd-stage-in {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.gd-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--bb-surface-sunken);
+  color: var(--bb-primary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-num-lg {
+  width: 26px;
+  height: 26px;
+  font-size: 0.75rem;
+}
+
+.gd-tip {
+  border-top: 1px solid var(--bb-border-subtle);
+  padding-top: 0.75rem;
+}
+
+/* ---------- guide: screen mocks ---------- */
+
+.gd-mock {
+  background: var(--bb-surface-subtle);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-card);
+  padding: 0.75rem;
+}
+
+.gd-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.625rem;
+}
+
+.gd-mock-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--bb-border);
+}
+
+.gd-mock-panel {
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-control);
+  padding: 0.75rem;
+}
+
+.gd-mock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.gd-mock-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bb-text-muted);
+}
+
+.gd-mock-strong {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--bb-text);
+}
+
+.gd-mock-num {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--bb-text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-mock-line {
+  display: block;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--bb-surface-sunken);
+}
+
+.gd-mock-field {
+  height: 24px;
+  margin-top: 0.25rem;
+  border: 1px solid var(--bb-border);
+  border-radius: 6px;
+  background: var(--bb-surface);
+}
+
+.gd-mock-btn {
+  height: 26px;
+  border-radius: 6px;
+  background: var(--bb-primary);
+  color: var(--bb-on-primary);
+  font-size: 0.625rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gd-mock-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: var(--bb-surface-sunken);
+  color: var(--bb-text-muted);
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.gd-mock-chip-solid {
+  background: var(--bb-primary);
+  color: var(--bb-on-primary);
+}
+
+.gd-mock-total {
+  border-top: 1px solid var(--bb-border-subtle);
+  padding-top: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--bb-text);
+}
+
+.gd-mock-note {
+  background: var(--bb-surface-sunken);
+  border-radius: 6px;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--bb-text-muted);
+}
+
+.gd-mock-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--bb-surface-sunken);
+  overflow: hidden;
+}
+
+.gd-mock-track > span {
+  display: block;
+  height: 100%;
+  background: var(--bb-success);
+}
+
+.gd-mock-timer {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--bb-text);
+  letter-spacing: -0.01em;
+}
+
+.gd-mock-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.gd-mock-tile {
+  background: var(--bb-surface-subtle);
+  border-radius: 6px;
+  padding: 0.375rem;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gd-progress-bar,
+  .gd-stage {
+    transition: none;
+  }
+
+  .gd-stage-out,
+  .gd-stage-in {
+    opacity: 1;
+    transform: none;
+  }
+}

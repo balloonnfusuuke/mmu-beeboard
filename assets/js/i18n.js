@@ -29,7 +29,8 @@
         studylog: 'MMU BeeBoard — Study Log',
         subjectEdit: 'MMU BeeBoard — Edit Subject',
         deadlineDetail: 'MMU BeeBoard — Deadline details',
-        notes: 'MMU BeeBoard — Notes'
+        notes: 'MMU BeeBoard — Notes',
+        guide: 'MMU BeeBoard — How to use'
       },
       brand: { tagline: 'Personal study dashboard' },
       nav: { settings: 'Settings', backToDashboard: 'Back to dashboard' },
@@ -940,7 +941,201 @@
             'this trimester. This cannot be undone.',
           ok: 'Delete subject'
         }
-      }
+      },
+      guide: {
+        title: 'How to use BeeBoard',
+        subtitle: 'A guided tour of the whole app, one step at a time.',
+        hero: {
+          eyebrow: 'Getting started',
+          heading: 'Your whole trimester on one screen',
+          body:
+            'BeeBoard brings your timetable, grades, deadlines, attendance and study log together, so you can ' +
+            'see how the term is going without opening five different things.',
+          p1Title: 'No sign-up',
+          p1Body: 'There is no account and no login. Open the page and start working.',
+          p2Title: 'Data stays in this browser',
+          p2Body: 'Subjects, marks and notes are stored locally. Nothing is uploaded to a server.',
+          p3Title: 'Works offline',
+          p3Body: 'After the first visit the app opens without a connection.',
+          startTour: 'Start the tour',
+          openDashboard: 'Open the dashboard',
+          readFaq: 'Read the FAQ'
+        },
+        tour: {
+          label: 'Guided tour',
+          stepOf: 'Step {n} of {total}',
+          progressAria: 'Tour progress',
+          prev: 'Back',
+          next: 'Next',
+          finish: 'Finish',
+          restart: 'Start over',
+          done: 'That is the whole tour. Open the dashboard and try it with your own subjects.',
+          openPage: 'Open this page',
+          todoTitle: 'What to do',
+          mockLabel: 'Screen preview'
+        },
+        steps: {
+          s1: {
+            title: 'Set up your trimester',
+            body:
+              'Start with the term label and the first Monday. Every week number, deadline and attendance ' +
+              'figure is counted from that date.',
+            todo1: 'Open Settings and set the trimester label and start date.',
+            todo2: 'Set the number of teaching weeks, 14 by default.',
+            todo3: 'Add your subjects, or skip and add them later.',
+            cta: 'Open settings'
+          },
+          s2: {
+            title: 'Add subjects and assessment weightings',
+            body:
+              'Each subject holds its weekly sessions and its assessment components. The weighting total ' +
+              'should reach 100%.',
+            todo1: 'Open a subject and fill in the code, name and credit hours.',
+            todo2: 'Add each assessment with its weight and full marks.',
+            todo3: 'Set the type of the final assessment to Final exam so the simulator can compute the mark you need.',
+            cta: 'Open subject editor'
+          },
+          s3: {
+            title: 'Read the dashboard and the next class',
+            body: 'The dashboard answers two questions: what is happening today, and what is coming next.',
+            todo1: 'Check the next class card for room, time and how long until it starts.',
+            todo2: 'Use the today card for memos and unfinished homework.',
+            todo3: 'Follow the deadline countdown to see what is closest.',
+            cta: 'Open the dashboard'
+          },
+          s4: {
+            title: 'See the mark you need in the final',
+            body:
+              'Enter the marks you already have. The simulator shows the final exam mark that still gets you ' +
+              'to your target grade.',
+            todo1: 'Pick a subject and a target grade.',
+            todo2: 'Type the marks you have received so far.',
+            todo3: 'Read the needed final mark, or the undetermined note while components are still unentered.',
+            cta: 'Open the simulator'
+          },
+          s5: {
+            title: 'Track deadlines and attendance',
+            body: 'Deadlines are grouped by week. Attendance counts only the classes that actually happened.',
+            todo1: 'Open Deadlines and work through the list week by week.',
+            todo2: 'Mark a class cancelled when it does not run; it leaves the attendance denominator.',
+            todo3: 'Record a replacement class as a transfer so it counts in the right week.',
+            cta: 'Open attendance'
+          },
+          s6: {
+            title: 'Log study time, back up, and move to the next term',
+            body:
+              'The study log keeps a record of what you actually did. Export a backup before you change ' +
+              'anything big.',
+            todo1: 'Start the timer, or add a session by hand.',
+            todo2: 'Export your data from Settings and keep the file somewhere safe.',
+            todo3: 'When the term ends, archive it and start the next one from Settings.',
+            cta: 'Open the study log'
+          }
+        },
+        features: {
+          title: 'Every feature, one by one',
+          subtitle: 'What each screen does, how to use it, and what to watch out for.',
+          stepsLabel: 'How to use',
+          tipsLabel: 'Tips and cautions',
+          f1: {
+            title: 'Dashboard',
+            body: 'One screen with the next class, today, deadlines and study progress.',
+            step1: 'Open the home page; it is the dashboard.',
+            step2: 'Read the next class card for room and start time.',
+            step3: 'Use the quick actions to jump to the simulator or add a memo.',
+            tip: 'The card shows today and unfinished homework only. Past memos live in Notes.'
+          },
+          f2: {
+            title: 'Weekly timetable',
+            body: 'Monday to Friday in one grid, with rooms, cancellations and personal events.',
+            step1: 'Open the dashboard and scroll to the timetable.',
+            step2: 'Read a room code such as CQAR3002: campus, building, wing, floor and room.',
+            step3: 'Add a personal event for anything that is not a class.',
+            tip:
+              'Building letters: Q is FCI, R is FOM, L is FAIE, J is FCM, N is CNMX. CNMX is the large ' +
+              'lecture hall and has no wing.'
+          },
+          f3: {
+            title: 'Grade simulator',
+            body: 'Turns the marks you have into the mark you still need.',
+            step1: 'Choose the subject and the target grade.',
+            step2: 'Enter the marks you already received.',
+            step3: 'Read the needed final mark, or the undetermined note.',
+            tip: 'A mark above the full score is clamped to the maximum, and a toast tells you when that happens.'
+          },
+          f4: {
+            title: 'Deadlines and deadline details',
+            body: 'Every assessment in week order, with the detail you need on the day.',
+            step1: 'Open Deadlines to see the list grouped by week.',
+            step2: 'Open a deadline to add a link or a memo.',
+            step3: 'Add your own deadline when something is not part of a subject.',
+            tip: 'A week that adds up to more than 100% is flagged, because weightings are counted per subject.'
+          },
+          f5: {
+            title: 'Attendance',
+            body: 'Percentage per subject against the threshold you set.',
+            step1: 'Open Attendance and pick a subject.',
+            step2: 'Mark each class attended or absent.',
+            step3: 'Change the threshold in Settings if your faculty uses a different one.',
+            tip: 'Cancelled classes leave the denominator. A transfer class counts in the week it is held.'
+          },
+          f6: {
+            title: 'Notes and homework',
+            body: 'Short memos and homework items, attached to a subject and a date.',
+            step1: 'Add a memo from the dashboard or from Notes.',
+            step2: 'Mark homework as done when you finish it.',
+            step3: 'Open Notes to see every memo, newest first.',
+            tip: 'Finished homework leaves the dashboard and Deadlines but stays in Notes.'
+          },
+          f7: {
+            title: 'Study log',
+            body: 'A record of the time you actually spent studying.',
+            step1: 'Start the timer when you begin and stop it when you finish.',
+            step2: 'Or add a session by hand with a date and a duration.',
+            step3: 'Compare the week against your weekly target.',
+            tip: 'The date defaults to today in your own time zone.'
+          },
+          f8: {
+            title: 'Settings',
+            body: 'Theme, language, goals, term and data, all in one place.',
+            step1: 'Switch between light, dark and system theme.',
+            step2: 'Set the CGPA target, attendance threshold and weekly study target.',
+            step3: 'Export or import your data, or reset it.',
+            tip: 'Import replaces the data in this browser. Export first if you are unsure.'
+          },
+          f9: {
+            title: 'Install, offline and updates',
+            body: 'BeeBoard can be installed like an app and opened without a connection.',
+            step1: 'Open Settings and press Install app when the button appears.',
+            step2: 'On a phone, use Add to home screen from the browser menu.',
+            step3: 'After an update, reload twice so the new version is picked up.',
+            tip: 'The first reload downloads the new version; the second one shows it.'
+          }
+        },
+        mock: {
+          term: 'Trimester',
+          start: 'First Monday',
+          save: 'Save',
+          subject: 'Subject',
+          weight: 'Weight',
+          total: 'Total',
+          nextClass: 'Next class',
+          quiz: 'Quiz',
+          test: 'Test',
+          final: 'Final exam',
+          needed: 'Needed in the final',
+          attendance: 'Attendance',
+          deadline: 'Deadline',
+          timer: 'Timer',
+          export: 'Export'
+        },
+        help: {
+          title: 'Stuck?',
+          body: 'The FAQ answers the common questions. If yours is not there, open an issue on GitHub.',
+          faq: 'Read the FAQ',
+          contact: 'Ask the developer'
+        }
+      },
     },
 
     ja: {
@@ -954,7 +1149,8 @@
         studylog: 'MMU BeeBoard — 学習ログ',
         subjectEdit: 'MMU BeeBoard — 科目の編集',
         deadlineDetail: 'MMU BeeBoard — 締切の詳細',
-        notes: 'MMU BeeBoard — メモ'
+        notes: 'MMU BeeBoard — メモ',
+        guide: 'MMU BeeBoard — 使い方ガイド'
       },
       brand: { tagline: '個人用学習ダッシュボード' },
       nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る' },
@@ -1845,7 +2041,194 @@
           body: '{name} とそのコマ・配点・点数・出席記録をこの学期から削除します。元に戻せません。',
           ok: '科目を削除'
         }
-      }
+      },
+      guide: {
+        title: '使い方ガイド',
+        subtitle: 'アプリ全体をステップごとに案内します。',
+        hero: {
+          eyebrow: 'はじめに',
+          heading: '学期のすべてを、1画面に',
+          body:
+            'BeeBoard は時間割・成績・締切・出席・学習ログを1か所にまとめます。5つの画面を開き回らなくても、' +
+            '学期の進み具合が分かります。',
+          p1Title: '登録不要',
+          p1Body: 'アカウントもログインもありません。ページを開けばすぐ使えます。',
+          p2Title: 'データはこのブラウザの中だけ',
+          p2Body: '科目・点数・メモはこのブラウザに保存されます。サーバーへは送信しません。',
+          p3Title: 'オフラインでも動く',
+          p3Body: '一度開けば、通信がなくても起動できます。',
+          startTour: 'ツアーを始める',
+          openDashboard: 'ダッシュボードを開く',
+          readFaq: 'FAQを見る'
+        },
+        tour: {
+          label: 'ツアー',
+          stepOf: 'ステップ {n} / {total}',
+          progressAria: 'ツアーの進み具合',
+          prev: '前へ',
+          next: '次へ',
+          finish: '完了',
+          restart: '最初から',
+          done: 'ツアーはここまでです。ダッシュボードを開いて、自分の科目で試してみてください。',
+          openPage: 'このページを開く',
+          todoTitle: 'やること',
+          mockLabel: '画面イメージ'
+        },
+        steps: {
+          s1: {
+            title: '学期を設定する',
+            body:
+              '学期名と最初の月曜日から始めます。週番号・締切・出席の集計は、すべてこの日付を基準に数えます。',
+            todo1: '設定を開き、学期名と開始日を入れます。',
+            todo2: '授業週数を設定します（既定は14週）。',
+            todo3: '科目を登録します。あとから追加しても構いません。',
+            cta: '設定を開く'
+          },
+          s2: {
+            title: '科目と評価項目を登録する',
+            body: '科目ごとに毎週のコマと評価項目を持ちます。配点の合計は100%にそろえます。',
+            todo1: '科目を開き、科目コード・科目名・単位数を入れます。',
+            todo2: '評価項目ごとに配点と満点を追加します。',
+            todo3: '期末の評価項目は種別を「期末試験」にします。シミュレーターが必要点数を計算できるようになります。',
+            cta: '科目エディタを開く'
+          },
+          s3: {
+            title: 'ダッシュボードと次の授業を読む',
+            body: 'ダッシュボードが答えるのは2つだけです。今日なにがあるか、次に何が来るか。',
+            todo1: '「次の授業」カードで教室・時刻・開始までの残り時間を確認します。',
+            todo2: '「今日」カードでメモと未完了の宿題を確認します。',
+            todo3: '締切のカウントダウンで、いちばん近いものを確認します。',
+            cta: 'ダッシュボードを開く'
+          },
+          s4: {
+            title: '期末で必要な点を見る',
+            body: 'すでに取った点数を入れます。目標グレードに届く期末の点数が表示されます。',
+            todo1: '科目と目標グレードを選びます。',
+            todo2: 'これまでに受け取った点数を入力します。',
+            todo3: '必要Final点、または未入力がある間は「未確定」の表示を読みます。',
+            cta: 'シミュレーターを開く'
+          },
+          s5: {
+            title: '締切と出席を追う',
+            body: '締切は週ごとにまとまります。出席は実際に行われた授業だけを数えます。',
+            todo1: '締切を開き、週ごとにリストを確認します。',
+            todo2: '実施されなかった授業は休講にすると、出席の分母から外れます。',
+            todo3: '振替の授業は振替として記録すると、実施した週で数えます。',
+            cta: '出席を開く'
+          },
+          s6: {
+            title: '学習ログ、バックアップ、次の学期へ',
+            body: '学習ログは実際にやったことの記録です。大きく変える前にエクスポートで控えを取ります。',
+            todo1: 'タイマーを開始するか、手入力でセッションを追加します。',
+            todo2: '設定からデータをエクスポートし、安全な場所に保管します。',
+            todo3: '学期が終わったらアーカイブし、設定から次の学期を始めます。',
+            cta: '学習ログを開く'
+          }
+        },
+        features: {
+          title: '機能をひとつずつ',
+          subtitle: '各画面が何をするか、使い方、気をつける点。',
+          stepsLabel: '使い方',
+          tipsLabel: 'コツ／注意',
+          f1: {
+            title: 'ダッシュボード',
+            body: '次の授業・今日・締切・学習の進み具合を1画面にまとめます。',
+            step1: 'ホームページを開きます。それがダッシュボードです。',
+            step2: '「次の授業」カードで教室と開始時刻を確認します。',
+            step3: 'クイック操作からシミュレーターへ移動したり、メモを追加できます。',
+            tip: 'カードに出るのは今日分と未完了の宿題だけです。過去のメモは Notes にあります。'
+          },
+          f2: {
+            title: '週間時間割',
+            body: '月曜から金曜までを1つのグリッドに。教室・休講・個人予定もここに入ります。',
+            step1: 'ダッシュボードを開き、時間割までスクロールします。',
+            step2: 'CQAR3002 のような教室コードを読みます。キャンパス・建物・ウイング・階・部屋です。',
+            step3: '授業以外の予定は個人予定として追加します。',
+            tip:
+              '建物の記号は Q が FCI、R が FOM、L が FAIE、J が FCM、N が CNMX です。CNMX は大講義棟で、' +
+              'ウイングを持ちません。'
+          },
+          f3: {
+            title: '成績シミュレーター',
+            body: '取った点数から、まだ必要な点数を計算します。',
+            step1: '科目と目標グレードを選びます。',
+            step2: 'すでに受け取った点数を入力します。',
+            step3: '必要Final点、または未確定の表示を読みます。',
+            tip: '満点を超える入力は満点に丸められ、そのときにトーストで知らせます。'
+          },
+          f4: {
+            title: '締切と締切詳細',
+            body: 'すべての評価を週の順に。当日に必要な情報もここにまとまります。',
+            step1: '締切を開くと、週ごとにまとまったリストが出ます。',
+            step2: '締切を開くと、リンクやメモを追加できます。',
+            step3: '科目に属さない締切は自分で追加できます。',
+            tip: '配点は科目ごとに数えるため、同じ週で合計が100%を超えると警告が出ます。'
+          },
+          f5: {
+            title: '出席',
+            body: '科目ごとの出席率を、設定したしきい値と比べます。',
+            step1: '出席を開き、科目を選びます。',
+            step2: '各コマを出席・欠席で記録します。',
+            step3: '学部ごとの基準が違う場合は、設定でしきい値を変えます。',
+            tip: '休講は分母から外れます。振替は実施した週で数えます。'
+          },
+          f6: {
+            title: 'メモと宿題',
+            body: '科目と日付に紐づく、短いメモと宿題。',
+            step1: 'ダッシュボードまたは Notes からメモを追加します。',
+            step2: '終わった宿題は完了にします。',
+            step3: 'Notes を開くと、すべてのメモが新しい順に並びます。',
+            tip: '完了した宿題はダッシュボードと締切から消えますが、Notes には残ります。'
+          },
+          f7: {
+            title: '学習ログ',
+            body: '実際に勉強した時間の記録。',
+            step1: '始めるときにタイマーを開始し、終わったら停止します。',
+            step2: '日付と時間を入れて手入力で追加することもできます。',
+            step3: '週の合計を週間目標と比べます。',
+            tip: '日付の初期値は、自分のタイムゾーンでの今日です。'
+          },
+          f8: {
+            title: '設定',
+            body: 'テーマ・言語・目標・学期・データを1か所に。',
+            step1: 'ライト・ダーク・システムのテーマを切り替えます。',
+            step2: 'CGPA目標・出席しきい値・週間学習目標を設定します。',
+            step3: 'データのエクスポート・インポート・リセットを行います。',
+            tip: 'インポートはこのブラウザのデータを置き換えます。不安なときは先にエクスポートしてください。'
+          },
+          f9: {
+            title: 'インストール・オフライン・更新',
+            body: 'BeeBoard はアプリのようにインストールでき、通信なしでも開けます。',
+            step1: '設定を開き、ボタンが出ていれば「アプリをインストール」を押します。',
+            step2: 'スマホではブラウザのメニューから「ホーム画面に追加」を使います。',
+            step3: '更新後は2回再読み込みすると新しい版が反映されます。',
+            tip: '1回目の再読み込みで新しい版を取得し、2回目で表示が切り替わります。'
+          }
+        },
+        mock: {
+          term: '学期',
+          start: '最初の月曜日',
+          save: '保存',
+          subject: '科目',
+          weight: '配点',
+          total: '合計',
+          nextClass: '次の授業',
+          quiz: 'Quiz',
+          test: 'Test',
+          final: '期末試験',
+          needed: '期末で必要',
+          attendance: '出席',
+          deadline: '締切',
+          timer: 'タイマー',
+          export: 'エクスポート'
+        },
+        help: {
+          title: '困ったら',
+          body: 'よくある質問は FAQ にまとめています。そこに無いときは GitHub で Issue を立ててください。',
+          faq: 'FAQを見る',
+          contact: '開発者に質問する'
+        }
+      },
     }
   };
 
