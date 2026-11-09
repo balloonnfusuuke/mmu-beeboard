@@ -55,6 +55,18 @@ python -m http.server 8000
 Run `npx vercel dev`, then open http://localhost:3000/api/v1/health — the same server still
 serves the static pages, so http://localhost:3000/ opens the dashboard as usual.
 
+### Snapshot for a local AI
+
+`assets/js/snapshot.js` turns the saved state into JSON: the term, the subjects with their
+assessments, the custom deadlines and the deadline list. The student profile, marks,
+attendance, notes and personal events are left out. No page loads it — run it from the
+console on any BeeBoard page:
+
+```js
+await import('/assets/js/snapshot.js');
+console.log(JSON.stringify(BB.snapshot.build(), null, 2));
+```
+
 ## First-time setup
 
 The app starts empty — no subjects, no timetable, no marks. On the first visit the dashboard
@@ -147,6 +159,7 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 │   │   ├── theme.js      # applies the saved theme before first paint
 │   │   ├── app.js        # shared UI shell, dashboard logic, calculations
 │   │   ├── subject-form.js   # subject fields shared by the editor and the wizard
+│   │   ├── snapshot.js   # read-only JSON snapshot for a local AI
 │   │   └── pages/        # one file per page
 │   ├── logo.svg
 │   └── favicon.svg
