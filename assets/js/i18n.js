@@ -192,6 +192,18 @@
           other: '{n} no-class or transfers in other weeks'
         }
       },
+      ws: {
+        title: 'Week {n} summary',
+        sessions: 'Sessions',
+        deadlines: 'Deadlines',
+        study: 'Study time',
+        attendance: 'Attendance',
+        breakdown: '{held} held · {cancelled} cancelled · {transferred} transferred',
+        more: '+{n} more',
+        none: 'None',
+        target: 'of {n} hrs target',
+        records: '{present} present · {absent} absent'
+      },
       detail: {
         nextClass: 'Next class: {code} {name}',
         lecturer: 'Lecturer: {name}',
@@ -1612,6 +1624,18 @@
           one: 'ほかの週に休講・振替が {n} 件',
           other: 'ほかの週に休講・振替が {n} 件'
         }
+      },
+      ws: {
+        title: '第{n}週のサマリー',
+        sessions: 'コマ数',
+        deadlines: '締切',
+        study: '学習時間',
+        attendance: '出席記録',
+        breakdown: '実施 {held} · 休講 {cancelled} · 振替 {transferred}',
+        more: 'ほか {n} 件',
+        none: 'なし',
+        target: '目標 {n} 時間',
+        records: '出席 {present} · 欠席 {absent}'
       },
       detail: {
         nextClass: '次の授業: {code} {name}',

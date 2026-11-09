@@ -965,6 +965,121 @@
         : '');
   }
 
+  /* 表示週のサマリー。グリッドと同じ週を使い、既存データを数えるだけ。
+     コマ数はグリッドのブロック数に合わせる（休講・振替で消えた回も数える）。 */
+  function weekSummary(state, now) {
+    var week = viewWeek(state, now);
+    var dates = viewWeekDates(state, now);
+    var dayIsos = [1, 2, 3, 4, 5].map(function (day) {
+      return dates[day];
+    });
+
+    var held = 0;
+    var cancelled = 0;
+    var transferred = 0;
+    state.subjects.forEach(function (subject) {
+      subject.sessions.forEach(function (session, index) {
+        var date = dates[session.day];
+        if (!date) return;
+        var override = overrideFor(state, subject.id, index, date);
+        if (!override || override.kind === 'online') held += 1;
+        else if (override.kind === 'transfer') transferred += 1;
+        else cancelled += 1;
+      });
+    });
+    /* 振替で入ってきた回は、その週の実施コマとして数える。 */
+    extraSessions(state).forEach(function (extra) {
+      if (dayIsos.indexOf(extra.date) >= 0) held += 1;
+    });
+
+    var deadlines = deadlineItems().filter(function (item) {
+      return item.week === week;
+    });
+
+    var minutes = 0;
+    state.studySessions.forEach(function (session) {
+      if (weekOfClamped(new Date(session.startedAt)) !== week) return;
+      minutes += session.minutes || 0;
+    });
+
+    var present = 0;
+    var absent = 0;
+    state.subjects.forEach(function (subject) {
+      var log = (subject.attendance && subject.attendance.log) || [];
+      log.forEach(function (entry) {
+        if (dayIsos.indexOf(isoKey(entry.date)) < 0) return;
+        if (entry.status === 'present') present += 1;
+        else absent += 1;
+      });
+    });
+
+    return {
+      week: week,
+      held: held,
+      cancelled: cancelled,
+      transferred: transferred,
+      total: held + cancelled + transferred,
+      deadlines: deadlines,
+      minutes: minutes,
+      present: present,
+      absent: absent,
+      records: present + absent
+    };
+  }
+
+  function summaryCard(key, icon, label, value, note) {
+    return (
+      '<div class="bg-surface border border-border rounded-control p-3 flex items-start gap-3 min-w-0" data-ws="' + key + '">' +
+        '<span class="material-symbols-outlined text-[20px] mt-1 shrink-0 text-primary">' + icon + '</span>' +
+        '<div class="min-w-0 flex-1">' +
+          '<div class="text-caption text-muted font-medium">' + escHtml(label) + '</div>' +
+          '<div class="text-headline-sm font-extrabold text-ink num" data-ws-value>' + escHtml(value) + '</div>' +
+          (note
+            ? '<div class="text-caption text-muted mt-1 break-words" data-ws-note>' + escHtml(note) + '</div>'
+            : '') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  /* グリッドの下に出す週サマリー。週移動のたびに描き直す。 */
+  function renderWeekSummary(state, now) {
+    var host = $('#week-summary');
+    if (!host) return;
+    var summary = weekSummary(state, now);
+    var names = summary.deadlines.map(function (item) {
+      return item.assessment.name;
+    });
+    var shown = names.slice(0, 2);
+    var more = names.length - shown.length;
+    var deadlineNote = names.length
+      ? shown.join(', ') + (more > 0 ? ' ' + t('ws.more', { n: more }) : '')
+      : t('ws.none');
+    var target = state.settings.weeklyStudyTarget;
+
+    host.innerHTML =
+      '<div class="flex items-center gap-2 pb-3">' +
+        '<span class="material-symbols-outlined text-[20px] text-primary">bar_chart</span>' +
+        '<h3 class="text-title-md font-bold text-ink">' + escHtml(t('ws.title', { n: summary.week })) + '</h3>' +
+      '</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">' +
+        summaryCard('sessions', 'event', t('ws.sessions'), String(summary.total),
+          t('ws.breakdown', {
+            held: summary.held,
+            cancelled: summary.cancelled,
+            transferred: summary.transferred
+          })) +
+        summaryCard('deadlines', 'assignment_late', t('ws.deadlines'),
+          String(summary.deadlines.length), deadlineNote) +
+        summaryCard('study', 'timer', t('ws.study'), hoursLabel(summary.minutes),
+          target ? t('ws.target', { n: target }) : '') +
+        summaryCard('attendance', 'rule', t('ws.attendance'), String(summary.records),
+          summary.records
+            ? t('ws.records', { present: summary.present, absent: summary.absent })
+            : t('ws.none')) +
+      '</div>';
+  }
+
   function renderClassDetail(next, state, now) {
     var host = $('#class-detail');
     if (!host) return;
@@ -1871,6 +1986,7 @@
       renderWeekNav(state, now);
       renderTimetable(state, now);
       renderLegend(state);
+      renderWeekSummary(state, now);
     });
   }
 
@@ -1894,6 +2010,7 @@
     renderLegend(state);
     renderTimetable(state, now);
     renderWeekNav(state, now);
+    renderWeekSummary(state, now);
     renderClassDetail(next, state, now);
     renderTopics(state);
     renderSummaries(state, now, next);
