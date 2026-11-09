@@ -1,7 +1,8 @@
 # MMU BeeBoard
 
 A personal study dashboard for MMU (Multimedia University) students. Static HTML, CSS and
-vanilla JavaScript — no backend, no build step required to run, no tracking.
+vanilla JavaScript — no backend, no build step required to run. The only network
+request is Vercel Web Analytics (aggregate page views, no cookies).
 
 > **Not an official MMU system.** This is an independent personal project. It is not
 > affiliated with, endorsed by, or connected to Multimedia University. It ships with no
@@ -193,9 +194,10 @@ curl -s -H "User-Agent: $UA" \
 
 ## Privacy
 
-No network requests, no analytics, no cookies, no third-party scripts. All state lives in
-your browser's `localStorage` under the key `mmu-beeboard`. Use **Settings → Export data** to
-take a JSON backup, or **Reset all data** to wipe it.
+The only network request the app makes is Vercel Web Analytics, which records aggregate
+page views (path, referrer, country, device type) with no cookies and no cross-site tracking.
+All state lives in your browser's `localStorage` under the key `mmu-beeboard`. Use **Settings →
+Export data** to take a JSON backup, or **Reset all data** to wipe it.
 
 ## License
 
