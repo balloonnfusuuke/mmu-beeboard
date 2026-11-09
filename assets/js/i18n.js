@@ -87,6 +87,11 @@
         duration: 'Duration (minutes)',
         areYouSure: 'Are you sure?'
       },
+      update: {
+        available: 'A new version is available',
+        action: 'Update',
+        dismiss: 'Dismiss'
+      },
       day: {
         sun: 'Sun',
         mon: 'Mon',
@@ -1500,6 +1505,11 @@
         subject: '科目',
         duration: '時間（分）',
         areYouSure: '実行しますか？'
+      },
+      update: {
+        available: '新しいバージョンがあります',
+        action: '更新',
+        dismiss: '閉じる'
       },
       day: {
         sun: '日',

@@ -4,7 +4,13 @@
    更新を配るときは CACHE の版を上げる。古いキャッシュは activate で削除する。 */
 'use strict';
 
-var CACHE = 'mmu-beeboard-v5';
+var CACHE = 'mmu-beeboard-v6';
+
+/* 更新バナーを持たない版のキャッシュ名。この版から上げるときだけ、待たせずに
+   有効化して従来どおり 2 回の再読み込みで届ける（旧ページにはバナーが無いため、
+   待たせるとタブを閉じるまで更新が届かない）。バナー対応版からの更新は待たせる。
+   バナー対応版が広まったら、この定数と install 内の分岐は削除してよい。 */
+var LEGACY_CACHE = /^mmu-beeboard-v[1-5]$/;
 
 /* 初回訪問でここをまとめてキャッシュする。1 つでも 404 すると install が失敗するので、
    実行時に読み込むファイルだけを列挙する（tailwind.src.css はビルド入力なので含めない）。 */
@@ -70,8 +76,15 @@ self.addEventListener('install', function (event) {
         return cache.addAll(ASSETS);
       })
       .then(function () {
-        /* 新しい版を待たせずに有効化する。古いキャッシュは activate で消す。 */
-        return self.skipWaiting();
+        /* バナー対応版からの更新は waiting のまま待ち、ページの「更新」ボタン
+           （SKIP_WAITING）で有効化する。バナー非対応版から上げるときだけ、
+           旧ページにバナーが無いので待たせずに有効化する。 */
+        return caches.keys().then(function (keys) {
+          var legacy = keys.some(function (key) {
+            return LEGACY_CACHE.test(key);
+          });
+          return legacy ? self.skipWaiting() : undefined;
+        });
       })
   );
 });
@@ -91,6 +104,13 @@ self.addEventListener('activate', function (event) {
         return self.clients.claim();
       })
   );
+});
+
+/* ページ側の「更新」ボタンから SKIP_WAITING を受け取ったら、待機中の版を有効化する。
+   有効化すると clients.claim() でページの controller が変わり、ページ側が再読み込みする。 */
+self.addEventListener('message', function (event) {
+  if (!event.data || event.data.type !== 'SKIP_WAITING') return;
+  self.skipWaiting();
 });
 
 self.addEventListener('fetch', function (event) {

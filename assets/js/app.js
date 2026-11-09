@@ -2197,13 +2197,118 @@
     }
   };
 
+  /* ---------- update banner ---------- */
+
+  /* 新しい Service Worker が waiting になったら、画面下部にバナーを出す。
+     「更新」で SKIP_WAITING を送り、controllerchange を受けて 1 回だけ再読み込みする。
+     再読み込みの条件は「押されたこと」。初回インストール時も clients.claim() で
+     controllerchange が飛ぶため、フラグが無いと初回訪問で読み込み直してしまう。 */
+  var updateBanner = null;
+  var updateRegistration = null;
+  var updateRequested = false;
+  var updateReloaded = false;
+  var updateDismissed = false;
+
+  function hideUpdateBanner() {
+    if (!updateBanner) return;
+    updateBanner.remove();
+    updateBanner = null;
+  }
+
+  function reloadForUpdate() {
+    if (updateReloaded) return;
+    updateReloaded = true;
+    global.location.reload();
+  }
+
+  function applyUpdate() {
+    var waiting = updateRegistration && updateRegistration.waiting;
+    /* waiting が既に有効化済みなら、読み直すだけで新しい版になる。 */
+    if (!waiting) {
+      reloadForUpdate();
+      return;
+    }
+    updateRequested = true;
+    try {
+      waiting.postMessage({ type: 'SKIP_WAITING' });
+    } catch (e) {
+      /* 送れない状態（既に redundant など）なら、読み直すだけにする。 */
+      reloadForUpdate();
+    }
+  }
+
+  function showUpdateBanner() {
+    if (updateBanner || updateDismissed || !document.body) return;
+
+    var banner = document.createElement('div');
+    banner.className = 'bb-update-banner';
+    banner.setAttribute('role', 'status');
+    banner.setAttribute('aria-live', 'polite');
+    banner.innerHTML =
+      '<span class="material-symbols-outlined bb-update-icon" aria-hidden="true">download</span>' +
+      '<p class="bb-update-text" data-i18n="update.available"></p>' +
+      '<button type="button" class="bb-btn bb-btn-primary bb-btn-sm bb-update-action" data-i18n="update.action"></button>' +
+      '<button type="button" class="bb-update-close" data-i18n-aria-label="update.dismiss">' +
+      '<span class="material-symbols-outlined" aria-hidden="true">close</span></button>';
+    document.body.appendChild(banner);
+
+    /* 文言は data-i18n で入れる。他タブでの言語変更（storage イベント）にも追随する。 */
+    if (BB.i18n && BB.i18n.apply) BB.i18n.apply(banner);
+
+    banner.querySelector('.bb-update-action').addEventListener('click', applyUpdate);
+    banner.querySelector('.bb-update-close').addEventListener('click', function () {
+      /* そのページ表示中だけ隠す。保存しないので次に開けばまた出る。 */
+      updateDismissed = true;
+      hideUpdateBanner();
+    });
+
+    updateBanner = banner;
+  }
+
+  /* 新しい worker が installed になった時点で出す。controller が無い＝初回インストールで、
+     置き換える旧版が無いため出さない。 */
+  function watchWorker(worker) {
+    if (!worker) return;
+    if (worker.state === 'installed') {
+      if (global.navigator.serviceWorker.controller) showUpdateBanner();
+      return;
+    }
+    worker.addEventListener('statechange', function () {
+      if (worker.state !== 'installed') return;
+      if (!global.navigator.serviceWorker.controller) return;
+      showUpdateBanner();
+    });
+  }
+
+  function watchRegistration(registration) {
+    updateRegistration = registration;
+
+    /* 読み込み時点で既に waiting の版が残っている場合。 */
+    if (registration.waiting && global.navigator.serviceWorker.controller) showUpdateBanner();
+
+    watchWorker(registration.installing);
+    registration.addEventListener('updatefound', function () {
+      watchWorker(registration.installing);
+      /* インストールが速すぎて installing が空になっている場合の取りこぼし防止。 */
+      if (registration.waiting && global.navigator.serviceWorker.controller) showUpdateBanner();
+    });
+  }
+
   /* Service Worker は全ページ共通のこのファイルから 1 回だけ登録する。
      各ページに登録コードを置くと、ページごとに重複して持つことになる。 */
   if (global.navigator && 'serviceWorker' in global.navigator) {
+    global.navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!updateRequested) return;
+      reloadForUpdate();
+    });
+
     global.addEventListener('load', function () {
-      global.navigator.serviceWorker.register('./sw.js').catch(function () {
-        /* 登録できなくてもアプリは動く。オフライン対応だけが効かない。 */
-      });
+      global.navigator.serviceWorker
+        .register('./sw.js')
+        .then(watchRegistration)
+        .catch(function () {
+          /* 登録できなくてもアプリは動く。オフライン対応だけが効かない。 */
+        });
     });
   }
 

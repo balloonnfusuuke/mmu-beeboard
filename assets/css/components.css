@@ -404,6 +404,74 @@ a.tt-block-off:hover { border-color: var(--bb-primary); color: var(--bb-text); }
   to { opacity: 1; transform: none; }
 }
 
+/* ---------- update banner ---------- */
+
+/* 新しい Service Worker が waiting になったときだけ、画面下部に出す。
+   閉じる（×）はそのページ表示中だけ隠す（保存しないので次に開けばまた出る）。
+   390px 幅でも収まるよう、文言は折り返し可・ボタン類は縮めない。 */
+.bb-update-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  background: var(--bb-surface);
+  border-top: 1px solid var(--bb-border);
+  box-shadow: var(--bb-shadow-float);
+  animation: bb-update-in 0.18s ease-out;
+}
+
+.bb-update-icon {
+  flex-shrink: 0;
+  color: var(--bb-primary);
+}
+
+.bb-update-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--bb-text);
+}
+
+.bb-update-action { flex-shrink: 0; }
+
+.bb-update-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -0.25rem;
+  border: 0;
+  border-radius: var(--bb-radius-control);
+  background: transparent;
+  color: var(--bb-text-muted);
+  cursor: pointer;
+}
+
+.bb-update-close:hover {
+  background: var(--bb-surface-subtle);
+  color: var(--bb-text);
+}
+
+.bb-update-close .material-symbols-outlined { font-size: 20px; }
+
+@keyframes bb-update-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-update-banner { animation: none; }
+}
+
 /* ---------- modal ---------- */
 
 /* ネイティブ confirm() は自動操作環境で自動却下され「押しても無反応」に見えるため、
