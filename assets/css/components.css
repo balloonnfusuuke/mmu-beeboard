@@ -159,6 +159,64 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 
 /* ---------- weekly timetable ---------- */
 
+/* 週移動。見出しの 1 行に収め、狭い幅では「今週」ボタンを次の行へ送る。
+   週ラベルは省略せず読める幅を確保する（それでも足りないときだけ省略する）。 */
+.bb-week-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bb-week-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-control);
+  background: var(--bb-surface);
+  color: var(--bb-text);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.bb-week-btn:hover:not(:disabled) {
+  background: var(--bb-surface-subtle);
+  border-color: color-mix(in srgb, var(--bb-primary) 40%, var(--bb-border));
+}
+
+.bb-week-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.bb-week-label {
+  flex: 1 1 auto;
+  min-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--bb-text);
+}
+
+.bb-week-today {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 0.625rem;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-control);
+  background: var(--bb-surface);
+  color: var(--bb-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bb-week-today:hover { background: var(--bb-surface-subtle); }
+
 .tt-head, .tt-body { display: grid; grid-template-columns: 68px repeat(5, minmax(0, 1fr)); }
 .tt-head { border-bottom: 1px solid var(--bb-border); padding-bottom: 6px; }
 .tt-corner { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--bb-text-muted); font-weight: 600; padding-left: 4px; }

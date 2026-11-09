@@ -110,13 +110,34 @@
     return Math.min(week, weeks + 1);
   }
 
-  /* 表示中の週の各曜日（1=月 … 5=金）の実日付。休講・振替の照合と、出席ページの
+  /* 時間割グリッドの表示週。0 = 今週。保存しない（開くたび今週に戻る）。 */
+  var weekOffset = 0;
+
+  /* 学期の最終週。currentWeek が試験週（weeks + 1）まで返すので、同じ上限に合わせる。 */
+  function lastWeek(state) {
+    return (state.term.weeks || 14) + 1;
+  }
+
+  /* グリッドが表示している週。 */
+  function viewWeek(state, now) {
+    var week = currentWeek(now) + weekOffset;
+    return Math.min(Math.max(week, 1), lastWeek(state));
+  }
+
+  /* 表示週を delta 週ぶん動かす。端では offset を動かさない。 */
+  function shiftWeek(state, now, delta) {
+    var current = currentWeek(now);
+    var next = Math.min(Math.max(current + weekOffset + delta, 1), lastWeek(state));
+    weekOffset = next - current;
+  }
+
+  /* 指定した週の各曜日（1=月 … 5=金）の実日付。休講・振替の照合と、出席ページの
      日付欄の初期値が同じ基準を使うように、ここへ集約する。
      学期開始日が未設定だと weekRange は null を返すが、そこで諦めると
      グリッドだけが休講・振替を落とす（凡例には「休講」が出たまま）ので、
      今日を含む月曜はじまりの週へフォールバックする。 */
-  function weekDates(now) {
-    var range = BB.date.weekRange(currentWeek(now));
+  function weekDatesOf(week, now) {
+    var range = BB.date.weekRange(week);
     var monday;
     if (range) {
       monday = range.start;
@@ -129,6 +150,16 @@
       dates[day] = isoDay(addDays(monday, day - 1));
     }
     return dates;
+  }
+
+  /* 今週の各曜日の実日付。出席ページの日付欄の初期値などが使う。 */
+  function weekDates(now) {
+    return weekDatesOf(currentWeek(now), now);
+  }
+
+  /* グリッドが表示している週の各曜日の実日付。 */
+  function viewWeekDates(state, now) {
+    return weekDatesOf(viewWeek(state, now), now);
   }
 
   /* ---------- pure logic ---------- */
@@ -683,7 +714,7 @@
     }
     /* 表示中の週に無い休講・振替はグリッドに出ないのが正しいが、
        「保存できていない」と誤解される。件数だけ凡例に出す。 */
-    var week = weekDates(new Date());
+    var week = viewWeekDates(state, new Date());
     var weekList = [1, 2, 3, 4, 5].map(function (day) {
       return week[day];
     });
@@ -726,7 +757,9 @@
     host.style.setProperty('--tt-hour', HOUR_HEIGHT + 'px');
 
     /* 表示中の週の各曜日の実日付。メモ追加と休講・振替の照合で同じ値を使う。 */
-    var weekDayDates = weekDates(now);
+    var weekDayDates = viewWeekDates(state, now);
+    /* 「今日」の強調は今週を見ているときだけ。別の週に同じ曜日を塗らない。 */
+    var isCurrentWeek = viewWeek(state, now) === currentWeek(now);
     function dateOfWeekday(day) {
       return weekDayDates[day] || isoDay(now);
     }
@@ -770,7 +803,7 @@
       '<div class="tt-head"><div class="tt-corner">' + t('tt.time') + '</div>' +
       [1, 2, 3, 4, 5]
         .map(function (day) {
-          var today = now.getDay() === day;
+          var today = isCurrentWeek && now.getDay() === day;
           return '<div class="tt-day' + (today ? ' is-today' : '') + '">' + dayName(day) +
             dayDateText(day) +
             (today ? ' ' + t('tt.today') : '') + '</div>';
@@ -901,6 +934,35 @@
     host.innerHTML =
       head +
       '<div class="tt-body"><div class="tt-times" style="height:' + height + 'px">' + times + '</div>' + columns + '</div>';
+  }
+
+  /* 週移動の見出し。前週／次週と「Week n · 日付範囲」、今週に戻るボタン。
+     学期開始日が無いと週ごとの日付が決まらないので、移動自体をさせない。 */
+  function renderWeekNav(state, now) {
+    var host = $('#tt-week-nav');
+    if (!host) return;
+    var week = viewWeek(state, now);
+    var last = lastWeek(state);
+    var canMove = !!state.term.startDate;
+    var range = BB.date.weekLabel(week);
+    var label = t('common.week', { n: week }) + (range ? ' · ' + range : '');
+    var prevLabel = escHtml(t('tt.prevWeek'));
+    var nextLabel = escHtml(t('tt.nextWeek'));
+
+    host.innerHTML =
+      '<button type="button" class="bb-week-btn" data-week-prev' +
+        (canMove && week > 1 ? '' : ' disabled') +
+        ' aria-label="' + prevLabel + '" title="' + prevLabel + '">' +
+        '<span class="material-symbols-outlined text-[18px]">arrow_back</span></button>' +
+      '<span class="bb-week-label num" data-week-label>' + escHtml(label) + '</span>' +
+      '<button type="button" class="bb-week-btn" data-week-next' +
+        (canMove && week < last ? '' : ' disabled') +
+        ' aria-label="' + nextLabel + '" title="' + nextLabel + '">' +
+        '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
+      (weekOffset !== 0
+        ? '<button type="button" class="bb-week-today" data-week-today>' +
+          escHtml(t('common.thisWeek')) + '</button>'
+        : '');
   }
 
   function renderClassDetail(next, state, now) {
@@ -1791,6 +1853,27 @@
     });
   }
 
+  /* 週移動。押されたらグリッドと凡例だけ描き直す。
+     Next Class は現在日時基準なので、ここでは触らない。 */
+  function bindWeekNav() {
+    var host = $('#tt-week-nav');
+    if (!host || host.getAttribute('data-bound') === '1') return;
+    host.setAttribute('data-bound', '1');
+
+    host.addEventListener('click', function (event) {
+      var now = new Date();
+      var state = BB.store.get();
+      if (event.target.closest('[data-week-prev]')) shiftWeek(state, now, -1);
+      else if (event.target.closest('[data-week-next]')) shiftWeek(state, now, 1);
+      else if (event.target.closest('[data-week-today]')) weekOffset = 0;
+      else return;
+
+      renderWeekNav(state, now);
+      renderTimetable(state, now);
+      renderLegend(state);
+    });
+  }
+
   function init() {
     var state = BB.store.get();
 
@@ -1810,6 +1893,7 @@
     renderNextClass(next, now, preview);
     renderLegend(state);
     renderTimetable(state, now);
+    renderWeekNav(state, now);
     renderClassDetail(next, state, now);
     renderTopics(state);
     renderSummaries(state, now, next);
@@ -2401,6 +2485,7 @@
     bindNotes();
     bindNoteTriggers();
     bindEvents();
+    bindWeekNav();
     /* 他タブの保存は storage イベントで届く。ヘッダーもページ本体も、
        開いているフォームの入力を保ったまま描き直す。 */
     BB.store.subscribe(function () {

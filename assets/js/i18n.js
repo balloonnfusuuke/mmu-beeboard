@@ -183,6 +183,8 @@
         noClass: 'No class',
         transfer: 'Transfer',
         online: 'Online',
+        prevWeek: 'Previous week',
+        nextWeek: 'Next week',
         dayDate: '{d}',
         dayDateWithMonth: '{mon} {d}',
         overridesElsewhere: {
@@ -1602,6 +1604,8 @@
         noClass: '休講',
         transfer: '振替',
         online: 'オンライン',
+        prevWeek: '前の週',
+        nextWeek: '次の週',
         dayDate: '{d}日',
         dayDateWithMonth: '{m}/{d}',
         overridesElsewhere: {
