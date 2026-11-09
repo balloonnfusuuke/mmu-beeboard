@@ -4,7 +4,7 @@
    更新を配るときは CACHE の版を上げる。古いキャッシュは activate で削除する。 */
 'use strict';
 
-var CACHE = 'mmu-beeboard-v10';
+var CACHE = 'mmu-beeboard-v11';
 
 /* 更新バナーを持たない版のキャッシュ名。この版から上げるときだけ、待たせずに
    有効化して従来どおり 2 回の再読み込みで届ける（旧ページにはバナーが無いため、
@@ -121,6 +121,8 @@ self.addEventListener('fetch', function (event) {
 
   var url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  /* API はキャッシュしない。health などが古い応答を返さないようにする。 */
+  if (url.pathname.indexOf('/api/') === 0) return;
 
   event.respondWith(
     caches.match(request, { ignoreSearch: true }).then(function (cached) {

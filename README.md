@@ -49,6 +49,12 @@ python -m http.server 8000
 # then visit http://localhost:8000/
 ```
 
+### API
+
+`api/` holds Vercel Serverless Functions; `GET /api/v1/health` returns `{"ok": true}`.
+Run `npx vercel dev`, then open http://localhost:3000/api/v1/health — the same server still
+serves the static pages, so http://localhost:3000/ opens the dashboard as usual.
+
 ## First-time setup
 
 The app starts empty — no subjects, no timetable, no marks. On the first visit the dashboard
