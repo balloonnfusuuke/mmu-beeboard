@@ -511,6 +511,10 @@
           export: 'Export data (JSON)',
           import: 'Import data',
           reset: 'Reset all data',
+          snapshot: 'Export for local AI',
+          snapshotHint:
+            'Writes beeboard-snapshot.json to a folder you pick. If the browser cannot write ' +
+            'files, the same file is downloaded instead.',
           hint: 'All data is stored locally in this browser. Nothing is sent to MMU.'
         },
         install: {
@@ -534,6 +538,8 @@
           switched: 'Switched to {label}',
           themeSet: 'Theme set to {theme}',
           backup: 'Backup downloaded',
+          snapshotSaved: 'beeboard-snapshot.json saved',
+          snapshotDownloaded: 'beeboard-snapshot.json downloaded',
           imported: 'Data imported',
           importFailed: 'Import failed: invalid file',
           restored: 'Trimester restored'
@@ -1952,6 +1958,9 @@
           export: 'データを書き出す（JSON）',
           import: 'データを読み込む',
           reset: '全データをリセット',
+          snapshot: 'ローカルAI用に書き出す',
+          snapshotHint:
+            '選んだフォルダに beeboard-snapshot.json を書き出します。書き込めないブラウザでは同じ名前でダウンロードします。',
           hint: 'データはすべてこのブラウザ内に保存されます。MMU に送信されることはありません。'
         },
         install: {
@@ -1974,6 +1983,8 @@
           switched: '{label} に切り替えました',
           themeSet: 'テーマを {theme} にしました',
           backup: 'バックアップを書き出しました',
+          snapshotSaved: 'beeboard-snapshot.json を保存しました',
+          snapshotDownloaded: 'beeboard-snapshot.json をダウンロードしました',
           imported: 'データを読み込みました',
           importFailed: '読み込みに失敗しました: ファイルが不正です',
           restored: '学期を復元しました'

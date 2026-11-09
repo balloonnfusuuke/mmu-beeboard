@@ -344,6 +344,134 @@
     );
   }
 
+  /* ---------- snapshot for a local AI ---------- */
+
+  var SNAPSHOT_FILE = 'beeboard-snapshot.json';
+  var HANDLE_DB = 'mmu-beeboard-handles';
+  var HANDLE_STORE = 'dirs';
+  var HANDLE_KEY = 'snapshot-dir';
+
+  /* 一度選んだフォルダを IndexedDB に覚えておく。FileSystemDirectoryHandle は
+     構造化クローンで保存できる。使えない環境では毎回フォルダを選ぶだけになる。 */
+  function openHandleDb() {
+    return new Promise(function (resolve, reject) {
+      var request = indexedDB.open(HANDLE_DB, 1);
+      request.onupgradeneeded = function () {
+        request.result.createObjectStore(HANDLE_STORE);
+      };
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+      request.onerror = function () {
+        reject(request.error);
+      };
+    });
+  }
+
+  function readDirHandle() {
+    return openHandleDb()
+      .then(function (db) {
+        return new Promise(function (resolve) {
+          var request = db.transaction(HANDLE_STORE, 'readonly').objectStore(HANDLE_STORE).get(HANDLE_KEY);
+          request.onsuccess = function () {
+            resolve(request.result || null);
+          };
+          request.onerror = function () {
+            resolve(null);
+          };
+        });
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function writeDirHandle(handle) {
+    return openHandleDb()
+      .then(function (db) {
+        return new Promise(function (resolve) {
+          var tx = db.transaction(HANDLE_STORE, 'readwrite');
+          tx.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY);
+          tx.oncomplete = function () {
+            resolve();
+          };
+          tx.onerror = function () {
+            resolve();
+          };
+        });
+      })
+      .catch(function () {});
+  }
+
+  function pickDir() {
+    return window.showDirectoryPicker({ id: 'beeboard-snapshot', mode: 'readwrite' }).then(function (handle) {
+      return writeDirHandle(handle).then(function () {
+        return handle;
+      });
+    });
+  }
+
+  /* 許可が残っているフォルダを返す。無ければ選び直してもらう。 */
+  function snapshotDir() {
+    return readDirHandle().then(function (stored) {
+      if (!stored) return pickDir();
+      return stored
+        .queryPermission({ mode: 'readwrite' })
+        .then(function (permission) {
+          return permission === 'granted' ? stored : pickDir();
+        })
+        .catch(function () {
+          return pickDir();
+        });
+    });
+  }
+
+  function writeSnapshotFile(dir, json) {
+    return dir.getFileHandle(SNAPSHOT_FILE, { create: true }).then(function (handle) {
+      return handle.createWritable().then(function (writable) {
+        return writable
+          .write(json)
+          .then(function () {
+            return writable.close();
+          });
+      });
+    });
+  }
+
+  function downloadSnapshot(json) {
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = SNAPSHOT_FILE;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* File System Access API があればフォルダへ、無ければダウンロードへ落とす。 */
+  function exportSnapshot() {
+    var json = JSON.stringify(BB.snapshot.build(), null, 2);
+
+    if (!window.showDirectoryPicker) {
+      downloadSnapshot(json);
+      BB.ui.toast(t('settings.toast.snapshotDownloaded'));
+      return;
+    }
+
+    snapshotDir()
+      .then(function (dir) {
+        return writeSnapshotFile(dir, json).then(function () {
+          BB.ui.toast(t('settings.toast.snapshotSaved'));
+        });
+      })
+      .catch(function (error) {
+        /* 利用者がフォルダ選択を閉じただけなら、何も出さずに終わる。 */
+        if (error && error.name === 'AbortError') return;
+        downloadSnapshot(json);
+        BB.ui.toast(t('settings.toast.snapshotDownloaded'));
+      });
+  }
+
   function dataSection() {
     return section(
       'database',
@@ -352,13 +480,16 @@
       '<div class="flex flex-wrap items-center gap-3">' +
         '<button type="button" id="export-data" class="bb-btn bb-btn-ghost">' +
         '<span class="material-symbols-outlined text-[18px]">download</span>' + t('settings.data.export') + '</button>' +
+        '<button type="button" id="export-snapshot" class="bb-btn bb-btn-ghost">' +
+        '<span class="material-symbols-outlined text-[18px]">save</span>' + t('settings.data.snapshot') + '</button>' +
         '<label class="bb-btn bb-btn-ghost cursor-pointer">' +
         '<span class="material-symbols-outlined text-[18px]">upload</span>' + t('settings.data.import') +
         '<input type="file" id="import-data" accept="application/json" class="hidden"></label>' +
         '<button type="button" id="reset-data" class="bb-btn bb-btn-danger">' +
         '<span class="material-symbols-outlined text-[18px]">warning</span>' + t('settings.data.reset') + '</button>' +
         '</div>' +
-        '<p class="text-caption text-muted mt-3">' + t('settings.data.hint') + '</p>'
+        '<p class="text-caption text-muted mt-3">' + t('settings.data.hint') + '</p>' +
+        '<p class="text-caption text-muted mt-1">' + t('settings.data.snapshotHint') + '</p>'
     );
   }
 
@@ -538,6 +669,11 @@
       link.click();
       URL.revokeObjectURL(url);
       BB.ui.toast(t('settings.toast.backup'));
+      return;
+    }
+
+    if (event.target.closest('#export-snapshot')) {
+      exportSnapshot();
       return;
     }
 

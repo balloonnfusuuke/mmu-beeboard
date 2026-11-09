@@ -59,8 +59,19 @@ serves the static pages, so http://localhost:3000/ opens the dashboard as usual.
 
 `assets/js/snapshot.js` turns the saved state into JSON: the term, the subjects with their
 assessments, the custom deadlines and the deadline list. The student profile, marks,
-attendance, notes and personal events are left out. No page loads it — run it from the
-console on any BeeBoard page:
+attendance, notes and personal events are left out.
+
+**Settings → Data & Storage → Export for local AI** writes `beeboard-snapshot.json`. Where it
+lands depends on the browser:
+
+- **Chromium browsers (Chrome, Edge)** — a folder picker opens the first time. The file is
+  written into the folder you pick, and that folder is remembered, so the next export
+  overwrites the same file without asking again. If the browser has dropped the permission,
+  it asks for the folder once more.
+- **Firefox, Safari, and anything without the File System Access API** — the same file is
+  downloaded through the normal save dialog.
+
+The same JSON is available from the console on any page:
 
 ```js
 await import('/assets/js/snapshot.js');
