@@ -49,16 +49,21 @@
     head: {
       title: t('sim.title'),
       subtitle: t('sim.subtitle'),
-      actions: active
-        ? '<select id="subject-switch" class="bb-input" style="height:40px;width:auto">' +
-          state()
-            .subjects.map(function (subject) {
-              return '<option value="' + subject.id + '"' + (subject.id === active.id ? ' selected' : '') + '>' +
-                subject.id + ' ' + subject.name + '</option>';
-            })
-            .join('') +
-          '</select>'
-        : ''
+      actions:
+        (active
+          ? '<select id="subject-switch" class="bb-input" style="height:40px;width:auto">' +
+            state()
+              .subjects.map(function (subject) {
+                return '<option value="' + subject.id + '"' + (subject.id === active.id ? ' selected' : '') + '>' +
+                  subject.id + ' ' + subject.name + '</option>';
+              })
+              .join('') +
+            '</select>'
+          : '') +
+        '<a href="roadmap.html" class="bb-btn bb-btn-ghost" aria-label="' + esc(t('rm.title')) +
+        '" title="' + esc(t('rm.title')) + '">' +
+        '<span class="material-symbols-outlined text-[18px]">grading</span>' +
+        '<span class="hidden sm:inline">' + esc(t('rm.link')) + '</span></a>'
     }
   });
 

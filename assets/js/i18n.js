@@ -33,7 +33,8 @@
         notes: 'MMU BeeBoard — Notes',
         guide: 'MMU BeeBoard — How to use',
         faq: 'MMU BeeBoard — FAQ',
-        contact: 'MMU BeeBoard — Ask the developer'
+        contact: 'MMU BeeBoard — Ask the developer',
+        roadmap: 'MMU BeeBoard — Assessment roadmap'
       },
       brand: { tagline: 'Personal study dashboard' },
       nav: { settings: 'Settings', backToDashboard: 'Back to dashboard', guide: 'How to use' },
@@ -203,6 +204,18 @@
         none: 'None',
         target: 'of {n} hrs target',
         records: '{present} present · {absent} absent'
+      },
+      rm: {
+        title: 'Assessment roadmap',
+        subtitle: 'Every assessment in week order, across all subjects.',
+        progress: 'Graded so far',
+        progressNote: '{graded} of {total} weight graded',
+        weight: 'Weight {n}%',
+        notYet: 'Not yet',
+        secured: '{score} / {max} · {points} pts',
+        empty: 'No assessments yet.',
+        emptyHint: 'Add assessments on a subject page to see the roadmap.',
+        link: 'Roadmap'
       },
       detail: {
         nextClass: 'Next class: {code} {name}',
@@ -1466,7 +1479,8 @@
         notes: 'MMU BeeBoard — メモ',
         guide: 'MMU BeeBoard — 使い方ガイド',
         faq: 'MMU BeeBoard — よくある質問',
-        contact: 'MMU BeeBoard — 開発者への質問'
+        contact: 'MMU BeeBoard — 開発者への質問',
+        roadmap: 'MMU BeeBoard — 評価ロードマップ'
       },
       brand: { tagline: '個人用学習ダッシュボード' },
       nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る', guide: '使い方' },
@@ -1636,6 +1650,18 @@
         none: 'なし',
         target: '目標 {n} 時間',
         records: '出席 {present} · 欠席 {absent}'
+      },
+      rm: {
+        title: '評価ロードマップ',
+        subtitle: '全科目の評価項目を週順に並べています。',
+        progress: '採点済みの割合',
+        progressNote: '配点 {total} のうち {graded} を採点済み',
+        weight: '配点 {n}%',
+        notYet: '未実施',
+        secured: '{score} / {max} · 確保 {points}',
+        empty: '評価項目はまだありません。',
+        emptyHint: '科目ページで評価項目を追加すると、ここに並びます。',
+        link: 'ロードマップ'
       },
       detail: {
         nextClass: '次の授業: {code} {name}',

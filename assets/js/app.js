@@ -1241,7 +1241,11 @@
             return when ? '<p class="text-caption text-muted num">' + escHtml(when) + '</p>' : '';
           })()
         : '') +
-      '<p class="text-body-sm text-muted">' + t('card.deadlines.scheduled', { n: items.length }) + '</p>' +
+      '<div class="flex items-center justify-between gap-2">' +
+      '<p class="text-body-sm text-muted min-w-0">' + t('card.deadlines.scheduled', { n: items.length }) + '</p>' +
+      '<a href="roadmap.html" class="shrink-0 text-caption font-semibold text-primary hover:underline flex items-center gap-0.5">' +
+      '<span>' + t('rm.link') + '</span>' +
+      '<span class="material-symbols-outlined text-[14px]">arrow_forward</span></a></div>' +
       '</div>';
 
     var footer =

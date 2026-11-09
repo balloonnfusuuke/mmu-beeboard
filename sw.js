@@ -4,7 +4,7 @@
    更新を配るときは CACHE の版を上げる。古いキャッシュは activate で削除する。 */
 'use strict';
 
-var CACHE = 'mmu-beeboard-v8';
+var CACHE = 'mmu-beeboard-v9';
 
 /* 更新バナーを持たない版のキャッシュ名。この版から上げるときだけ、待たせずに
    有効化して従来どおり 2 回の再読み込みで届ける（旧ページにはバナーが無いため、
@@ -21,6 +21,7 @@ var ASSETS = [
   './simulator.html',
   './deadlines.html',
   './deadline-detail.html',
+  './roadmap.html',
   './session-detail.html',
   './attendance.html',
   './studylog.html',
@@ -46,6 +47,7 @@ var ASSETS = [
   './assets/js/pages/deadline-detail.js',
   './assets/js/pages/session-detail.js',
   './assets/js/pages/deadlines.js',
+  './assets/js/pages/roadmap.js',
   './assets/js/pages/notes.js',
   './assets/js/pages/settings.js',
   './assets/js/pages/setup.js',
