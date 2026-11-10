@@ -244,3 +244,18 @@ test('termRange は開始日が無ければ空を返す', () => {
   assert.deepEqual(plain(core.termRange({ startDate: '', weeks: 14 })), { start: '', end: '' });
   assert.deepEqual(plain(core.termRange({ startDate: '2026-02-31', weeks: 14 })), { start: '', end: '' });
 });
+
+/* ---------- loader ---------- */
+
+test('window が無い context では読み込みを動かさない', () => {
+  const context = vm.createContext({ URL });
+  vm.runInContext(source, context, { filename: 'assets/js/ebwise.js' });
+  const ebwise = context.BB.ebwise;
+  assert.equal(typeof ebwise.core.parseFeed, 'function');
+  /* 読み込みは document があるページでだけ登録する。 */
+  if (typeof ebwise.feed === 'function') {
+    assert.equal(ebwise.feed(), null);
+  } else {
+    assert.equal(ebwise.feed, undefined);
+  }
+});

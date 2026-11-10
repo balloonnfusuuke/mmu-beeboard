@@ -1,8 +1,11 @@
-/* MMU BeeBoard — eBwise feed reader (pure core).
+/* MMU BeeBoard — eBwise feed reader.
    ローカルAIが置いた ebwise-feed.json を読み、科目と資料・締切を対応づける。
    形式は docs/ebwise-feed.md。
 
-   このファイルは DOM・localStorage・IndexedDB に触らない。画面側は戻り値だけを使う。
+   前半の core は純粋な関数だけで、DOM にも保存にも触らない（node のテストで読める）。
+   後半の読み込みは、window と document があるページでだけ動く。読んだ feed は
+   このファイルの変数にだけ置き、localStorage・sessionStorage・IndexedDB には書かない。
+   フォルダのピッカーも requestPermission も自動では出さない（許可済みのときだけ読む）。
    文字列は信用しない前提で、リンクは safeUrl を通したものだけを href にしてよい。 */
 (function (global) {
   'use strict';
@@ -300,13 +303,235 @@
     return { start: startDate, end: dayString(end) };
   }
 
-  BB.ebwise = {
-    core: {
-      parseFeed: parseFeed,
-      safeUrl: safeUrl,
-      mapCourses: mapCourses,
-      materialsFor: materialsFor,
-      termRange: termRange
-    }
+  var core = {
+    parseFeed: parseFeed,
+    safeUrl: safeUrl,
+    mapCourses: mapCourses,
+    materialsFor: materialsFor,
+    termRange: termRange
   };
+
+  BB.ebwise = { core: core };
+
+  /* ---------- loader ---------- */
+
+  /* ここから下はブラウザのページでだけ動く。node（テスト）には document が無いので
+     何も登録せずに終わる。BB.ebwise.core はそのまま使える。 */
+  if (!global.document || typeof global.document.addEventListener !== 'function') return;
+
+  var FEED_FILE = 'ebwise-feed.json';
+  /* 表示中はこの間隔で読み直す。裏に回っている間は読まない。 */
+  var POLL_MS = 60000;
+
+  /* 読んだ feed はこの変数にだけ置く。保存はしない。 */
+  var feed = null;
+  var status = emptyStatus('none', '');
+  var listeners = [];
+  /* 前回読んだファイルの lastModified と size。同じなら中身を読み直さない。 */
+  var lastStamp = '';
+  /* 前回通知した内容。変わっていなければ onChange を呼ばない。 */
+  var lastSignature = '';
+  var reading = false;
+  var again = false;
+  var pending = null;
+  var timer = null;
+  var started = false;
+
+  function emptyStatus(state, reason) {
+    return {
+      state: state,
+      reason: reason || '',
+      generatedAt: '',
+      lastSync: null,
+      counts: { courses: 0, materials: 0, deadlines: 0, dropped: 0 }
+    };
+  }
+
+  function okStatus(parsed, dropped) {
+    return {
+      state: 'ok',
+      reason: '',
+      generatedAt: parsed.generatedAt,
+      lastSync: parsed.lastSync,
+      counts: {
+        courses: parsed.courses.length,
+        materials: parsed.materials.length,
+        deadlines: parsed.deadlines.length,
+        dropped: dropped
+      }
+    };
+  }
+
+  function cloneStatus(value) {
+    return {
+      state: value.state,
+      reason: value.reason,
+      generatedAt: value.generatedAt,
+      lastSync: value.lastSync ? JSON.parse(JSON.stringify(value.lastSync)) : null,
+      counts: {
+        courses: value.counts.courses,
+        materials: value.counts.materials,
+        deadlines: value.counts.deadlines,
+        dropped: value.counts.dropped
+      }
+    };
+  }
+
+  /* 1 回分の読み取り。例外は投げず、状態にして返す。 */
+  function read() {
+    if (!BB.snapshot || typeof BB.snapshot.readDirHandle !== 'function') {
+      return Promise.resolve({ status: emptyStatus('none', ''), feed: null });
+    }
+    return BB.snapshot
+      .readDirHandle()
+      .then(function (dir) {
+        if (!dir) return { status: emptyStatus('none', ''), feed: null };
+        /* 許可を尋ねるだけで、ピッカーも requestPermission も出さない。 */
+        return dir.queryPermission({ mode: 'readwrite' }).then(function (permission) {
+          if (permission !== 'granted') return { status: emptyStatus('no_permission', ''), feed: null };
+          return readFile(dir);
+        });
+      })
+      .catch(function () {
+        return { status: emptyStatus('no_permission', ''), feed: null };
+      });
+  }
+
+  function readFile(dir) {
+    return dir
+      .getFileHandle(FEED_FILE)
+      .then(function (handle) {
+        return handle.getFile();
+      })
+      .then(function (file) {
+        var stamp = file.lastModified + ':' + file.size;
+        /* 同じファイルを読んでいるだけなら、中身も同じ。 */
+        if (stamp === lastStamp) return null;
+        lastStamp = stamp;
+        return file.text().then(function (text) {
+          var result = core.parseFeed(text, file.size);
+          if (!result.ok) return { status: emptyStatus('invalid', result.reason), feed: null };
+          return { status: okStatus(result.feed, result.dropped), feed: result.feed };
+        });
+      })
+      .catch(function (error) {
+        /* ファイルが無いのは異常ではない。次の走査で拾える。 */
+        lastStamp = '';
+        if (error && error.name === 'NotFoundError') {
+          return { status: emptyStatus('missing', ''), feed: null };
+        }
+        return { status: emptyStatus('invalid', 'read_failed'), feed: null };
+      });
+  }
+
+  function signatureOf(result) {
+    return result.status.state + '|' + result.status.reason + '|' +
+      (result.feed ? JSON.stringify(result.feed) : '');
+  }
+
+  /* 中身か状態が変わったときだけ購読者へ知らせる。 */
+  function apply(result) {
+    if (!result) return;
+    var signature = signatureOf(result);
+    if (signature === lastSignature) return;
+    lastSignature = signature;
+    feed = result.feed;
+    status = result.status;
+    notify();
+  }
+
+  function notify() {
+    listeners.slice().forEach(function (listener) {
+      try {
+        listener();
+      } catch (e) {
+        /* 1 つの購読者が落ちても他は動かす */
+      }
+    });
+  }
+
+  function visible() {
+    return !global.document || global.document.visibilityState !== 'hidden';
+  }
+
+  function schedule() {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    /* 裏に回っている間は読まない。戻ったときに visibilitychange が読み直す。 */
+    if (!visible()) return;
+    timer = setTimeout(function () {
+      timer = null;
+      run();
+    }, POLL_MS);
+  }
+
+  /* 読み取りは 1 本にまとめる。読んでいる最中に呼ばれたら、終わってからもう 1 回読む。
+     戻り値は「この呼び出しの分まで終わった」ときに解決する。 */
+  function run() {
+    if (reading) {
+      again = true;
+      return pending;
+    }
+    reading = true;
+    pending = read()
+      .then(apply)
+      .catch(function () {
+        apply({ status: emptyStatus('invalid', 'read_failed'), feed: null });
+      })
+      .then(function () {
+        reading = false;
+        if (again) {
+          again = false;
+          return run();
+        }
+        pending = null;
+        schedule();
+      });
+    return pending;
+  }
+
+  function onChange(listener) {
+    if (typeof listener !== 'function') return function () {};
+    listeners.push(listener);
+    return function () {
+      listeners = listeners.filter(function (item) {
+        return item !== listener;
+      });
+    };
+  }
+
+  function start() {
+    if (started) return;
+    started = true;
+    run();
+    global.addEventListener('focus', function () {
+      run();
+    });
+    global.document.addEventListener('visibilitychange', function () {
+      if (!visible()) {
+        /* 裏に回ったらタイマーを止める。 */
+        if (timer) clearTimeout(timer);
+        timer = null;
+        return;
+      }
+      run();
+    });
+  }
+
+  /* 今の feed（読めていなければ null）。 */
+  BB.ebwise.feed = function () {
+    return feed;
+  };
+  /* 読み取りの状態。呼び出し側が書き換えても内部は変わらない。 */
+  BB.ebwise.status = function () {
+    return cloneStatus(status);
+  };
+  /* 中身が変わったときだけ呼ばれる。戻り値は購読をやめる関数。 */
+  BB.ebwise.onChange = onChange;
+  /* すぐ 1 回読む。 */
+  BB.ebwise.refresh = function () {
+    return run();
+  };
+
+  start();
 })(typeof window !== 'undefined' ? window : globalThis);
