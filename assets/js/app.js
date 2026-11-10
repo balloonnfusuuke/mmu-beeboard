@@ -2584,6 +2584,8 @@
     setDeadlineDetail: setDeadlineDetail,
     eventsForDay: eventsForDay,
     personalEventsOf: personalEventsOf,
+    /* bridge.js が操作ファイルの color を検証するときに使う。定義はここ 1 か所だけ。 */
+    eventColors: EVENT_COLORS,
     overridesOf: overridesOf,
     overrideFor: overrideFor,
     sessionHref: sessionHref,

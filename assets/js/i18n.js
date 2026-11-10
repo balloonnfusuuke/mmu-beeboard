@@ -39,7 +39,7 @@
       brand: { tagline: 'Personal study dashboard' },
       nav: { settings: 'Settings', backToDashboard: 'Back to dashboard', guide: 'How to use' },
       bridge: {
-        toast: { noteAdded: 'Local AI: memo added' }
+        toast: { prefix: 'Local AI: ', undo: 'Undo' }
       },
       common: {
         cancel: 'Cancel',
@@ -1494,7 +1494,7 @@
       brand: { tagline: '個人用学習ダッシュボード' },
       nav: { settings: '設定', backToDashboard: 'ダッシュボードに戻る', guide: '使い方' },
       bridge: {
-        toast: { noteAdded: 'ローカルAI: メモを追加しました' }
+        toast: { prefix: 'ローカルAI: ', undo: '元に戻す' }
       },
       common: {
         cancel: 'キャンセル',
