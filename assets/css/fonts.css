@@ -1,6 +1,6 @@
 /* MMU BeeBoard — self-hosted fonts. 外部 CDN に依存しない。
    Plus Jakarta Sans: 可変フォント (wght 400–800)、Google Fonts のサブセットをそのまま同梱。
-   Material Symbols Outlined: 実際に使う 77 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
+   Material Symbols Outlined: 実際に使う 80 アイコンだけに絞ったサブセット (opsz 24 / wght 400 / FILL 0 / GRAD 0)。
 
    ■ アイコン名の洗い出し方（手で数えない）
      1. node tools/collect-icons.js          使用アイコン名を全量で出力する
@@ -27,16 +27,16 @@
         （woff2 を差し替え忘れると "missing from woff2: ..." で落ちる）
 
    ICON_NAMES（アルファベット順・この並びでないと 400 が返る）:
-   add,add_link,add_task,alarm,arrow_back,arrow_forward,assignment_late,badge,bar_chart,
-   bug_report,calculate,calendar_month,calendar_today,check,check_circle,chevron_left,
-   chevron_right,close,cloud_off,code,content_copy,dark_mode,dashboard,database,delete,
-   desktop_windows,download,edit,edit_note,event,event_available,event_busy,event_repeat,
-   event_upcoming,expand_more,flag,forum,gavel,grade,grading,help,history,
-   history_toggle_off,hourglass_empty,info,light_mode,link,lock,menu_book,military_tech,
-   note_add,open_in_new,palette,person,person_off,play_arrow,play_circle,
-   radio_button_unchecked,restart_alt,room,rule,save,schedule,search,search_off,settings,
-   stop,swap_horiz,task_alt,timer,translate,undo,upload,verified,verified_user,videocam,
-   warning */
+   add,add_link,add_task,alarm,arrow_back,arrow_forward,assignment_late,badge,bar_chart,bug_report,
+   calculate,calendar_month,calendar_today,check,check_circle,chevron_left,chevron_right,close,
+   cloud_off,code,content_copy,dark_mode,dashboard,database,delete,desktop_windows,download,edit,
+   edit_note,event,event_available,event_busy,event_repeat,event_upcoming,expand_more,flag,
+   folder_off,forum,gavel,grade,grading,help,history,history_toggle_off,hourglass_empty,info,
+   light_mode,link,lock,menu_book,military_tech,note_add,open_in_new,palette,person,person_off,
+   play_arrow,play_circle,radio_button_unchecked,restart_alt,room,rule,save,schedule,school,search,
+   search_off,settings,smart_toy,stop,swap_horiz,task_alt,timer,translate,undo,upload,verified,
+   verified_user,videocam,warning
+*/
 
 
 /* ---------- Plus Jakarta Sans ---------- */

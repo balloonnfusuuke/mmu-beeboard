@@ -2947,13 +2947,26 @@
       syncOpenForms();
       init();
     });
-    /* feed が変わったら、この 2 か所だけ描き直す。開いているフォームは触らない。 */
-    if (BB.ebwise && typeof BB.ebwise.onChange === 'function') {
+    /* feed が変わったら、この 2 か所だけ描き直す。開いているフォームは触らない。
+       ebwise.js は app.js より後に読み込まれるので、ここの時点では BB.ebwise がまだ無い。
+       だから登録は DOM の読み込みが終わってから行い、登録直後にも 1 回描く。 */
+    function hookEbwise() {
+      if (!BB.ebwise || typeof BB.ebwise.onChange !== 'function') return;
       BB.ebwise.onChange(function () {
-        var state = BB.store.get();
-        renderEbwise(state);
-        renderTopics(state);
+        var next = BB.store.get();
+        renderEbwise(next);
+        renderTopics(next);
       });
+      /* 登録より先に feed を読み終えていた場合は onChange が来ない。 */
+      var state = BB.store.get();
+      renderEbwise(state);
+      renderTopics(state);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', hookEbwise);
+    } else {
+      hookEbwise();
     }
   }
 })(window);
