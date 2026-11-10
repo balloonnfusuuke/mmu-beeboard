@@ -40,19 +40,49 @@
     return day.getFullYear() + '-' + pad2(day.getMonth() + 1) + '-' + pad2(day.getDate());
   }
 
+  /* 締切 1 件の出どころ。key は締切ページ（BB.dash.deadlineItems）と同じ表記に揃える。
+     科目を持たない宿題は subjectId を null にする（表示用の代理科目の id は使わない）。 */
+  function assignmentMeta(item) {
+    if (item.custom) {
+      return {
+        subjectId: item.custom.subjectId || null,
+        key: item.key || 'c:' + item.custom.id,
+        source: 'custom'
+      };
+    }
+    if (item.note) {
+      return {
+        subjectId: item.note.subjectCode || null,
+        key: item.key || 'n:' + item.note.id,
+        source: 'homework'
+      };
+    }
+    var subjectId = item.subject && item.subject.id ? item.subject.id : null;
+    var assessmentId = item.assessment && item.assessment.id ? item.assessment.id : '';
+    return {
+      subjectId: subjectId,
+      key: item.key || 'a:' + subjectId + ':' + assessmentId,
+      source: 'assessment'
+    };
+  }
+
   /* 締切 1 件。科目名・課題名・週・締切日・配点・種別だけを持つ。
      due は締切ページが日付として扱う値（sortDue）から作る。週しか持たない
      評価（科目の assessments）は due が null になり、week で位置が分かる。
      学期開始日が未設定だと週をカレンダーに置けないので、due は常に null。 */
   function toAssignment(item, hasStartDate) {
     var assessment = item.assessment || {};
+    var meta = assignmentMeta(item);
     return {
       subject: item.subject && item.subject.name ? item.subject.name : null,
       name: assessment.name || '',
       week: isFinite(item.week) ? Number(item.week) : null,
       due: hasStartDate ? isoDay(item.sortDue) : null,
       weight: Number(assessment.weight) || 0,
-      kind: assessment.kind === 'exam' ? 'exam' : 'coursework'
+      kind: assessment.kind === 'exam' ? 'exam' : 'coursework',
+      subjectId: meta.subjectId,
+      key: meta.key,
+      source: meta.source
     };
   }
 
@@ -207,6 +237,8 @@
     build: build,
     toJson: toJson,
     fileName: FILE_NAME,
+    /* bridge.js が同じフォルダの inbox を見るために使う。ピッカーは開かない。 */
+    readDirHandle: readDirHandle,
     ensureFolder: ensureFolder,
     writeTo: writeTo,
     download: download,

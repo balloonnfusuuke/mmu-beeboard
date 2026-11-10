@@ -146,6 +146,18 @@
       write(state);
       return state;
     },
+    /* 外部（ローカルAIの操作ファイル）からの反映用。update と同じく保存直前の最新状態に
+       mutate を当てて保存し、そのあと同じタブの subscribe 購読者にも知らせる。
+       各ページは入力中のフォームを退避してから描き直せる。
+       他タブの保存は storage イベントで届くので、ここでは重ねて呼ばない。
+       mutate の中から BB.store.update を呼ばないこと（保存が二重になる）。 */
+    applyExternal: function (mutate) {
+      var state = current();
+      mutate(state);
+      write(state);
+      notify();
+      return state;
+    },
     /* このタブで保存するたびに呼ばれる。他タブの変更は subscribe 側で届く。 */
     onWrite: function (listener) {
       writeListeners.push(listener);

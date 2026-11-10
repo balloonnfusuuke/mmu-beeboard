@@ -604,8 +604,14 @@
       try {
         var imported = JSON.parse(String(reader.result));
         if (!imported || !imported.subjects) throw new Error('invalid');
+        /* store.js の VERSION と同じ 2 だけを受け付ける。版が違う保存は
+           読み込み後に再シードされ、入れたはずのデータが消える。 */
+        if (imported.version !== 2) throw new Error('invalid');
         BB.store.update(function (data) {
           Object.keys(imported).forEach(function (key) {
+            /* exportedAt と assignments はスナップショットの派生データ。
+               保存に混ざると、次の書き出しで古い締切一覧が残る。 */
+            if (key === 'exportedAt' || key === 'assignments') return;
             data[key] = imported[key];
           });
         });
