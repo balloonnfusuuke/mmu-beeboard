@@ -622,6 +622,133 @@
     return section('smart_toy', t('ai.title'), t('ai.subtitle'), body, false, 'ai-bridge');
   }
 
+  /* ---------- eBwise 連携 ---------- */
+
+  /* 入力中の欄があれば描き直さない。打っている途中の値を消さないため。 */
+  function busyTyping() {
+    var active = document.activeElement;
+    return !!(active && active.closest && active.closest('#settings') &&
+      /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName));
+  }
+
+  function ebwiseStatusHtml(status) {
+    if (!status || status.state === 'none') return esc(t('ebwise.state.none'));
+    if (status.state === 'no_permission') return esc(t('ebwise.state.noPermission'));
+    if (status.state === 'missing') return esc(t('ebwise.state.missing'));
+    if (status.state === 'invalid') {
+      return esc(t('ebwise.state.invalid', { reason: status.reason || '' }));
+    }
+    var sync = status.lastSync || {};
+    return esc(t('ebwise.state.ok', {
+      at: timeLabel(status.generatedAt),
+      result: sync.result || t('ebwise.state.noSync'),
+      when: timeLabel(sync.finishedAt)
+    }));
+  }
+
+  /* ログインが切れているときだけ、次にやることを 1 行で出す。 */
+  function ebwiseLoginHtml(status) {
+    var result = status && status.lastSync ? status.lastSync.result : '';
+    if (result !== 'token_invalid' && result !== 'no_token') return '';
+    return '<p class="text-body-sm text-alert mt-2">' + esc(t('ebwise.loginExpired')) + '</p>';
+  }
+
+  function ebwiseSubjectLabel(subject) {
+    return subject.id + ' · ' + subject.name;
+  }
+
+  function ebwiseMappingHtml() {
+    var feed = BB.ebwise.feed();
+    var courses = feed && Array.isArray(feed.courses) ? feed.courses : [];
+    var list = courses.filter(function (course) {
+      return course && typeof course.code === 'string' && course.code !== '';
+    });
+    if (!list.length) {
+      return '<p class="text-body-sm text-muted">' + esc(t('ebwise.mapping.empty')) + '</p>';
+    }
+
+    var subjects = state().subjects || [];
+    var info = BB.ebwise.mapping();
+    /* 「自動」の選択肢には、手動の指定を混ぜない今の自動の結果を出す。 */
+    var auto = BB.ebwise.core.mapCourses(subjects, list, {});
+
+    function autoLabel(code) {
+      if (auto.map[code]) {
+        var found = null;
+        subjects.forEach(function (subject) {
+          if (subject.id === auto.map[code]) found = subject;
+        });
+        return found ? ebwiseSubjectLabel(found) : auto.map[code];
+      }
+      if (auto.ambiguous.indexOf(code) >= 0) return t('ebwise.mapping.ambiguous');
+      return t('ebwise.mapping.unmatched');
+    }
+
+    return (
+      '<div>' +
+      list
+        .map(function (course) {
+          var code = course.code;
+          var how = info.how[code] || 'auto';
+          var selected = how === 'off' ? '' : how === 'manual' ? info.map[code] || '' : 'auto';
+          var options =
+            '<option value="auto"' + (selected === 'auto' ? ' selected' : '') + '>' +
+            esc(t('ebwise.mapping.auto', { result: autoLabel(code) })) + '</option>' +
+            '<option value=""' + (selected === '' ? ' selected' : '') + '>' +
+            esc(t('ebwise.mapping.off')) + '</option>' +
+            subjects
+              .map(function (subject) {
+                return '<option value="' + esc(subject.id) + '"' +
+                  (selected === subject.id ? ' selected' : '') + '>' +
+                  esc(ebwiseSubjectLabel(subject)) + '</option>';
+              })
+              .join('');
+          return (
+            '<div class="py-3 border-b border-border-subtle last:border-0">' +
+            '<div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">' +
+            '<span class="text-body-md font-semibold text-ink num">' + esc(code) + '</span>' +
+            '<span class="text-caption text-muted min-w-0 break-words">' + esc(course.fullname) + '</span>' +
+            '</div>' +
+            '<div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">' +
+            '<select class="bb-input sm:max-w-xs" data-ebwise-code="' + esc(code) + '">' + options + '</select>' +
+            '<span class="text-caption text-muted">' + esc(t('ebwise.how.' + how)) + '</span>' +
+            '</div>' +
+            (info.ambiguous.indexOf(code) >= 0
+              ? '<p class="text-caption text-alert mt-1">' + esc(t('ebwise.mapping.ambiguousHint')) + '</p>'
+              : '') +
+            '</div>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+
+  /* eBwise の feed と、BeeBoard の科目の対応。 */
+  function ebwiseSection() {
+    if (!BB.ebwise || typeof BB.ebwise.status !== 'function') return '';
+    var status = BB.ebwise.status();
+    var body =
+      '<div class="space-y-4">' +
+      '<div><p class="text-body-sm text-ink">' + ebwiseStatusHtml(status) + '</p>' +
+      ebwiseLoginHtml(status) + '</div>' +
+      '<div class="pt-3 border-t border-border-subtle">' +
+      '<p class="text-body-md font-semibold text-ink mb-1">' + esc(t('ebwise.mapping.title')) + '</p>' +
+      '<p class="text-caption text-muted mb-2">' + esc(t('ebwise.mapping.hint')) + '</p>' +
+      ebwiseMappingHtml() +
+      '</div></div>';
+    return section('school', esc(t('ebwise.title')), esc(t('ebwise.subtitle')), body, false, 'ebwise');
+  }
+
+  /* このセクションだけを差し替える。ほかの入力中のフォームは触らない。 */
+  function refreshEbwiseSection() {
+    var host = document.getElementById('ebwise');
+    if (!host) return;
+    var html = ebwiseSection();
+    if (!html) return;
+    host.outerHTML = html;
+  }
+
   function render() {
     document.getElementById('settings').innerHTML =
       profileSection() +
@@ -633,6 +760,7 @@
       timetableSection() +
       termSection() +
       aiBridgeSection() +
+      ebwiseSection() +
       dataSection() +
       installSection() +
       helpSection();
@@ -846,6 +974,15 @@
     }
   });
 
+  /* eBwise の科目の対応。変えたら保存して、このセクションだけ描き直す。 */
+  document.addEventListener('change', function (event) {
+    var select = event.target.closest('[data-ebwise-code]');
+    if (!select) return;
+    var saved = BB.ebwise.setMapping(select.getAttribute('data-ebwise-code'), select.value);
+    BB.ui.toast(saved ? t('common.saved') : t('ebwise.toast.failed'));
+    refreshEbwiseSection();
+  });
+
   document.addEventListener('change', function (event) {
     if (event.target.id !== 'import-data') return;
     var file = event.target.files && event.target.files[0];
@@ -886,14 +1023,19 @@
 
   /* 他タブの保存を取り込んだら描き直す。入力中の欄があれば触らない。 */
   BB.store.subscribe(function () {
-    var active = document.activeElement;
-    if (active && active.closest && active.closest('#settings') && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName)) {
-      return;
-    }
+    if (busyTyping()) return;
     applyTheme(state().settings.theme);
     BB.ui.refreshChrome();
     render();
   });
+
+  /* eBwise の feed が変わったら、このセクションだけ描き直す。 */
+  if (BB.ebwise && typeof BB.ebwise.onChange === 'function') {
+    BB.ebwise.onChange(function () {
+      if (busyTyping()) return;
+      refreshEbwiseSection();
+    });
+  }
 
   /* インストールの可否が変わったら（appinstalled など）ボタンを出し入れする。 */
   BB.install.subscribe(function () {

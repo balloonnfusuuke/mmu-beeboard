@@ -171,6 +171,21 @@ test("mapCourses は manual の '' を「つながない」として扱う", () 
   assert.deepEqual(plain(result.ambiguous), []);
 });
 
+test('mapCourses は manual のキーを消すと自動に戻る', () => {
+  const subjects = [
+    { id: 'CMA6114', name: 'Artificial Intelligence' },
+    { id: 'CCP6114', name: 'Compiler Construction' }
+  ];
+  const courses = [courseOf('CMA6114')];
+  const manual = { CMA6114: 'CCP6114' };
+  assert.deepEqual(plain(core.mapCourses(subjects, courses, manual).map), { CMA6114: 'CCP6114' });
+  /* setMapping('auto') はキーを消す。消したあとは自動の結果に戻る。 */
+  delete manual.CMA6114;
+  const back = core.mapCourses(subjects, courses, manual);
+  assert.deepEqual(plain(back.map), { CMA6114: 'CMA6114' });
+  assert.equal(back.how.CMA6114, 'auto');
+});
+
 test('mapCourses は 2 科目に当たる場合に対応させない', () => {
   const result = core.mapCourses(
     [

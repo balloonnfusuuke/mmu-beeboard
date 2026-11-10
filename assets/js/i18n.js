@@ -187,6 +187,37 @@
           stale: 'the file is more than 7 days old'
         }
       },
+      ebwise: {
+        title: 'eBwise',
+        subtitle: 'Course materials and deadlines from the local eBwise feed. Nothing is uploaded.',
+        state: {
+          none: 'No folder chosen yet. Choose the folder in Local AI above.',
+          noPermission: 'Folder access needs restoring. Open Local AI above and press "Choose the folder again".',
+          missing: 'ebwise-feed.json is not in the folder yet.',
+          invalid: 'The feed could not be read ({reason}).',
+          ok: 'Read {at} · last sync {result} at {when}',
+          noSync: 'not recorded'
+        },
+        loginExpired: 'The eBwise login has expired. On your PC, run python -m ebwise_sync login.',
+        mapping: {
+          title: 'Courses',
+          hint: 'Choose which BeeBoard subject each eBwise course belongs to. "Automatic" follows the code and the name.',
+          empty: 'No courses in the feed yet.',
+          auto: 'Automatic ({result})',
+          off: 'Do not link',
+          unmatched: 'no match',
+          ambiguous: 'more than one match',
+          ambiguousHint: 'More than one BeeBoard subject matches this course. Choose one by hand.'
+        },
+        how: {
+          auto: 'Automatic',
+          manual: 'Set by hand',
+          off: 'Not linked'
+        },
+        toast: {
+          failed: 'That subject does not exist.'
+        }
+      },
       day: {
         sun: 'Sun',
         mon: 'Mon',
@@ -1768,6 +1799,37 @@
           not_allowed: 'この変更は許可されていません',
           expired: '期限が切れています',
           stale: '作成から 7 日を過ぎています'
+        }
+      },
+      ebwise: {
+        title: 'eBwise 連携',
+        subtitle: 'パソコンが置いた eBwise の資料と締切です。どこにも送信しません。',
+        state: {
+          none: 'フォルダがまだ選ばれていません。上のローカルAI連携でフォルダを選んでください。',
+          noPermission: 'フォルダの許可が切れています。上のローカルAI連携で「フォルダを選び直す」を押してください。',
+          missing: 'フォルダに ebwise-feed.json がまだありません。',
+          invalid: 'feed を読めませんでした（{reason}）。',
+          ok: '{at} に読み込み · 最後の同期 {result}（{when}）',
+          noSync: '記録なし'
+        },
+        loginExpired: 'eBwise のログインが切れています。パソコンで python -m ebwise_sync login を実行してください',
+        mapping: {
+          title: '科目の対応',
+          hint: 'eBwise の科目を BeeBoard のどの科目につなぐか選べます。「自動」はコードと名前から決めます。',
+          empty: 'feed に科目がまだありません。',
+          auto: '自動（{result}）',
+          off: 'つながない',
+          unmatched: '一致なし',
+          ambiguous: '2 科目以上に一致',
+          ambiguousHint: 'BeeBoard の 2 科目以上に当たっています。手で選んでください。'
+        },
+        how: {
+          auto: '自動',
+          manual: '手動',
+          off: 'つながない'
+        },
+        toast: {
+          failed: 'その科目はありません。'
         }
       },
       day: {

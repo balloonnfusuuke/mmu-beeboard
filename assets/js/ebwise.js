@@ -533,5 +533,39 @@
     return run();
   };
 
+  /* eBwise の科目と BeeBoard の科目の対応。feed が無ければ空。 */
+  BB.ebwise.mapping = function () {
+    var empty = { map: {}, how: {}, unmatched: [], ambiguous: [] };
+    if (!feed) return empty;
+    if (!BB.store || typeof BB.store.get !== 'function') return empty;
+    var data = BB.store.get();
+    if (!data) return empty;
+    var manual = data.ebwise && data.ebwise.mapping ? data.ebwise.mapping : {};
+    return core.mapCourses(data.subjects || [], feed.courses || [], manual);
+  };
+
+  /* code の対応を手で決める。'auto' は手動の指定を消す。'' は「つながない」。
+     実在しない科目は受け付けない。 */
+  BB.ebwise.setMapping = function (code, subjectId) {
+    if (typeof code !== 'string' || !code || isUnsafe(code)) return false;
+    if (!BB.store || typeof BB.store.update !== 'function') return false;
+    var value = subjectId === undefined || subjectId === null ? 'auto' : String(subjectId);
+    if (value !== 'auto' && value !== '') {
+      var data = BB.store.get();
+      var exists = (data.subjects || []).some(function (subject) {
+        return subject && subject.id === value;
+      });
+      if (!exists) return false;
+    }
+    BB.store.update(function (state) {
+      state.ebwise = state.ebwise ||
+        { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false };
+      state.ebwise.mapping = state.ebwise.mapping || {};
+      if (value === 'auto') delete state.ebwise.mapping[code];
+      else state.ebwise.mapping[code] = value;
+    });
+    return true;
+  };
+
   start();
 })(typeof window !== 'undefined' ? window : globalThis);
