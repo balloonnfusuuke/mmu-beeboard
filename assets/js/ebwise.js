@@ -303,6 +303,121 @@
     return { start: startDate, end: dayString(end) };
   }
 
+  /* ---------- deadlineOps ---------- */
+
+  var OP_SCHEMA = 'beeboard-op/1';
+  /* feed の kind を BeeBoard の締切の種別に寄せる。 */
+  var KIND_OF = { assignment: 'assignment', quiz: 'testPrep', event: 'other' };
+  /* これより古い締切は候補にしない。 */
+  var OLD_MS = 7 * 86400000;
+
+  /* 'YYYY-MM-DD' を UTC のミリ秒に。実在しない日付は null。 */
+  function dayMs(iso) {
+    var value = String(iso === undefined || iso === null ? '' : iso);
+    var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return null;
+    var date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    if (isNaN(date.getTime())) return null;
+    if (dayString(date) !== value) return null;
+    return date.getTime();
+  }
+
+  /* 同じ締切・同じ日時なら同じ opId。日時が変われば別の opId になる。 */
+  function opIdOf(id, dueDate, dueTime) {
+    return 'ebw-' + String(id).replace(/[^A-Za-z0-9]/g, '-') + '-' + dueDate + 'T' +
+      String(dueTime === undefined || dueTime === null ? '' : dueTime).replace(/:/g, '');
+  }
+
+  function deadlineById(state, id) {
+    var list = state && Array.isArray(state.customDeadlines) ? state.customDeadlines : [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  /* feed の締切から、承認待ちに積む操作を作る。DOM にも保存にも触らない。
+     自動では反映しない。呼ぶ側が 1 件ずつ承認の流れに渡す。 */
+  function deadlineOps(feed, map, state, todayIso) {
+    var ops = [];
+    if (!feed || !Array.isArray(feed.deadlines)) return ops;
+    var mapping = map && typeof map === 'object' ? map : {};
+    var data = state && typeof state === 'object' ? state : {};
+    var term = data.term || {};
+    var range = termRange(term);
+    var today = dayMs(todayIso);
+    var suggested = data.ebwise && data.ebwise.suggested ? data.ebwise.suggested : {};
+    var site = typeof feed.site === 'string' ? feed.site : '';
+
+    for (var i = 0; i < feed.deadlines.length; i++) {
+      var item = feed.deadlines[i];
+      if (!item || typeof item !== 'object') continue;
+      var id = textOf(item.id);
+      var course = textOf(item.course);
+      if (!id || !course) continue;
+      /* 対応する科目が無いものは候補にしない。 */
+      var subjectId = typeof mapping[course] === 'string' ? mapping[course] : '';
+      if (!subjectId) continue;
+      var dueDate = textOf(item.dueDate);
+      if (!dueDate) continue;
+      var dueMs = dayMs(dueDate);
+      if (dueMs === null) continue;
+      if (range.start && range.end && (dueDate < range.start || dueDate > range.end)) continue;
+      if (today !== null && today - dueMs >= OLD_MS) continue;
+      if (item.submission === 'submitted') continue;
+
+      var record = suggested[id];
+      var status = record && typeof record === 'object' ? textOf(record.status) : '';
+      if (status === 'dismissed' || status === 'pending') continue;
+
+      var dueTime = textOf(item.dueTime);
+      var opId = opIdOf(id, dueDate, dueTime);
+      var basis = { termId: term.id };
+
+      if (status === 'imported') {
+        /* 取り込んだ締切がまだ残っていて、日時が変わったときだけ更新する。 */
+        var deadline = deadlineById(data, textOf(record.deadlineId));
+        if (!deadline) continue;
+        if (textOf(record.dueDate) === dueDate && textOf(record.dueTime) === dueTime) continue;
+        ops.push({
+          schema: OP_SCHEMA,
+          opId: opId,
+          type: 'ebwise.deadline.update',
+          basis: basis,
+          args: {
+            ebwiseId: id,
+            deadlineId: deadline.id,
+            expect: { date: textOf(deadline.date) },
+            date: dueDate,
+            time: dueTime
+          }
+        });
+        continue;
+      }
+
+      /* 知らない状態は候補にしない。記録が無いものだけ取り込む。 */
+      if (status) continue;
+
+      ops.push({
+        schema: OP_SCHEMA,
+        opId: opId,
+        type: 'ebwise.deadline.import',
+        basis: basis,
+        args: {
+          ebwiseId: id,
+          subjectId: subjectId,
+          name: textOf(item.name),
+          date: dueDate,
+          time: dueTime,
+          kind: KIND_OF[textOf(item.kind)] || 'other',
+          url: safeUrl(item.url, site),
+          course: course
+        }
+      });
+    }
+    return ops;
+  }
+
   /* ---------- ui ---------- */
 
   var JA_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -410,7 +525,8 @@
     safeUrl: safeUrl,
     mapCourses: mapCourses,
     materialsFor: materialsFor,
-    termRange: termRange
+    termRange: termRange,
+    deadlineOps: deadlineOps
   };
 
   BB.ebwise = {
@@ -542,7 +658,36 @@
     lastSignature = signature;
     feed = result.feed;
     status = result.status;
+    submitDeadlines();
     notify();
+  }
+
+  /* 今日の日付（この PC のローカル）。締切の古さはここから測る。 */
+  function todayIso() {
+    var now = new Date();
+    return now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+  }
+
+  /* feed の締切を承認待ちに積む。自動では反映しない。
+     新しく積まれたときだけ、inbox と同じトーストを 1 回出す。 */
+  function submitDeadlines() {
+    if (!feed || !BB.bridge || typeof BB.bridge.submitInternal !== 'function') return;
+    if (!BB.store || typeof BB.store.get !== 'function') return;
+    var data = BB.store.get();
+    if (!data) return;
+    var manual = data.ebwise && data.ebwise.mapping ? data.ebwise.mapping : {};
+    var map = core.mapCourses(data.subjects || [], feed.courses || [], manual).map;
+    var ops = core.deadlineOps(feed, map, data, todayIso());
+    var added = 0;
+    ops.forEach(function (op) {
+      var outcome = BB.bridge.submitInternal(op);
+      if (outcome && outcome.pending) added += 1;
+    });
+    if (!added) return;
+    if (!BB.ui || typeof BB.ui.toast !== 'function') return;
+    var prefix = BB.i18n && typeof BB.i18n.t === 'function' ? BB.i18n.t('bridge.toast.prefix') : '';
+    var message = BB.i18n && typeof BB.i18n.t === 'function' ? BB.i18n.t('ai.pending.toast') : '';
+    BB.ui.toast(prefix + message);
   }
 
   function notify() {

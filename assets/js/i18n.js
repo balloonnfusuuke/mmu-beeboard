@@ -104,6 +104,13 @@
         approve: 'Approve',
         reject: 'Reject',
         none: '(none)',
+        ebwise: {
+          title: 'eBwise deadline',
+          subject: 'Subject',
+          name: 'Name',
+          when: 'Due',
+          link: 'Link'
+        },
         pause: {
           label: 'Pause changes from the AI',
           hint: 'While paused, the inbox folder is not read. Files stay where they are.',
@@ -893,6 +900,7 @@
         noAssessments: 'No assessments for this filter.',
         dueInWeek: 'Due in the week of {range}',
         custom: '(custom)',
+        ebwise: 'eBwise',
         homework: 'Homework',
         openDetail: 'Open details',
         removeCustom: 'Remove this custom deadline',
@@ -957,6 +965,7 @@
         notFound: 'This deadline no longer exists.',
         notFoundHint: 'It may have been deleted, or it belongs to another term.',
         subject: 'Subject',
+        ebwise: 'eBwise',
         week: 'Week',
         due: 'Due',
         weight: 'Weight',
@@ -1745,6 +1754,13 @@
         approve: '承認',
         reject: '却下',
         none: '（なし）',
+        ebwise: {
+          title: 'eBwise の締切',
+          subject: '科目',
+          name: '名前',
+          when: '日時',
+          link: 'リンク'
+        },
         pause: {
           label: 'AIからの変更を一時停止',
           hint: '停止中は inbox フォルダを読みません。置かれたファイルはそのまま残ります。',
@@ -2518,6 +2534,7 @@
         noAssessments: 'この絞り込みに該当する評価はありません。',
         dueInWeek: '{range} の週が期限',
         custom: '（カスタム）',
+        ebwise: 'eBwise',
         homework: '宿題',
         openDetail: '詳細を開く',
         removeCustom: 'このカスタム締切を削除',
@@ -2582,6 +2599,7 @@
         notFound: 'この締切はもう存在しません。',
         notFoundHint: '削除されたか、別の学期の締切です。',
         subject: '科目',
+        ebwise: 'eBwise',
         week: '週',
         due: '期限',
         weight: '配点',

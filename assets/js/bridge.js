@@ -692,6 +692,181 @@
     };
   }
 
+  /* ---------- eBwise の締切（承認が必要） ---------- */
+
+  /* state.ebwise.suggested を読み書きする。古い保存に無くても作る。 */
+  function suggestedOf(state) {
+    if (!state.ebwise || typeof state.ebwise !== 'object') {
+      state.ebwise = { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false };
+    }
+    if (!state.ebwise.suggested || typeof state.ebwise.suggested !== 'object') {
+      state.ebwise.suggested = {};
+    }
+    return state.ebwise.suggested;
+  }
+
+  function suggestedRecord(state, ebwiseId) {
+    var suggested = state.ebwise && state.ebwise.suggested ? state.ebwise.suggested : {};
+    var record = suggested[ebwiseId];
+    return record && typeof record === 'object' ? record : null;
+  }
+
+  function termStartIso() {
+    var start = BB.date.start();
+    if (!start) return '';
+    return start.getFullYear() + '-' + pad2(start.getMonth() + 1) + '-' + pad2(start.getDate());
+  }
+
+  function termEndIso(state) {
+    var end = termEndOf(state);
+    if (!end) return '';
+    return end.getFullYear() + '-' + pad2(end.getMonth() + 1) + '-' + pad2(end.getDate());
+  }
+
+  function ebwiseMemo(date, time) {
+    return 'eBwise から取り込み（締切 ' + jaDay(date) + (time ? ' ' + time : '') + '）';
+  }
+
+  function ebwiseSummary(verb, name, date, time) {
+    return 'eBwise の締切を' + verb + ': ' + shortText(name) + ' ' + jaDay(date) + (time || '');
+  }
+
+  function validateEbwiseDeadlineImport(state, args) {
+    if (!args || typeof args !== 'object') return bad('invalid_args');
+    if (!hasSubject(state, args.subjectId)) return bad('unknown_subject');
+    var name = typeof args.name === 'string' ? args.name.trim() : '';
+    if (!name || name.length > 200) return bad('invalid_name');
+    if (!isRealDay(args.date)) return bad('invalid_date');
+    if (DEADLINE_KINDS.indexOf(args.kind) < 0) return bad('invalid_kind');
+    var start = termStartIso();
+    var end = termEndIso(state);
+    if (start && end && (args.date < start || args.date > end)) return bad('out_of_term');
+    var record = suggestedRecord(state, args.ebwiseId);
+    if (record && record.status === 'imported') return bad('duplicate');
+    if (typeof args.url !== 'string') return bad('invalid_link');
+    if (args.url !== '' && !/^https:\/\//i.test(args.url)) return bad('invalid_link');
+    var time = typeof args.time === 'string' ? args.time : '';
+    return ok('', ebwiseSummary('追加', name, args.date, time));
+  }
+
+  function applyEbwiseDeadlineImport(state, args) {
+    var date = args.date;
+    var time = typeof args.time === 'string' ? args.time : '';
+    var week = BB.dash.weekOf(BB.date.parse(date));
+    state.customDeadlines = state.customDeadlines || [];
+    var entry = {
+      id: nextId(state, 'customDeadlines', 'cd-'),
+      createdAt: new Date().toISOString(),
+      subjectId: args.subjectId,
+      name: args.name.trim(),
+      week: week,
+      date: date,
+      kind: args.kind,
+      weight: 0,
+      note: '',
+      ebwiseId: args.ebwiseId,
+      source: 'ebwise'
+    };
+    state.customDeadlines.push(entry);
+    var after = clone(entry);
+
+    var steps = [{ op: 'remove', path: 'customDeadlines', id: entry.id, expect: after }];
+
+    var url = typeof args.url === 'string' ? args.url : '';
+    if (url) {
+      var detailKey = 'c:' + entry.id;
+      state.deadlineDetails = state.deadlineDetails || {};
+      var detailBefore = state.deadlineDetails[detailKey] ? clone(state.deadlineDetails[detailKey]) : null;
+      state.deadlineDetails[detailKey] = {
+        links: [{ label: 'eBwise', url: url }],
+        memo: ebwiseMemo(date, time)
+      };
+      steps.push({
+        op: 'put',
+        path: 'deadlineDetails',
+        key: detailKey,
+        expect: clone(state.deadlineDetails[detailKey]),
+        value: detailBefore
+      });
+    }
+
+    /* 取り込んだ記録は undo に含めない。取り消したものを再び候補にしないため。 */
+    suggestedOf(state)[args.ebwiseId] = {
+      status: 'imported',
+      deadlineId: entry.id,
+      dueDate: date,
+      dueTime: time,
+      at: new Date().toISOString()
+    };
+
+    return {
+      after: { ids: [entry.id] },
+      undo: { steps: steps },
+      summaryJa: ebwiseSummary('追加', entry.name, date, time)
+    };
+  }
+
+  function validateEbwiseDeadlineUpdate(state, args) {
+    if (!args || typeof args !== 'object') return bad('invalid_args');
+    var deadline = findById(state.customDeadlines, args.deadlineId);
+    if (!deadline) return bad('not_found');
+    if (args.expect && typeof args.expect === 'object') {
+      var differs = conflictOf(deadline, args.expect);
+      if (differs) return conflict(differs);
+    }
+    if (!isRealDay(args.date)) return bad('invalid_date');
+    var start = termStartIso();
+    var end = termEndIso(state);
+    if (start && end && (args.date < start || args.date > end)) return bad('out_of_term');
+    var time = typeof args.time === 'string' ? args.time : '';
+    return ok('', ebwiseSummary('更新', deadline.name, args.date, time));
+  }
+
+  function applyEbwiseDeadlineUpdate(state, args) {
+    var deadline = findById(state.customDeadlines, args.deadlineId);
+    var before = clone(deadline);
+    var date = args.date;
+    var time = typeof args.time === 'string' ? args.time : '';
+    deadline.date = date;
+    deadline.week = BB.dash.weekOf(BB.date.parse(date));
+    var after = clone(deadline);
+    var steps = [{ op: 'put', path: 'customDeadlines', id: deadline.id, expect: after, value: before }];
+
+    var detailKey = 'c:' + deadline.id;
+    var detailBefore = state.deadlineDetails && state.deadlineDetails[detailKey]
+      ? clone(state.deadlineDetails[detailKey])
+      : null;
+    if (detailBefore) {
+      state.deadlineDetails[detailKey] = {
+        links: Array.isArray(detailBefore.links) ? detailBefore.links : [],
+        memo: ebwiseMemo(date, time)
+      };
+      steps.push({
+        op: 'put',
+        path: 'deadlineDetails',
+        key: detailKey,
+        expect: clone(state.deadlineDetails[detailKey]),
+        value: detailBefore
+      });
+    }
+
+    var record = suggestedOf(state)[args.ebwiseId];
+    if (record && typeof record === 'object') {
+      /* 承認されたので、次は「取り込み済み」として比べる。 */
+      record.status = 'imported';
+      record.deadlineId = deadline.id;
+      record.dueDate = date;
+      record.dueTime = time;
+      record.at = new Date().toISOString();
+    }
+
+    return {
+      after: { ids: [deadline.id] },
+      undo: { steps: steps },
+      summaryJa: ebwiseSummary('更新', deadline.name, date, time)
+    };
+  }
+
   function validateDeadlineDetailSet(state, args) {
     if (!args || typeof args !== 'object') return bad('invalid_args');
     if (typeof args.key !== 'string' || !args.key) return bad('invalid_args');
@@ -1460,6 +1635,17 @@
       policy: 'approval',
       validate: validateAssessmentPatch,
       apply: applyAssessmentPatch
+    },
+    /* eBwise の候補。アプリの中から submitInternal で積むだけで、inbox からは入れない。 */
+    'ebwise.deadline.import': {
+      policy: 'approval',
+      validate: validateEbwiseDeadlineImport,
+      apply: applyEbwiseDeadlineImport
+    },
+    'ebwise.deadline.update': {
+      policy: 'approval',
+      validate: validateEbwiseDeadlineUpdate,
+      apply: applyEbwiseDeadlineUpdate
     }
   };
 
@@ -1538,7 +1724,7 @@
   /* 1 件を、保存直前の最新状態に対して適用する。
      mutate の中から BB.store.update や BB.dash.setDeadlineDetail を呼ばない
      （保存が二重になる）。state を直接書く。 */
-  function applyOp(op) {
+  function applyOp(op, source) {
     var outcome = {
       applied: false,
       pending: false,
@@ -1603,14 +1789,26 @@
           pushResult(bridge, pendingRejected);
           return;
         }
-        bridge.pending.push({
+        var pendingItem = {
           opId: outcome.opId,
           type: type,
           args: clone(args),
           summaryJa: pendingVerdict.summaryJa || '',
           preview: previewOf(state, spec, args),
           receivedAt: new Date().toISOString()
-        });
+        };
+        /* どこから来た候補かは、eBwise のときだけ書く（既存の形は変えない）。 */
+        if (source) pendingItem.source = source;
+        bridge.pending.push(pendingItem);
+        if (source === 'ebwise' && typeof args.ebwiseId === 'string' && args.ebwiseId) {
+          suggestedOf(state)[args.ebwiseId] = {
+            status: 'pending',
+            opId: outcome.opId,
+            dueDate: typeof args.date === 'string' ? args.date : '',
+            dueTime: typeof args.time === 'string' ? args.time : '',
+            at: new Date().toISOString()
+          };
+        }
         pushResult(
           bridge,
           resultEntry(outcome.opId, type, 'pending_approval', '', pendingVerdict.summaryJa, [])
@@ -1647,6 +1845,15 @@
     /* 反映・承認待ち・却下のどれでも、結果をスナップショットに出す。 */
     if (outcome.applied || outcome.pending || outcome.reason) scheduleSnapshot();
     return outcome;
+  }
+
+  /* eBwise の候補を承認待ちに積む。inbox のファイルとは別経路で、
+     'ebwise.' で始まる type だけを受け付ける。自動では反映しない。 */
+  function submitInternal(op) {
+    if (isPaused()) return { skipped: 'paused' };
+    var type = op && typeof op.type === 'string' ? op.type : '';
+    if (type.indexOf('ebwise.') !== 0) return { skipped: 'not_allowed' };
+    return applyOp(op, 'ebwise');
   }
 
   /* 読めなかったファイルの記録。opId が分からないものは null で残す。 */
@@ -1792,6 +1999,21 @@
         bridge,
         resultEntry(item.opId, item.type, 'rejected', 'rejected_by_user', SUMMARY.rejected_by_user, [])
       );
+      /* 却下した eBwise の候補は、もう一度出さない。 */
+      if (String(item.type).indexOf('ebwise.') === 0 && item.args && item.args.ebwiseId) {
+        var dismissed = suggestedOf(state)[item.args.ebwiseId];
+        if (dismissed && typeof dismissed === 'object') {
+          dismissed.status = 'dismissed';
+          dismissed.at = new Date().toISOString();
+        } else {
+          suggestedOf(state)[item.args.ebwiseId] = {
+            status: 'dismissed',
+            dueDate: typeof item.args.date === 'string' ? item.args.date : '',
+            dueTime: typeof item.args.time === 'string' ? item.args.time : '',
+            at: new Date().toISOString()
+          };
+        }
+      }
     });
     scheduleSnapshot();
     return true;
@@ -1815,6 +2037,10 @@
         var at = Date.parse(item && item.receivedAt ? item.receivedAt : '');
         if (isFinite(at) && now - at > EXPIRE_MS) {
           pushResult(target, resultEntry(item.opId, item.type, 'rejected', 'expired', SUMMARY.expired, []));
+          /* 取り下げた eBwise の候補は記録ごと消す。次の feed でまた候補になる。 */
+          if (String(item.type).indexOf('ebwise.') === 0 && item.args && item.args.ebwiseId) {
+            delete suggestedOf(state)[item.args.ebwiseId];
+          }
           return;
         }
         keep.push(item);
@@ -1956,6 +2182,14 @@
 
       if (op.schema !== OP_SCHEMA) {
         recordRejection(opId, type, 'bad_schema');
+        return drop(inbox, entry.name).then(function () {
+          return true;
+        });
+      }
+
+      /* eBwise の候補はアプリの中から積む。inbox のファイルからは入れない。 */
+      if (type.indexOf('ebwise.') === 0) {
+        recordRejection(opId, type, 'not_allowed');
         return drop(inbox, entry.name).then(function () {
           return true;
         });
@@ -2344,7 +2578,9 @@
     reject: reject,
     expire: expire,
     paused: isPaused,
-    setPaused: setPaused
+    setPaused: setPaused,
+    /* eBwise の候補を承認待ちに積む。inbox のファイルからは呼べない。 */
+    submitInternal: submitInternal
   };
 
   /* 古い承認待ちは、フォルダの許可が無くても起動時に片付ける。 */

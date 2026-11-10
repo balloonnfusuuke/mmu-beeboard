@@ -342,3 +342,200 @@ test('materialRowsHtml は changedAt の曜日を Date から出す', () => {
   );
   assert.equal(html.includes('11 Nov (Wed)'), true);
 });
+
+/* ---------- deadlineOps ---------- */
+
+const TODAY = '2026-11-10';
+const TERM = { id: 't1', startDate: '2026-11-09', weeks: 14 };
+
+/* 見本の科目のうち CMA6114 だけを BeeBoard に持っている状態。 */
+function deadlineState(overrides) {
+  return Object.assign(
+    {
+      term: TERM,
+      subjects: [{ id: 'CMA6114', name: 'Artificial Intelligence' }],
+      customDeadlines: [],
+      deadlineDetails: {},
+      ebwise: { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false }
+    },
+    overrides || {}
+  );
+}
+
+function mapFor(state) {
+  return core.mapCourses(state.subjects, sample.courses, {}).map;
+}
+
+test('deadlineOps は見本から import を 2 件だけ返す', () => {
+  const state = deadlineState();
+  const ops = plain(core.deadlineOps(sample, mapFor(state), state, TODAY));
+  assert.equal(ops.length, 2);
+  assert.deepEqual(
+    ops.map((op) => op.args.ebwiseId),
+    ['ebw:quiz:9002', 'ebw:event:9003']
+  );
+  assert.equal(
+    ops.every((op) => op.type === 'ebwise.deadline.import'),
+    true
+  );
+  assert.equal(ops[0].schema, 'beeboard-op/1');
+  assert.deepEqual(ops[0].basis, { termId: 't1' });
+  assert.equal(ops[0].args.subjectId, 'CMA6114');
+  assert.equal(ops[0].args.name, 'Quiz 3');
+  assert.equal(ops[0].args.date, '2026-11-25');
+  assert.equal(ops[0].args.time, '10:00');
+  assert.equal(ops[0].args.kind, 'testPrep');
+  assert.equal(ops[0].args.course, 'CMA6114');
+  assert.equal(ops[0].args.url, 'https://ebwise.mmu.edu.my/mod/quiz/view.php?id=9002');
+  assert.equal(ops[1].args.kind, 'other');
+});
+
+test('deadlineOps は学期外と提出済みを候補にしない', () => {
+  const feed = JSON.parse(JSON.stringify(sample));
+  feed.deadlines.push({
+    id: 'ebw:assign:9101',
+    course: 'CMA6114',
+    kind: 'assignment',
+    name: 'Far away',
+    dueDate: '2027-06-01',
+    dueTime: '23:59',
+    submission: null,
+    url: 'https://ebwise.mmu.edu.my/mod/assign/view.php?id=9101'
+  });
+  feed.deadlines.push({
+    id: 'ebw:assign:9102',
+    course: 'CMA6114',
+    kind: 'assignment',
+    name: 'Already handed in',
+    dueDate: '2026-11-21',
+    dueTime: '23:59',
+    submission: 'submitted',
+    url: 'https://ebwise.mmu.edu.my/mod/assign/view.php?id=9102'
+  });
+  const state = deadlineState();
+  const ops = plain(core.deadlineOps(feed, mapFor(state), state, TODAY));
+  assert.equal(ops.length, 2);
+  assert.deepEqual(
+    ops.map((op) => op.args.ebwiseId),
+    ['ebw:quiz:9002', 'ebw:event:9003']
+  );
+});
+
+test('deadlineOps の opId は同じ入力なら毎回同じ', () => {
+  const state = deadlineState();
+  const map = mapFor(state);
+  const first = plain(core.deadlineOps(sample, map, state, TODAY));
+  const second = plain(core.deadlineOps(sample, map, state, TODAY));
+  assert.deepEqual(
+    first.map((op) => op.opId),
+    second.map((op) => op.opId)
+  );
+  assert.equal(first[0].opId, 'ebw-ebw-quiz-9002-2026-11-25T1000');
+});
+
+test('deadlineOps は dismissed と pending を候補にしない', () => {
+  const state = deadlineState({
+    ebwise: {
+      schema: 1,
+      mapping: {},
+      suggested: {
+        'ebw:quiz:9002': { status: 'dismissed' },
+        'ebw:event:9003': { status: 'pending', opId: 'ebw-ebw-event-9003-2026-11-18T0900' }
+      },
+      seenAt: {},
+      filesLinked: false
+    }
+  });
+  const ops = plain(core.deadlineOps(sample, mapFor(state), state, TODAY));
+  assert.equal(ops.length, 0);
+});
+
+test('deadlineOps は取り込んだ締切の日付が変わったら update を返す', () => {
+  const state = deadlineState({
+    customDeadlines: [
+      { id: 'cd-1', subjectId: 'CMA6114', name: 'Quiz 3', date: '2026-11-25', week: 3, kind: 'testPrep', weight: 0 }
+    ],
+    ebwise: {
+      schema: 1,
+      mapping: {},
+      suggested: {
+        'ebw:quiz:9002': { status: 'imported', deadlineId: 'cd-1', dueDate: '2026-11-25', dueTime: '10:00' }
+      },
+      seenAt: {},
+      filesLinked: false
+    }
+  });
+  const map = mapFor(state);
+
+  /* 日時が変わっていなければ update は出ない。 */
+  const same = plain(core.deadlineOps(sample, map, state, TODAY));
+  assert.equal(
+    same.some((op) => op.args.ebwiseId === 'ebw:quiz:9002'),
+    false
+  );
+
+  const feed = JSON.parse(JSON.stringify(sample));
+  feed.deadlines[1].dueDate = '2026-11-26';
+  feed.deadlines[1].dueTime = '09:00';
+  const ops = plain(core.deadlineOps(feed, map, state, TODAY));
+  const update = ops.find((op) => op.type === 'ebwise.deadline.update');
+  assert.ok(update);
+  assert.equal(update.args.ebwiseId, 'ebw:quiz:9002');
+  assert.equal(update.args.deadlineId, 'cd-1');
+  assert.deepEqual(update.args.expect, { date: '2026-11-25' });
+  assert.equal(update.args.date, '2026-11-26');
+  assert.equal(update.args.time, '09:00');
+  assert.notEqual(update.opId, 'ebw-ebw-quiz-9002-2026-11-25T1000');
+});
+
+test('deadlineOps は取り込んだ締切が消えていれば update を出さない', () => {
+  const state = deadlineState({
+    customDeadlines: [],
+    ebwise: {
+      schema: 1,
+      mapping: {},
+      suggested: {
+        'ebw:quiz:9002': { status: 'imported', deadlineId: 'cd-1', dueDate: '2026-11-25', dueTime: '10:00' }
+      },
+      seenAt: {},
+      filesLinked: false
+    }
+  });
+  const feed = JSON.parse(JSON.stringify(sample));
+  feed.deadlines[1].dueDate = '2026-11-26';
+  const ops = plain(core.deadlineOps(feed, mapFor(state), state, TODAY));
+  assert.equal(
+    ops.some((op) => op.args.ebwiseId === 'ebw:quiz:9002'),
+    false
+  );
+});
+
+test('deadlineOps は 7 日以上前の締切を候補にしない', () => {
+  const feed = JSON.parse(JSON.stringify(sample));
+  feed.deadlines.push({
+    id: 'ebw:event:9201',
+    course: 'CMA6114',
+    kind: 'event',
+    name: 'Exactly a week ago',
+    dueDate: '2026-11-03',
+    dueTime: '09:00',
+    submission: null,
+    url: ''
+  });
+  feed.deadlines.push({
+    id: 'ebw:event:9202',
+    course: 'CMA6114',
+    kind: 'event',
+    name: 'Six days ago',
+    dueDate: '2026-11-04',
+    dueTime: '09:00',
+    submission: null,
+    url: ''
+  });
+  /* 学期の初日より前でも、7 日以内なら候補にする。 */
+  const state = deadlineState({ term: { id: 't1', startDate: '2026-10-01', weeks: 14 } });
+  const ops = plain(core.deadlineOps(feed, mapFor(state), state, TODAY));
+  const ids = ops.map((op) => op.args.ebwiseId);
+  assert.equal(ids.includes('ebw:event:9201'), false);
+  assert.equal(ids.includes('ebw:event:9202'), true);
+});

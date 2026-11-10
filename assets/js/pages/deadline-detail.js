@@ -94,6 +94,10 @@
       '<div class="bb-card p-5">' +
       '<div class="flex flex-wrap items-center gap-2">' + BB.ui.solidChip(found.subject.color, found.subject.id) +
       (found.subject.name ? '<span class="text-body-sm text-muted">' + esc(found.subject.name) + '</span>' : '') +
+      (found.custom && found.custom.source === 'ebwise'
+        ? '<span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' +
+          t('dd.ebwise') + '</span>'
+        : '') +
       '</div>' +
       '<div class="flex flex-wrap gap-x-8 gap-y-3 mt-3 pt-3 border-t border-border-subtle">' +
       metaRow(t('dd.week'), t('common.week', { n: found.week })) +

@@ -279,6 +279,10 @@
               '<a href="' + detailHref + '" class="hover:text-primary transition-colors">' + esc(assessment.name) + '</a>' +
               (marks ? ' ' + marks : '') +
               (item.custom ? ' <span class="text-caption font-semibold text-muted">' + t('dl.custom') + '</span>' : '') +
+              (item.custom && item.custom.source === 'ebwise'
+                ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-primary)">' +
+                  t('dl.ebwise') + '</span>'
+                : '') +
               (item.custom && assessment.customKind
                 ? ' <span class="bb-chip" style="background:var(--bb-surface-sunken);color:var(--bb-text-muted)">' +
                   t('dl.kind.' + assessment.customKind) + '</span>'

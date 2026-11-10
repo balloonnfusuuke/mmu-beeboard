@@ -566,6 +566,46 @@
     );
   }
 
+  /* eBwise の候補は、undo の差分ではなく科目・名前・日時・リンクで見せる。 */
+  function ebwisePendingHtml(item) {
+    var args = item.args || {};
+    var data = state();
+    var subject = null;
+    (data.subjects || []).forEach(function (candidate) {
+      if (candidate.id === args.subjectId) subject = candidate;
+    });
+    var name = typeof args.name === 'string' ? args.name : '';
+    if (!name && args.deadlineId) {
+      (data.customDeadlines || []).forEach(function (entry) {
+        if (entry.id === args.deadlineId) name = entry.name || '';
+      });
+    }
+    var when = [args.date, args.time].filter(Boolean).join(' ');
+    var url = typeof args.url === 'string' ? args.url : '';
+    var rows = [
+      [t('ai.ebwise.subject'), subject ? subject.id + ' ' + subject.name : String(args.course || '')],
+      [t('ai.ebwise.name'), name],
+      [t('ai.ebwise.when'), when],
+      [t('ai.ebwise.link'), url]
+    ].filter(function (row) {
+      return row[1];
+    });
+    if (!rows.length) return '';
+    return (
+      '<dl class="text-body-sm space-y-1">' +
+      rows
+        .map(function (row) {
+          return (
+            '<div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">' +
+            '<dt class="text-caption uppercase tracking-wider text-muted min-w-[5rem]">' + esc(row[0]) + '</dt>' +
+            '<dd class="text-body min-w-0 break-words">' + esc(row[1]) + '</dd></div>'
+          );
+        })
+        .join('') +
+      '</dl>'
+    );
+  }
+
   /* ローカルAI連携。状態・承認待ち・直近の結果・一時停止・フォルダの選び直し。 */
   function aiBridgeSection() {
     var data = state();
@@ -582,9 +622,12 @@
               '<div class="min-w-0">' +
               '<p class="text-body-md font-semibold text-ink break-words">' +
               esc(item.summaryJa || item.type) + '</p>' +
-              '<p class="text-caption text-muted">' + esc(item.type) + ' · ' +
+              '<p class="text-caption text-muted">' +
+              esc(String(item.type).indexOf('ebwise.') === 0 ? t('ai.ebwise.title') : item.type) + ' · ' +
               esc(fmtDate(String(item.receivedAt || '').slice(0, 10))) + '</p></div>' +
-              previewHtml(item.preview) +
+              (String(item.type).indexOf('ebwise.') === 0
+                ? ebwisePendingHtml(item)
+                : previewHtml(item.preview)) +
               '<div class="flex flex-wrap gap-2">' +
               '<button type="button" class="bb-btn bb-btn-primary bb-btn-sm" data-ai-approve="' +
               esc(item.opId) + '">' + t('ai.approve') + '</button>' +
