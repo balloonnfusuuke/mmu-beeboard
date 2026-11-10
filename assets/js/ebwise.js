@@ -303,6 +303,108 @@
     return { start: startDate, end: dayString(end) };
   }
 
+  /* ---------- ui ---------- */
+
+  var JA_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+  var EN_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function escHtml(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function langCode() {
+    return BB.i18n && typeof BB.i18n.lang === 'function' ? BB.i18n.lang() : 'en';
+  }
+
+  /* 辞書があれば訳す。無ければ英語の既定文（node のテストでも同じ形で動く）。 */
+  function label(key, fallback) {
+    if (BB.i18n && typeof BB.i18n.t === 'function') {
+      var text = BB.i18n.t(key);
+      if (typeof text === 'string' && text !== key) return text;
+    }
+    return fallback;
+  }
+
+  /* changedAt は +08:00 のまま書かれている。日付部分をそのまま読み、曜日だけ Date で出す。 */
+  function dayParts(iso) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso === undefined || iso === null ? '' : iso));
+    if (!match) return null;
+    var month = Number(match[2]);
+    var day = Number(match[3]);
+    var date = new Date(Date.UTC(Number(match[1]), month - 1, day));
+    if (isNaN(date.getTime())) return null;
+    return { month: month, day: day, weekday: date.getUTCDay() };
+  }
+
+  function dateLabel(iso) {
+    var parts = dayParts(iso);
+    if (!parts) return '';
+    if (langCode() === 'ja') {
+      return parts.month + '月' + parts.day + '日（' + JA_DAYS[parts.weekday] + '）';
+    }
+    return parts.day + ' ' + EN_MONTHS[parts.month - 1] + ' (' + EN_DAYS[parts.weekday] + ')';
+  }
+
+  /* 資料 1 件ぶんの行。DOM を使わないので、node でも文字列として試せる。
+     opts.site は feed の site。リンクは safeUrl が通ったときだけ出す。 */
+  function materialRowsHtml(items, opts) {
+    var list = Array.isArray(items) ? items : [];
+    var options = opts || {};
+    var site = typeof options.site === 'string' ? options.site : '';
+
+    return list
+      .map(function (item) {
+        if (!item || typeof item !== 'object') return '';
+        var id = typeof item.id === 'string' ? item.id : '';
+        var unread = !!item.unread;
+        var status = item.status === 'updated'
+          ? label('ebwise.material.updated', 'Updated')
+          : label('ebwise.material.new', 'New');
+        var badgeClass = unread ? 'bg-primary text-on-primary' : 'bg-surface-sunken text-muted';
+        var where = [item.section, item.module]
+          .filter(function (part) {
+            return typeof part === 'string' && part !== '';
+          })
+          .join(' › ');
+        var when = dateLabel(item.changedAt);
+        var meta = [where, when]
+          .filter(function (part) {
+            return part !== '';
+          })
+          .join(' · ');
+        var url = safeUrl(item.url, site);
+        var open = url
+          ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
+            'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
+            escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
+          : '';
+        var copy = typeof item.localPath === 'string' && item.localPath !== ''
+          ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
+            'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
+            escHtml(label('ebwise.material.copy', 'Copy path')) + '</button>'
+          : '';
+
+        return (
+          '<div class="flex items-start gap-3 py-2.5 border-b border-border-subtle last:border-0">' +
+          '<span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ' +
+          badgeClass + '">' + escHtml(status) + '</span>' +
+          '<div class="min-w-0 flex-1">' +
+          '<div class="text-body-sm font-semibold text-ink break-words">' + escHtml(item.title) + '</div>' +
+          (meta ? '<div class="text-caption text-muted break-words">' + escHtml(meta) + '</div>' : '') +
+          '</div>' +
+          (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
+          '</div>'
+        );
+      })
+      .join('');
+  }
+
   var core = {
     parseFeed: parseFeed,
     safeUrl: safeUrl,
@@ -311,7 +413,10 @@
     termRange: termRange
   };
 
-  BB.ebwise = { core: core };
+  BB.ebwise = {
+    core: core,
+    ui: { materialRowsHtml: materialRowsHtml }
+  };
 
   /* ---------- loader ---------- */
 
@@ -566,6 +671,65 @@
     });
     return true;
   };
+
+  /* その科目の資料を今まで読んだことにする。unread の基準はこの時刻。 */
+  BB.ebwise.markSeen = function (subjectId) {
+    if (typeof subjectId !== 'string' || !subjectId || isUnsafe(subjectId)) return false;
+    if (!BB.store || typeof BB.store.update !== 'function') return false;
+    BB.store.update(function (state) {
+      state.ebwise = state.ebwise ||
+        { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false };
+      state.ebwise.seenAt = state.ebwise.seenAt || {};
+      state.ebwise.seenAt[subjectId] = new Date().toISOString();
+    });
+    return true;
+  };
+
+  /* ---------- 資料の行の操作 ---------- */
+
+  function toast(message) {
+    if (BB.ui && typeof BB.ui.toast === 'function') BB.ui.toast(message);
+  }
+
+  function materialById(id) {
+    if (!feed || !Array.isArray(feed.materials)) return null;
+    for (var i = 0; i < feed.materials.length; i++) {
+      if (feed.materials[i] && feed.materials[i].id === id) return feed.materials[i];
+    }
+    return null;
+  }
+
+  /* filesRoot と localPath を Windows のパスにつなぐ。 */
+  function fullPathOf(item) {
+    if (!item || typeof item.localPath !== 'string' || !item.localPath) return '';
+    var root = feed && typeof feed.filesRoot === 'string' ? feed.filesRoot : '';
+    return ((root ? root + '\\' : '') + item.localPath).replace(/\//g, '\\');
+  }
+
+  function copyPath(id) {
+    var path = fullPathOf(materialById(id));
+    if (!path) return;
+    var clipboard = global.navigator && global.navigator.clipboard;
+    if (!clipboard || typeof clipboard.writeText !== 'function') {
+      toast(label('ebwise.toast.copyFailed', 'Could not copy the path'));
+      return;
+    }
+    clipboard.writeText(path).then(
+      function () {
+        toast(label('ebwise.toast.copied', 'Path copied'));
+      },
+      function () {
+        toast(label('ebwise.toast.copyFailed', 'Could not copy the path'));
+      }
+    );
+  }
+
+  /* 行のボタンは data 属性で id を渡す。行は描き直されるので document で受ける。 */
+  global.document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest ? event.target.closest('[data-ebwise-copy]') : null;
+    if (!button) return;
+    copyPath(button.getAttribute('data-ebwise-copy'));
+  });
 
   start();
 })(typeof window !== 'undefined' ? window : globalThis);

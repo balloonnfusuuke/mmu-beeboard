@@ -1234,9 +1234,147 @@
     );
   }
 
+  /* ---------- eBwise ---------- */
+
+  /* 科目ごとの未読数。feed が無ければ空。 */
+  function ebwiseUnreadCounts(state) {
+    var counts = {};
+    if (!BB.ebwise || typeof BB.ebwise.feed !== 'function') return counts;
+    var feed = BB.ebwise.feed();
+    if (!feed) return counts;
+    var info = BB.ebwise.mapping();
+    var seenAt = (state.ebwise && state.ebwise.seenAt) || {};
+    state.subjects.forEach(function (subject) {
+      var items = BB.ebwise.core.materialsFor(feed, info.map, subject.id, seenAt[subject.id] || '');
+      var unread = items.filter(function (item) {
+        return item.unread;
+      }).length;
+      if (unread) counts[subject.id] = unread;
+    });
+    return counts;
+  }
+
+  /* 5 件を超えた科目は、押されたときだけ全件にする。 */
+  var ebwiseExpanded = {};
+
+  function ebwiseSubjectBlock(subject, items, unread, site) {
+    var chip = BB.color.chip(subject.color);
+    var expanded = !!ebwiseExpanded[subject.id];
+    var shown = expanded ? items : items.slice(0, 5);
+    var more =
+      items.length > 5
+        ? '<button type="button" data-ebwise-more="' + escHtml(subject.id) +
+          '" class="mt-2 text-caption font-semibold text-primary hover:underline">' +
+          escHtml(expanded ? t('ebwise.dash.less') : t('ebwise.dash.more', { n: items.length })) +
+          '</button>'
+        : '';
+    return (
+      '<div class="bg-surface border border-border rounded-card p-4 shadow-rest">' +
+      '<div class="flex items-center justify-between gap-2 pb-2 border-b border-border-subtle">' +
+      '<div class="flex items-center gap-2 min-w-0">' +
+      '<span class="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold" style="background:' + chip.background +
+      ';color:' + chip.color + ';border:1px solid ' + chip.borderColor + '">' + escHtml(subject.id) + '</span>' +
+      '<span class="text-body-sm font-semibold text-ink truncate">' + escHtml(subject.name) + '</span>' +
+      (unread
+        ? '<span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-on-primary">' +
+          escHtml(t('ebwise.dash.unread', { n: unread })) + '</span>'
+        : '') +
+      '</div>' +
+      '<button type="button" data-ebwise-seen="' + escHtml(subject.id) +
+      '" class="shrink-0 text-caption font-semibold text-primary hover:underline">' +
+      escHtml(t('ebwise.dash.seen')) + '</button>' +
+      '</div>' +
+      BB.ebwise.ui.materialRowsHtml(shown, { site: site }) +
+      more +
+      '</div>'
+    );
+  }
+
+  /* 状態が ok のときだけ科目ごとの一覧を出す。それ以外は 1 行だけ。 */
+  function renderEbwise(state) {
+    var host = $('#ebwise');
+    if (!host) return;
+    if (!BB.ebwise || typeof BB.ebwise.status !== 'function') {
+      host.innerHTML = '';
+      return;
+    }
+
+    var status = BB.ebwise.status();
+    /* 許可の帯は別に出ているので、ここでは重ねない。 */
+    if (status.state === 'no_permission') {
+      host.innerHTML = '';
+      return;
+    }
+    if (status.state !== 'ok') {
+      var line =
+        status.state === 'missing'
+          ? t('ebwise.dash.missing')
+          : status.state === 'invalid'
+            ? t('ebwise.dash.invalid', { reason: status.reason || '' })
+            : t('ebwise.dash.none');
+      host.innerHTML = '<p class="text-body-sm text-muted">' + escHtml(line) + '</p>';
+      return;
+    }
+
+    var feed = BB.ebwise.feed();
+    var info = BB.ebwise.mapping();
+    var seenAt = (state.ebwise && state.ebwise.seenAt) || {};
+    var blocks = [];
+    state.subjects.forEach(function (subject) {
+      var items = BB.ebwise.core.materialsFor(feed, info.map, subject.id, seenAt[subject.id] || '');
+      if (!items.length) return;
+      var unread = items.filter(function (item) {
+        return item.unread;
+      }).length;
+      blocks.push(ebwiseSubjectBlock(subject, items, unread, feed.site));
+    });
+
+    var unmatched = info.unmatched.length
+      ? '<p class="text-caption text-alert">' + escHtml(t('ebwise.dash.unmatched')) +
+        ' <a href="settings.html#ebwise" class="font-semibold text-primary hover:underline">' +
+        escHtml(t('ebwise.dash.settings')) + '</a></p>'
+      : '';
+
+    var head =
+      '<div class="flex items-center justify-between gap-2">' +
+      '<h2 class="text-title-md font-bold text-ink flex items-center gap-2">' +
+      '<span class="material-symbols-outlined text-[20px] text-primary">school</span>' +
+      escHtml(t('ebwise.dash.title')) + '</h2>' +
+      '<a href="settings.html#ebwise" class="text-caption text-muted hover:text-primary">' +
+      escHtml(t('ebwise.dash.settings')) + '</a></div>';
+
+    var body = blocks.length
+      ? '<div class="space-y-3">' + blocks.join('') + '</div>'
+      : '<p class="text-body-sm text-muted">' + escHtml(t('ebwise.dash.empty')) + '</p>';
+
+    host.innerHTML = head + unmatched + body;
+  }
+
+  /* 既読と「もっと見る」。行は描き直されるので、置き換わらない親で受ける。 */
+  function bindEbwise() {
+    var host = $('#ebwise');
+    if (!host || host.getAttribute('data-bound') === '1') return;
+    host.setAttribute('data-bound', '1');
+    host.addEventListener('click', function (event) {
+      var seen = event.target.closest('[data-ebwise-seen]');
+      if (seen) {
+        BB.ebwise.markSeen(seen.getAttribute('data-ebwise-seen'));
+        renderEbwise(BB.store.get());
+        renderTopics(BB.store.get());
+        return;
+      }
+      var more = event.target.closest('[data-ebwise-more]');
+      if (!more) return;
+      var id = more.getAttribute('data-ebwise-more');
+      ebwiseExpanded[id] = !ebwiseExpanded[id];
+      renderEbwise(BB.store.get());
+    });
+  }
+
   function renderTopics(state) {
     var host = $('#topics');
     if (!host) return;
+    var unreadOf = ebwiseUnreadCounts(state);
     if (!state.subjects.length) {
       host.innerHTML =
         '<div class="sm:col-span-2 lg:col-span-4 rounded-card border border-border bg-surface p-5 text-body-sm text-muted">' +
@@ -1248,9 +1386,15 @@
         var chip = BB.color.chip(subject.color);
         return (
           '<a href="simulator.html?subject=' + subject.id + '" class="group bg-surface border border-border hover:border-primary/40 rounded-card p-4 shadow-rest hover:shadow-hover transition-all">' +
-          '<div class="flex items-center justify-between pb-2">' +
+          '<div class="flex items-center justify-between gap-2 pb-2">' +
           '<span class="px-2 py-0.5 rounded text-[11px] font-bold" style="background:' + chip.background + ';color:' + chip.color + ';border:1px solid ' + chip.borderColor + '">' + subject.id + '</span>' +
-          '<span class="text-caption text-muted">' + subject.topics.label + '</span>' +
+          '<span class="flex items-center gap-1.5 min-w-0">' +
+          (unreadOf[subject.id]
+            ? '<span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-on-primary">' +
+              escHtml(t('ebwise.dash.badge', { n: unreadOf[subject.id] })) + '</span>'
+            : '') +
+          '<span class="text-caption text-muted truncate">' + subject.topics.label + '</span>' +
+          '</span>' +
           '</div>' +
           '<div class="text-caption text-muted pt-1 truncate" title="' + escHtml(subject.name) + '">' +
           subjectName(subject) + '</div>' +
@@ -2111,6 +2255,7 @@
     renderWeekSummary(state, now);
     renderClassDetail(next, state, now);
     renderTopics(state);
+    renderEbwise(state);
     renderSummaries(state, now, next);
     renderNotes(state, now);
     renderEventForm(state);
@@ -2795,11 +2940,20 @@
     bindNoteTriggers();
     bindEvents();
     bindWeekNav();
+    bindEbwise();
     /* 他タブの保存は storage イベントで届く。ヘッダーもページ本体も、
        開いているフォームの入力を保ったまま描き直す。 */
     BB.store.subscribe(function () {
       syncOpenForms();
       init();
     });
+    /* feed が変わったら、この 2 か所だけ描き直す。開いているフォームは触らない。 */
+    if (BB.ebwise && typeof BB.ebwise.onChange === 'function') {
+      BB.ebwise.onChange(function () {
+        var state = BB.store.get();
+        renderEbwise(state);
+        renderTopics(state);
+      });
+    }
   }
 })(window);

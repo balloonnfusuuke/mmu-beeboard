@@ -214,8 +214,31 @@
           manual: 'Set by hand',
           off: 'Not linked'
         },
+        material: {
+          new: 'New',
+          updated: 'Updated',
+          open: 'Open in eBwise',
+          copy: 'Copy path'
+        },
+        dash: {
+          aria: 'eBwise materials',
+          title: 'New from eBwise',
+          settings: 'Set up links',
+          missing: 'No eBwise data yet.',
+          none: 'Choose the folder in Settings to read eBwise.',
+          invalid: 'The eBwise feed could not be read ({reason}).',
+          empty: 'No new materials.',
+          unread: '{n} unread',
+          seen: 'Mark as read',
+          more: 'Show all ({n})',
+          less: 'Show less',
+          unmatched: 'Some eBwise courses are not linked.',
+          badge: 'eBwise new {n}'
+        },
         toast: {
-          failed: 'That subject does not exist.'
+          failed: 'That subject does not exist.',
+          copied: 'Path copied',
+          copyFailed: 'Could not copy the path'
         }
       },
       day: {
@@ -1828,8 +1851,31 @@
           manual: '手動',
           off: 'つながない'
         },
+        material: {
+          new: '新規',
+          updated: '更新',
+          open: 'eBwise で開く',
+          copy: '場所をコピー'
+        },
+        dash: {
+          aria: 'eBwise の新着資料',
+          title: 'eBwise の新着資料',
+          settings: '対応を設定',
+          missing: 'eBwise のデータはまだありません',
+          none: '設定でフォルダを選ぶと eBwise を読みます。',
+          invalid: 'eBwise の feed を読めませんでした（{reason}）。',
+          empty: '新しい資料はありません。',
+          unread: '未読 {n}',
+          seen: '既読にする',
+          more: 'もっと見る（{n}）',
+          less: '閉じる',
+          unmatched: '対応していない eBwise の科目があります。設定で対応させてください。',
+          badge: 'eBwise 新着 {n}'
+        },
         toast: {
-          failed: 'その科目はありません。'
+          failed: 'その科目はありません。',
+          copied: '場所をコピーしました',
+          copyFailed: '場所をコピーできませんでした'
         }
       },
       day: {

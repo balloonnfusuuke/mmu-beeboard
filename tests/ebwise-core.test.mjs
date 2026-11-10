@@ -14,13 +14,15 @@ const sampleText = readFileSync(join(here, 'fixtures/ebwise-feed.sample.json'), 
 const sample = JSON.parse(sampleText);
 
 /* URL だけは core が使うので渡す。window は渡さない。 */
-function loadCore() {
+function loadModule() {
   const context = vm.createContext({ URL });
   vm.runInContext(source, context, { filename: 'assets/js/ebwise.js' });
-  return context.BB.ebwise.core;
+  return context.BB.ebwise;
 }
 
-const core = loadCore();
+const ebwise = loadModule();
+const core = ebwise.core;
+const ui = ebwise.ui;
 const courseOf = (code) => sample.courses.find((course) => course.code === code);
 /* vm の context で作られた object は prototype が違うので、比較の前に素の値へ戻す。 */
 const plain = (value) => JSON.parse(JSON.stringify(value));
@@ -273,4 +275,70 @@ test('window が無い context では読み込みを動かさない', () => {
   } else {
     assert.equal(ebwise.feed, undefined);
   }
+});
+
+/* ---------- ui.materialRowsHtml ---------- */
+
+const SITE = 'https://ebwise.mmu.edu.my';
+
+test('materialRowsHtml は title をエスケープする', () => {
+  const html = ui.materialRowsHtml(
+    [{ id: 'ebw:file:1', title: '<script>alert(1)</script>', status: 'new', localPath: '' }],
+    { site: SITE }
+  );
+  assert.equal(html.includes('<script>'), false);
+  assert.equal(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), true);
+});
+
+test('materialRowsHtml は別の origin の url をリンクにしない', () => {
+  const html = ui.materialRowsHtml(
+    [
+      {
+        id: 'ebw:file:1',
+        title: 'Sample Lab 1',
+        status: 'new',
+        url: 'https://labs.example.edu/lab1.pdf',
+        localPath: ''
+      }
+    ],
+    { site: SITE }
+  );
+  assert.equal(html.includes('href='), false);
+  assert.equal(html.includes('labs.example.edu'), false);
+  assert.equal(html.includes('Sample Lab 1'), true);
+});
+
+test('materialRowsHtml は同じ origin の url だけリンクにする', () => {
+  const url = 'https://ebwise.mmu.edu.my/mod/resource/view.php?id=1';
+  const html = ui.materialRowsHtml(
+    [{ id: 'ebw:mod:1', title: 'Slides', status: 'updated', url, localPath: '' }],
+    { site: SITE }
+  );
+  assert.equal(html.includes('href="' + url + '"'), true);
+  assert.equal(html.includes('target="_blank"'), true);
+  assert.equal(html.includes('rel="noopener noreferrer"'), true);
+});
+
+test('materialRowsHtml は localPath が空ならコピーのボタンを出さない', () => {
+  const html = ui.materialRowsHtml(
+    [{ id: 'ebw:file:1', title: 'Lab', status: 'new', localPath: '' }],
+    { site: SITE }
+  );
+  assert.equal(html.includes('data-ebwise-copy'), false);
+});
+
+test('materialRowsHtml は localPath があれば id 付きのコピーのボタンを出す', () => {
+  const html = ui.materialRowsHtml(
+    [{ id: 'ebw:file:1', title: 'Lab', status: 'new', localPath: 'CMA6114/01 Topic 1/lab1.pdf' }],
+    { site: SITE }
+  );
+  assert.equal(html.includes('data-ebwise-copy="ebw:file:1"'), true);
+});
+
+test('materialRowsHtml は changedAt の曜日を Date から出す', () => {
+  const html = ui.materialRowsHtml(
+    [{ id: 'ebw:file:1', title: 'Lab', status: 'new', changedAt: '2026-11-11T10:15:00+08:00', localPath: '' }],
+    { site: SITE }
+  );
+  assert.equal(html.includes('11 Nov (Wed)'), true);
 });
