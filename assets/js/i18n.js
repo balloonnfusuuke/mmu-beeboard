@@ -242,10 +242,32 @@
           unmatched: 'Some eBwise courses are not linked.',
           badge: 'eBwise new {n}'
         },
+        files: {
+          title: 'Materials folder (optional)',
+          hint: 'Link the folder the sync writes files into. Pressing a material name then opens the file from this PC. Nothing is uploaded.',
+          link: 'Link the materials folder',
+          linked: 'The materials folder is linked.',
+          unlink: 'Unlink',
+          done: 'Materials folder linked',
+          unlinked: 'Materials folder unlinked',
+          warnName: 'The folder is not named "files". Check that you picked the right one.',
+          unsupported: 'This browser cannot link a folder.',
+          failed: 'The folder could not be linked.'
+        },
+        reset: {
+          title: 'Rejected deadlines',
+          hint: '{n} rejected eBwise deadline(s) will be offered again.',
+          action: 'Offer rejected deadlines again',
+          confirmTitle: 'Offer rejected deadlines again?',
+          confirmBody: 'Only the rejected eBwise deadlines are cleared. Nothing is added until you approve it.',
+          confirmAction: 'Offer again',
+          done: 'Rejected deadlines will be offered again'
+        },
         toast: {
           failed: 'That subject does not exist.',
           copied: 'Path copied',
-          copyFailed: 'Could not copy the path'
+          copyFailed: 'Could not copy the path',
+          fileMissing: 'Could not find the file'
         }
       },
       day: {
@@ -1372,6 +1394,14 @@
             step2: 'Read each waiting change: what it is now and what it would become.',
             step3: 'Press Approve to apply it, or Reject to drop it.',
             tip: 'Nothing is applied until you approve it. Undo sits next to each applied change.'
+          },
+          f11: {
+            title: 'eBwise materials',
+            body: 'New files and deadlines from eBwise, read from a JSON file on this PC.',
+            step1: 'Run the sync on your PC so it writes ebwise-feed.json into the folder you picked.',
+            step2: 'Open Settings, then eBwise, and link each eBwise course to a BeeBoard subject.',
+            step3: 'Approve the deadlines you want. New materials appear on the dashboard and on each class page.',
+            tip: 'Nothing is uploaded and no eBwise password is stored. Link the materials folder only if you want to open the files from here.'
           }
         },
         mock: {
@@ -1582,6 +1612,20 @@
             a:
               'Turn on Pause changes from the AI in Settings. While paused the inbox folder is not read and ' +
               'files stay where they are, so you can resume later without losing them.',
+          q26: {
+            q: 'What does BeeBoard read from eBwise?',
+            a:
+              'Only a JSON file the sync writes on your PC: course names, new file names and deadlines. ' +
+              'BeeBoard never signs in to eBwise, and the file is read at runtime only — it is never uploaded ' +
+              'and never saved into your browser data.'
+          },
+          q27: {
+            q: 'Can I open the course files from BeeBoard?',
+            a:
+              'Yes, if you link the materials folder in Settings. Pressing a material name opens the file from ' +
+              'this PC. The folder is optional: without it the list still shows what is new, and the link to ' +
+              'eBwise still works.'
+          },
             link: 'Open settings'
           }
         }
@@ -1892,10 +1936,32 @@
           unmatched: '対応していない eBwise の科目があります。設定で対応させてください。',
           badge: 'eBwise 新着 {n}'
         },
+        files: {
+          title: '資料フォルダ（任意）',
+          hint: '同期がファイルを置くフォルダをつなぐと、資料名を押したときにこのパソコンから開けます。どこにも送信しません。',
+          link: '資料フォルダもつなぐ',
+          linked: '資料フォルダがつながっています。',
+          unlink: 'つなぎを外す',
+          done: '資料フォルダをつなぎました',
+          unlinked: '資料フォルダのつなぎを外しました',
+          warnName: 'フォルダ名が "files" ではありません。選んだフォルダが正しいか確認してください。',
+          unsupported: 'このブラウザはフォルダをつなげません。',
+          failed: 'フォルダをつなげませんでした。'
+        },
+        reset: {
+          title: '却下した候補',
+          hint: '却下した eBwise の締切 {n} 件を、もう一度候補に出します。',
+          action: '却下した候補をもう一度出す',
+          confirmTitle: '却下した候補をもう一度出しますか？',
+          confirmBody: '消すのは却下した eBwise の締切の記録だけです。承認するまで何も追加されません。',
+          confirmAction: 'もう一度出す',
+          done: '却下した候補を戻しました'
+        },
         toast: {
           failed: 'その科目はありません。',
           copied: '場所をコピーしました',
-          copyFailed: '場所をコピーできませんでした'
+          copyFailed: '場所をコピーできませんでした',
+          fileMissing: 'ファイルが見つかりません'
         }
       },
       day: {
@@ -2994,6 +3060,14 @@
             step2: '承認待ちを 1 件ずつ、変更前と変更後を見ます。',
             step3: '「承認」で反映、「却下」で取り下げます。',
             tip: '承認するまでデータは変わりません。反映した変更の横には「元に戻す」があります。'
+          },
+          f11: {
+            title: 'eBwise の資料',
+            body: 'eBwise の新着資料と締切を、このパソコンの JSON ファイルから読みます。',
+            step1: 'パソコンで同期を実行し、選んだフォルダに ebwise-feed.json を置きます。',
+            step2: '設定画面の「eBwise 連携」で、eBwise の科目を BeeBoard の科目に対応させます。',
+            step3: '必要な締切だけ承認します。新着資料はダッシュボードと各回のページに出ます。',
+            tip: 'どこにも送信せず、eBwise のパスワードも保存しません。資料フォルダは、ここからファイルを開きたいときだけつなぎます。'
           }
         },
         mock: {
@@ -3180,6 +3254,19 @@
             a:
               '設定画面の「AIからの変更を一時停止」を入れます。停止中は inbox を読まず、ファイルはそのまま' +
               '残るので、あとで解除すれば取り込まれます。',
+          q26: {
+            q: 'eBwise から何を読みますか？',
+            a:
+              'パソコンで動く同期が置いた JSON ファイルだけです。中身は科目名、新着ファイル名、締切です。' +
+              'BeeBoard が eBwise にログインすることはなく、ファイルは実行時に読むだけで、どこにも送信せず、' +
+              'ブラウザの保存データにも入れません。'
+          },
+          q27: {
+            q: 'eBwise の資料は BeeBoard から開けますか？',
+            a:
+              '設定で資料フォルダをつなぐと開けます。資料名を押すと、このパソコンのファイルとして開きます。' +
+              'つながなくても、新着の一覧と eBwise へのリンクはそのまま使えます。'
+          },
             link: '設定を開く'
           }
         }

@@ -767,6 +767,41 @@
     );
   }
 
+  /* 資料フォルダ（任意）。つないでいるときだけ、資料名から開ける。 */
+  function ebwiseFilesHtml() {
+    var linked = typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked();
+    return (
+      '<div class="pt-3 border-t border-border-subtle">' +
+      '<p class="text-body-md font-semibold text-ink mb-1">' + esc(t('ebwise.files.title')) + '</p>' +
+      '<p class="text-caption text-muted mb-2">' + esc(t('ebwise.files.hint')) + '</p>' +
+      (linked
+        ? '<p class="text-body-sm text-ink mb-2">' + esc(t('ebwise.files.linked')) + '</p>' +
+          '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-ebwise-unlink-files>' +
+          esc(t('ebwise.files.unlink')) + '</button>'
+        : '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-ebwise-link-files>' +
+          esc(t('ebwise.files.link')) + '</button>') +
+      '</div>'
+    );
+  }
+
+  /* 却下した候補を戻す。1 件も無ければ出さない。 */
+  function ebwiseResetHtml() {
+    var data = state();
+    var suggested = data.ebwise && data.ebwise.suggested ? data.ebwise.suggested : {};
+    var dismissed = Object.keys(suggested).filter(function (key) {
+      return suggested[key] && suggested[key].status === 'dismissed';
+    });
+    if (!dismissed.length) return '';
+    return (
+      '<div class="pt-3 border-t border-border-subtle">' +
+      '<p class="text-body-md font-semibold text-ink mb-1">' + esc(t('ebwise.reset.title')) + '</p>' +
+      '<p class="text-caption text-muted mb-2">' + esc(t('ebwise.reset.hint', { n: dismissed.length })) + '</p>' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-ebwise-reset-dismissed>' +
+      esc(t('ebwise.reset.action')) + '</button>' +
+      '</div>'
+    );
+  }
+
   /* eBwise の feed と、BeeBoard の科目の対応。 */
   function ebwiseSection() {
     if (!BB.ebwise || typeof BB.ebwise.status !== 'function') return '';
@@ -779,7 +814,10 @@
       '<p class="text-body-md font-semibold text-ink mb-1">' + esc(t('ebwise.mapping.title')) + '</p>' +
       '<p class="text-caption text-muted mb-2">' + esc(t('ebwise.mapping.hint')) + '</p>' +
       ebwiseMappingHtml() +
-      '</div></div>';
+      '</div>' +
+      ebwiseFilesHtml() +
+      ebwiseResetHtml() +
+      '</div>';
     return section('school', esc(t('ebwise.title')), esc(t('ebwise.subtitle')), body, false, 'ebwise');
   }
 
@@ -1014,6 +1052,54 @@
           BB.store.reset();
           window.location.reload();
         });
+    }
+  });
+
+  /* 資料フォルダ。ピッカーも requestPermission も、押されたときだけ出す。 */
+  document.addEventListener('click', function (event) {
+    if (event.target.closest('[data-ebwise-link-files]')) {
+      BB.ebwise.linkFiles().then(function (result) {
+        if (!result || !result.ok) {
+          if (result && result.reason === 'unsupported') BB.ui.toast(t('ebwise.files.unsupported'));
+          else if (result && result.reason === 'failed') BB.ui.toast(t('ebwise.files.failed'));
+          return;
+        }
+        BB.ui.toast(t('ebwise.files.done'));
+        if (result.warn) BB.ui.toast(t('ebwise.files.warnName'));
+        render();
+      });
+      return;
+    }
+
+    if (event.target.closest('[data-ebwise-unlink-files]')) {
+      BB.ebwise.unlinkFiles().then(function () {
+        BB.ui.toast(t('ebwise.files.unlinked'));
+        render();
+      });
+      return;
+    }
+
+    /* 却下した候補を戻す。消すのは dismissed の記録だけ。 */
+    if (event.target.closest('[data-ebwise-reset-dismissed]')) {
+      BB.ui
+        .confirm({
+          title: t('ebwise.reset.confirmTitle'),
+          message: t('ebwise.reset.confirmBody'),
+          confirmLabel: t('ebwise.reset.confirmAction')
+        })
+        .then(function (ok) {
+          if (!ok) return;
+          BB.store.update(function (data) {
+            var suggested = data.ebwise && data.ebwise.suggested ? data.ebwise.suggested : {};
+            Object.keys(suggested).forEach(function (key) {
+              if (suggested[key] && suggested[key].status === 'dismissed') delete suggested[key];
+            });
+          });
+          if (BB.ebwise && typeof BB.ebwise.refresh === 'function') BB.ebwise.refresh();
+          BB.ui.toast(t('ebwise.reset.done'));
+          render();
+        });
+      return;
     }
   });
 

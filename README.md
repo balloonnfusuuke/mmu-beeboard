@@ -179,6 +179,29 @@ BB.bridge.dryRun({
 BB.bridge.status();
 ```
 
+### eBwise feed (local only)
+
+BeeBoard can also show new course materials and deadlines from eBwise, MMU's Moodle. It never
+signs in to eBwise. A separate program on your PC writes `ebwise-feed.json` into the folder you
+already picked, and BeeBoard reads that file at runtime. The format is documented in
+[docs/ebwise-feed.md](docs/ebwise-feed.md).
+
+- **Saved:** only `state.ebwise` — the course mapping, which deadlines you approved or rejected,
+  when you last marked a subject as read, and whether the materials folder is linked.
+- **Not saved:** the feed itself. File names, links and deadlines are never written into
+  `localStorage`, and no course file contents are ever in the feed.
+- **Permission:** the folder is read only while the permission you granted is still valid. The
+  picker and the permission prompt appear only when you press a button.
+- **Nothing leaves this computer.** There is no upload, no account and no API call. A link is
+  only turned into an anchor when it starts with `https://` and shares the feed's origin;
+  anything else is shown as text.
+- **Materials folder (optional):** link the folder the sync writes files into, and pressing a
+  material name opens the file from this PC. Without it the list still shows what is new.
+
+Deadlines from the feed arrive as approval candidates in Settings → Local AI. Nothing is added
+until you approve it, and rejecting one keeps it out of the list until you press
+"Offer rejected deadlines again".
+
 ## First-time setup
 
 The app starts empty — no subjects, no timetable, no marks. On the first visit the dashboard

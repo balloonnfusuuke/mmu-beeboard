@@ -499,6 +499,8 @@
             'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
             escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
           : '';
+        /* 資料フォルダをつないでいるときだけ、資料名を押して開ける。 */
+        var canOpen = options.files === true && typeof item.localPath === 'string' && item.localPath !== '';
         var copy = typeof item.localPath === 'string' && item.localPath !== ''
           ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
             'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
@@ -510,7 +512,12 @@
           '<span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ' +
           badgeClass + '">' + escHtml(status) + '</span>' +
           '<div class="min-w-0 flex-1">' +
-          '<div class="text-body-sm font-semibold text-ink break-words">' + escHtml(item.title) + '</div>' +
+          '<div class="text-body-sm font-semibold text-ink break-words">' +
+          (canOpen
+            ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
+              'class="text-left hover:text-primary hover:underline">' + escHtml(item.title) + '</button>'
+            : escHtml(item.title)) +
+          '</div>' +
           (meta ? '<div class="text-caption text-muted break-words">' + escHtml(meta) + '</div>' : '') +
           '</div>' +
           (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
@@ -830,6 +837,192 @@
     return true;
   };
 
+  /* ---------- 資料フォルダ（任意） ---------- */
+
+  /* snapshot.js は 'mmu-beeboard-handles' を使う。こちらは別の DB にして、
+     あちらのハンドルには触らない。 */
+  var FILES_DB = 'mmu-beeboard-ebwise';
+  var FILES_STORE = 'dirs';
+  var FILES_KEY = 'files-dir';
+
+  function openFilesDb() {
+    return new Promise(function (resolve, reject) {
+      var request = global.indexedDB.open(FILES_DB, 1);
+      request.onupgradeneeded = function () {
+        request.result.createObjectStore(FILES_STORE);
+      };
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+      request.onerror = function () {
+        reject(request.error);
+      };
+    });
+  }
+
+  function readFilesHandle() {
+    if (!global.indexedDB) return Promise.resolve(null);
+    return openFilesDb()
+      .then(function (db) {
+        return new Promise(function (resolve) {
+          var request = db.transaction(FILES_STORE, 'readonly').objectStore(FILES_STORE).get(FILES_KEY);
+          request.onsuccess = function () {
+            resolve(request.result || null);
+          };
+          request.onerror = function () {
+            resolve(null);
+          };
+        });
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function writeFilesHandle(handle) {
+    return openFilesDb()
+      .then(function (db) {
+        return new Promise(function (resolve) {
+          var tx = db.transaction(FILES_STORE, 'readwrite');
+          tx.objectStore(FILES_STORE).put(handle, FILES_KEY);
+          tx.oncomplete = function () {
+            resolve(true);
+          };
+          tx.onerror = function () {
+            resolve(false);
+          };
+        });
+      })
+      .catch(function () {
+        return false;
+      });
+  }
+
+  function clearFilesHandle() {
+    if (!global.indexedDB) return Promise.resolve(false);
+    return openFilesDb()
+      .then(function (db) {
+        return new Promise(function (resolve) {
+          var tx = db.transaction(FILES_STORE, 'readwrite');
+          tx.objectStore(FILES_STORE).delete(FILES_KEY);
+          tx.oncomplete = function () {
+            resolve(true);
+          };
+          tx.onerror = function () {
+            resolve(false);
+          };
+        });
+      })
+      .catch(function () {
+        return false;
+      });
+  }
+
+  function setFilesLinked(value) {
+    if (!BB.store || typeof BB.store.update !== 'function') return;
+    BB.store.update(function (state) {
+      state.ebwise = state.ebwise ||
+        { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false };
+      state.ebwise.filesLinked = !!value;
+    });
+  }
+
+  /* 資料フォルダをつないでいるか。保存値だけを見る。 */
+  BB.ebwise.filesLinked = function () {
+    var data = BB.store && typeof BB.store.get === 'function' ? BB.store.get() : null;
+    return !!(data && data.ebwise && data.ebwise.filesLinked);
+  };
+
+  /* 押されたときだけピッカーを出す。 */
+  BB.ebwise.linkFiles = function () {
+    if (typeof global.showDirectoryPicker !== 'function') {
+      return Promise.resolve({ ok: false, reason: 'unsupported' });
+    }
+    return global
+      .showDirectoryPicker({ id: 'beeboard-ebwise-files', mode: 'read' })
+      .then(function (handle) {
+        return writeFilesHandle(handle).then(function (saved) {
+          if (!saved) return { ok: false, reason: 'failed' };
+          setFilesLinked(true);
+          return { ok: true, name: handle.name || '', warn: handle.name !== 'files' };
+        });
+      })
+      .catch(function (error) {
+        if (error && error.name === 'AbortError') return { ok: false, reason: 'cancelled' };
+        return { ok: false, reason: 'failed' };
+      });
+  };
+
+  /* つなぎを外す。保存したハンドルを消し、filesLinked を false にする。 */
+  BB.ebwise.unlinkFiles = function () {
+    return clearFilesHandle().then(function () {
+      setFilesLinked(false);
+      return true;
+    });
+  };
+
+  /* localPath を '/' で分ける。'..' や空の要素があれば開かない。 */
+  function pathParts(localPath) {
+    if (typeof localPath !== 'string' || !localPath) return null;
+    var parts = localPath.split('/');
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (!part || part === '.' || part === '..' || part.indexOf('\\') >= 0) return null;
+    }
+    return parts;
+  }
+
+  function fileAt(dir, parts) {
+    var current = Promise.resolve(dir);
+    for (var i = 0; i < parts.length - 1; i++) {
+      (function (name) {
+        current = current.then(function (handle) {
+          return handle.getDirectoryHandle(name);
+        });
+      })(parts[i]);
+    }
+    return current.then(function (handle) {
+      return handle.getFileHandle(parts[parts.length - 1]).then(function (fileHandle) {
+        return fileHandle.getFile();
+      });
+    });
+  }
+
+  /* 資料を開く。許可が 'prompt' のときだけ、押されたこの瞬間に尋ねる。 */
+  function openMaterial(id) {
+    var item = materialById(id);
+    if (!item) return Promise.resolve(false);
+    var parts = pathParts(item.localPath);
+    if (!parts) return Promise.resolve(false);
+    return readFilesHandle()
+      .then(function (dir) {
+        if (!dir) return null;
+        return dir.queryPermission({ mode: 'read' }).then(function (permission) {
+          if (permission === 'granted') return dir;
+          if (permission !== 'prompt' || typeof dir.requestPermission !== 'function') return null;
+          return dir.requestPermission({ mode: 'read' }).then(function (next) {
+            return next === 'granted' ? dir : null;
+          });
+        });
+      })
+      .then(function (dir) {
+        if (!dir) return false;
+        return fileAt(dir, parts).then(function (file) {
+          var url = global.URL.createObjectURL(file);
+          global.open(url, '_blank', 'noopener');
+          setTimeout(function () {
+            global.URL.revokeObjectURL(url);
+          }, 60000);
+          return true;
+        });
+      })
+      .catch(function () {
+        return false;
+      });
+  }
+
+  BB.ebwise.openMaterial = openMaterial;
+
   /* ---------- 資料の行の操作 ---------- */
 
   function toast(message) {
@@ -871,6 +1064,13 @@
 
   /* 行のボタンは data 属性で id を渡す。行は描き直されるので document で受ける。 */
   global.document.addEventListener('click', function (event) {
+    var open = event.target && event.target.closest ? event.target.closest('[data-ebwise-open]') : null;
+    if (open) {
+      openMaterial(open.getAttribute('data-ebwise-open')).then(function (opened) {
+        if (!opened) toast(label('ebwise.toast.fileMissing', 'Could not find the file'));
+      });
+      return;
+    }
     var button = event.target && event.target.closest ? event.target.closest('[data-ebwise-copy]') : null;
     if (!button) return;
     copyPath(button.getAttribute('data-ebwise-copy'));

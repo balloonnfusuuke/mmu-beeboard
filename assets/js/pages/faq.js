@@ -26,6 +26,8 @@
     { key: 'q23', cat: 'ai' },
     { key: 'q24', cat: 'ai', href: 'settings.html' },
     { key: 'q25', cat: 'ai', href: 'settings.html' },
+    { key: 'q26', cat: 'ai', href: 'settings.html' },
+    { key: 'q27', cat: 'ai', href: 'settings.html' },
     { key: 'q10', cat: 'grades', href: 'simulator.html' },
     { key: 'q11', cat: 'grades', href: 'simulator.html' },
     { key: 'q12', cat: 'grades' },

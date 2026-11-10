@@ -9,3 +9,7 @@ Thumbs.db
 .env.local
 .env*.local
 .vercel
+# eBwise feed and files (local only, never committed)
+ebwise-feed.json
+ebwise-snapshot.json
+ebwise/

@@ -18,7 +18,7 @@
     { key: 's6', page: 'studylog.html', mock: 'studylog' }
   ];
 
-  var FEATURES = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10'];
+  var FEATURES = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11'];
 
   /* 0..STEPS.length-1 はステップ、STEPS.length は完了パネル。 */
   var step = 0;

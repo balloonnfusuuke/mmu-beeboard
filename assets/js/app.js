@@ -1284,7 +1284,10 @@
       '" class="shrink-0 text-caption font-semibold text-primary hover:underline">' +
       escHtml(t('ebwise.dash.seen')) + '</button>' +
       '</div>' +
-      BB.ebwise.ui.materialRowsHtml(shown, { site: site }) +
+      BB.ebwise.ui.materialRowsHtml(shown, {
+        site: site,
+        files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
+      }) +
       more +
       '</div>'
     );

@@ -539,3 +539,17 @@ test('deadlineOps は 7 日以上前の締切を候補にしない', () => {
   assert.equal(ids.includes('ebw:event:9201'), false);
   assert.equal(ids.includes('ebw:event:9202'), true);
 });
+
+test('materialRowsHtml は資料フォルダをつないだときだけ資料名をボタンにする', () => {
+  const items = [{ id: 'ebw:file:1', title: 'Lab', status: 'new', localPath: 'CMA6114/01 Topic 1/lab1.pdf' }];
+  const linked = ui.materialRowsHtml(items, { site: SITE, files: true });
+  assert.equal(linked.includes('data-ebwise-open="ebw:file:1"'), true);
+  const plainRows = ui.materialRowsHtml(items, { site: SITE });
+  assert.equal(plainRows.includes('data-ebwise-open'), false);
+  /* localPath が無い資料は、つないでいても開くボタンにしない。 */
+  const noPath = ui.materialRowsHtml([{ id: 'ebw:file:2', title: 'No path', status: 'new', localPath: '' }], {
+    site: SITE,
+    files: true
+  });
+  assert.equal(noPath.includes('data-ebwise-open'), false);
+});

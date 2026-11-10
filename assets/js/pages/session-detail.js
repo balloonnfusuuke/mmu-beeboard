@@ -444,7 +444,10 @@
       '<span class="material-symbols-outlined text-[20px] text-primary">school</span>' +
       esc(t('sd.ebwise.title')) + '</h3>' + more + '</div>' +
       '<div class="mt-2">' +
-      BB.ebwise.ui.materialRowsHtml(items.slice(0, 5), { site: feed.site }) +
+      BB.ebwise.ui.materialRowsHtml(items.slice(0, 5), {
+        site: feed.site,
+        files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
+      }) +
       '</div></div>'
     );
   }
