@@ -418,6 +418,37 @@
     );
   }
 
+  /* この科目に結びついた eBwise の資料。対応が無い・0 件なら空文字を返す。 */
+  function ebwiseInner(found) {
+    if (!BB.ebwise || typeof BB.ebwise.mapping !== 'function') return '';
+    var feed = BB.ebwise.feed();
+    if (!feed) return '';
+    var state = BB.store.get();
+    var seenAt = (state.ebwise && state.ebwise.seenAt) || {};
+    var items = BB.ebwise.core.materialsFor(
+      feed,
+      BB.ebwise.mapping().map,
+      found.subject.id,
+      seenAt[found.subject.id] || ''
+    );
+    if (!items.length) return '';
+
+    var more = items.length > 5
+      ? '<a href="index.html#ebwise" class="text-caption font-semibold text-primary hover:underline">' +
+        esc(t('sd.ebwise.all')) + '</a>'
+      : '';
+    return (
+      '<div class="bb-card p-5">' +
+      '<div class="flex items-center justify-between gap-3">' +
+      '<h3 class="text-title-md font-bold text-ink flex items-center gap-2">' +
+      '<span class="material-symbols-outlined text-[20px] text-primary">school</span>' +
+      esc(t('sd.ebwise.title')) + '</h3>' + more + '</div>' +
+      '<div class="mt-2">' +
+      BB.ebwise.ui.materialRowsHtml(items.slice(0, 5), { site: feed.site }) +
+      '</div></div>'
+    );
+  }
+
   function navHtml(found) {
     var prev = shiftHref(found, -1);
     var next = shiftHref(found, 1);
@@ -472,6 +503,7 @@
       statusHtml(found) +
       notesHtml(found) +
       overviewHtml(found) +
+      '<div id="sd-ebwise">' + ebwiseInner(found) + '</div>' +
       navHtml(found);
   }
 
@@ -679,4 +711,14 @@
     BB.ui.refreshChrome();
     render();
   });
+
+  /* feed が変わったら、eBwise のブロックだけ描き直す。出席の記録や入力中のフォームは触らない。 */
+  if (BB.ebwise && typeof BB.ebwise.onChange === 'function') {
+    BB.ebwise.onChange(function () {
+      var host = document.getElementById('sd-ebwise');
+      var found = resolve();
+      if (!host || !found) return;
+      host.innerHTML = ebwiseInner(found);
+    });
+  }
 })();

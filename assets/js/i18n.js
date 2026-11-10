@@ -1117,7 +1117,11 @@
         assessments: 'Assessment',
         openDeadlines: 'Open deadlines',
         prev: 'Previous session',
-        next: 'Next session'
+        next: 'Next session',
+        ebwise: {
+          title: 'New in eBwise',
+          all: 'See all'
+        }
       },
       sl: {
         title: 'Study Log',
@@ -2736,7 +2740,11 @@
         assessments: '評価項目',
         openDeadlines: '締切を開く',
         prev: '前の回',
-        next: '次の回'
+        next: '次の回',
+        ebwise: {
+          title: 'eBwise の新着',
+          all: 'すべて見る'
+        }
       },
       sl: {
         title: '学習ログ',
