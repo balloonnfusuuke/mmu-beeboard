@@ -513,8 +513,8 @@
           reset: 'Reset all data',
           snapshot: 'Export for local AI',
           snapshotHint:
-            'Writes beeboard-snapshot.json to a folder you pick. If the browser cannot write ' +
-            'files, the same file is downloaded instead.',
+            'Writes beeboard-snapshot.json to a folder you pick, and keeps it up to date while ' +
+            'the app is open. If the browser cannot write files, the same file is downloaded.',
           hint: 'All data is stored locally in this browser. Nothing is sent to MMU.'
         },
         install: {
@@ -1960,7 +1960,7 @@
           reset: '全データをリセット',
           snapshot: 'ローカルAI用に書き出す',
           snapshotHint:
-            '選んだフォルダに beeboard-snapshot.json を書き出します。書き込めないブラウザでは同じ名前でダウンロードします。',
+            '選んだフォルダに beeboard-snapshot.json を書き出し、アプリを開いている間は変更のたびに更新します。書き込めないブラウザでは同じ名前でダウンロードします。',
           hint: 'データはすべてこのブラウザ内に保存されます。MMU に送信されることはありません。'
         },
         install: {

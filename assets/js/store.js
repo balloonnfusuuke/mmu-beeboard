@@ -12,6 +12,8 @@
   var cache = null;
   var cacheRaw = null;
   var listeners = [];
+  /* 保存のたびに呼ぶ。listeners は他タブの変更用なので分けて持つ。 */
+  var writeListeners = [];
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -69,6 +71,16 @@
     }
   }
 
+  function notifyWrite() {
+    writeListeners.slice().forEach(function (listener) {
+      try {
+        listener();
+      } catch (e) {
+        /* 1 つの購読者が落ちても他は動かす */
+      }
+    });
+  }
+
   function write(state) {
     var raw = JSON.stringify(state);
     var store = storage();
@@ -76,6 +88,7 @@
     else memory = raw;
     cache = state;
     cacheRaw = raw;
+    notifyWrite();
   }
 
   /* 読めなかった保存状態は、シードで上書きする前に別キーへ退避する。
@@ -132,6 +145,15 @@
       mutate(state);
       write(state);
       return state;
+    },
+    /* このタブで保存するたびに呼ばれる。他タブの変更は subscribe 側で届く。 */
+    onWrite: function (listener) {
+      writeListeners.push(listener);
+      return function () {
+        writeListeners = writeListeners.filter(function (item) {
+          return item !== listener;
+        });
+      };
     },
     /* 他タブの保存を取り込んだときに呼ばれる。ページ側は再描画を登録する。 */
     subscribe: function (listener) {

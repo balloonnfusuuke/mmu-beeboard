@@ -57,24 +57,26 @@ serves the static pages, so http://localhost:3000/ opens the dashboard as usual.
 
 ### Snapshot for a local AI
 
-`assets/js/snapshot.js` turns the saved state into JSON: the term, the subjects with their
-assessments, the custom deadlines and the deadline list. The student profile, marks,
-attendance, notes and personal events are left out.
+`assets/js/snapshot.js` writes the whole saved state to JSON — the student profile, settings,
+subjects with their marks and attendance, notes, study sessions, personal events, the archive,
+custom deadlines and deadline details — plus `exportedAt` and an `assignments` list built with
+the same due rule as the Deadlines page. Nothing is filtered out, and nothing is uploaded: the
+file is only ever written to this computer.
 
 **Settings → Data & Storage → Export for local AI** writes `beeboard-snapshot.json`. Where it
 lands depends on the browser:
 
 - **Chromium browsers (Chrome, Edge)** — a folder picker opens the first time. The file is
-  written into the folder you pick, and that folder is remembered, so the next export
-  overwrites the same file without asking again. If the browser has dropped the permission,
-  it asks for the folder once more.
+  written into the folder you pick, and that folder is remembered. While the permission is
+  still granted, every change in the app rewrites the same file after a short debounce, so it
+  stays current without pressing the button again. The picker never opens on its own: once the
+  permission lapses, automatic writes stop and the next button press asks for the folder again.
 - **Firefox, Safari, and anything without the File System Access API** — the same file is
-  downloaded through the normal save dialog.
+  downloaded through the normal save dialog, and there is no automatic update.
 
 The same JSON is available from the console on any page:
 
 ```js
-await import('/assets/js/snapshot.js');
 console.log(JSON.stringify(BB.snapshot.build(), null, 2));
 ```
 
@@ -170,7 +172,7 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 │   │   ├── theme.js      # applies the saved theme before first paint
 │   │   ├── app.js        # shared UI shell, dashboard logic, calculations
 │   │   ├── subject-form.js   # subject fields shared by the editor and the wizard
-│   │   ├── snapshot.js   # read-only JSON snapshot for a local AI
+│   │   ├── snapshot.js   # JSON snapshot + folder export for a local AI
 │   │   └── pages/        # one file per page
 │   ├── logo.svg
 │   └── favicon.svg

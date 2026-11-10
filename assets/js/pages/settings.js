@@ -346,128 +346,30 @@
 
   /* ---------- snapshot for a local AI ---------- */
 
-  var SNAPSHOT_FILE = 'beeboard-snapshot.json';
-  var HANDLE_DB = 'mmu-beeboard-handles';
-  var HANDLE_STORE = 'dirs';
-  var HANDLE_KEY = 'snapshot-dir';
-
-  /* 一度選んだフォルダを IndexedDB に覚えておく。FileSystemDirectoryHandle は
-     構造化クローンで保存できる。使えない環境では毎回フォルダを選ぶだけになる。 */
-  function openHandleDb() {
-    return new Promise(function (resolve, reject) {
-      var request = indexedDB.open(HANDLE_DB, 1);
-      request.onupgradeneeded = function () {
-        request.result.createObjectStore(HANDLE_STORE);
-      };
-      request.onsuccess = function () {
-        resolve(request.result);
-      };
-      request.onerror = function () {
-        reject(request.error);
-      };
-    });
-  }
-
-  function readDirHandle() {
-    return openHandleDb()
-      .then(function (db) {
-        return new Promise(function (resolve) {
-          var request = db.transaction(HANDLE_STORE, 'readonly').objectStore(HANDLE_STORE).get(HANDLE_KEY);
-          request.onsuccess = function () {
-            resolve(request.result || null);
-          };
-          request.onerror = function () {
-            resolve(null);
-          };
-        });
-      })
-      .catch(function () {
-        return null;
-      });
-  }
-
-  function writeDirHandle(handle) {
-    return openHandleDb()
-      .then(function (db) {
-        return new Promise(function (resolve) {
-          var tx = db.transaction(HANDLE_STORE, 'readwrite');
-          tx.objectStore(HANDLE_STORE).put(handle, HANDLE_KEY);
-          tx.oncomplete = function () {
-            resolve();
-          };
-          tx.onerror = function () {
-            resolve();
-          };
-        });
-      })
-      .catch(function () {});
-  }
-
-  function pickDir() {
-    return window.showDirectoryPicker({ id: 'beeboard-snapshot', mode: 'readwrite' }).then(function (handle) {
-      return writeDirHandle(handle).then(function () {
-        return handle;
-      });
-    });
-  }
-
-  /* 許可が残っているフォルダを返す。無ければ選び直してもらう。 */
-  function snapshotDir() {
-    return readDirHandle().then(function (stored) {
-      if (!stored) return pickDir();
-      return stored
-        .queryPermission({ mode: 'readwrite' })
-        .then(function (permission) {
-          return permission === 'granted' ? stored : pickDir();
-        })
-        .catch(function () {
-          return pickDir();
-        });
-    });
-  }
-
-  function writeSnapshotFile(dir, json) {
-    return dir.getFileHandle(SNAPSHOT_FILE, { create: true }).then(function (handle) {
-      return handle.createWritable().then(function (writable) {
-        return writable
-          .write(json)
-          .then(function () {
-            return writable.close();
-          });
-      });
-    });
-  }
-
-  function downloadSnapshot(json) {
-    var blob = new Blob([json], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
-    link.href = url;
-    link.download = SNAPSHOT_FILE;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  /* File System Access API があればフォルダへ、無ければダウンロードへ落とす。 */
+  /* ボタンからの書き出し。フォルダが選ばれていればそこへ書き、無ければ選ばせ、
+     File System Access API が無いブラウザではダウンロードに落とす。
+     自動の上書きは snapshot.js 側で、許可が残っているフォルダにだけ行う。 */
   function exportSnapshot() {
-    var json = JSON.stringify(BB.snapshot.build(), null, 2);
+    var json = BB.snapshot.toJson();
 
     if (!window.showDirectoryPicker) {
-      downloadSnapshot(json);
+      BB.snapshot.download(json);
       BB.ui.toast(t('settings.toast.snapshotDownloaded'));
       return;
     }
 
-    snapshotDir()
+    BB.snapshot
+      .ensureFolder()
       .then(function (dir) {
-        return writeSnapshotFile(dir, json).then(function () {
-          BB.ui.toast(t('settings.toast.snapshotSaved'));
-        });
+        return BB.snapshot.writeTo(dir, json);
+      })
+      .then(function () {
+        BB.ui.toast(t('settings.toast.snapshotSaved'));
       })
       .catch(function (error) {
         /* 利用者がフォルダ選択を閉じただけなら、何も出さずに終わる。 */
         if (error && error.name === 'AbortError') return;
-        downloadSnapshot(json);
+        BB.snapshot.download(json);
         BB.ui.toast(t('settings.toast.snapshotDownloaded'));
       });
   }
