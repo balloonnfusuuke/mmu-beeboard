@@ -24,6 +24,9 @@ request is Vercel Web Analytics (aggregate page views, no cookies).
   and custom deadlines
 - **Study log** with a timer and manual entry
 - **Dark mode** (light / dark / system) driven entirely by CSS variables
+- **English and Japanese** — the whole interface switches, and the choice is remembered
+- **Local AI bridge** — a folder the app watches for operation files, with approval for
+  anything that touches attendance, marks or deletions
 - **Trimester switching** that archives the previous trimester instead of deleting it
 - **Safe with several tabs open** — every save re-reads the stored state first, and other
   tabs pick up the change through the `storage` event
@@ -33,10 +36,11 @@ request is Vercel Web Analytics (aggregate page views, no cookies).
 
 ### Deliberately not included
 
-There is no interface language switcher, no date-format setting, no configurable timetable
-day bounds and no reminder notifications. Earlier builds exposed those controls but nothing
-in the app honoured them, so they were removed rather than left as dead switches. The UI is
-English and dates are shown as `DD Mon YYYY`.
+There is no date-format setting, no configurable timetable day bounds and no reminder
+notifications. Earlier builds exposed those controls but nothing in the app honoured them,
+so they were removed rather than left as dead switches. The interface is English or
+Japanese, chosen in Settings, and dates follow that choice: `DD Mon YYYY` in English and
+`M月D日(曜)` in Japanese.
 
 ## Quick start
 
@@ -78,6 +82,101 @@ The same JSON is available from the console on any page:
 
 ```js
 console.log(JSON.stringify(BB.snapshot.build(), null, 2));
+```
+
+### Write-back from a local AI
+
+The snapshot is one direction: BeeBoard writes, the AI reads. The bridge adds the other
+direction, still without a server. A local AI drops a small JSON file into the folder you
+already picked, and BeeBoard applies it to `localStorage`.
+
+```
+<the folder you picked>/
+├── beeboard-snapshot.json   # written by BeeBoard, for the AI to read
+├── bridge-status.json       # written by BeeBoard every 20 seconds
+└── inbox/                   # written by the AI, read and emptied by BeeBoard
+    └── 2024-11-12-note.json
+```
+
+`inbox/` is created on the first run. `bridge-status.json` is a heartbeat: `heartbeatAt`,
+whether the tab is visible, which tab holds the import lock, the folder permission, how many
+changes are waiting for approval, the service-worker cache name, and when the snapshot was
+last written (`snapshotWrittenAt`, `snapshotError`).
+
+#### The operation file
+
+```json
+{
+  "schema": "beeboard-op/1",
+  "opId": "note-2024-11-12-001",
+  "type": "note.add",
+  "basis": { "termId": "term-1730000000000" },
+  "args": {
+    "kind": "memo",
+    "text": "Ask about the lab report",
+    "subjectCode": null,
+    "date": "2024-11-12",
+    "due": ""
+  }
+}
+```
+
+- `schema` must be `beeboard-op/1`, the file must be under 64 KB, and the name must end in
+  `.json`. `.tmp` is ignored, so write to a temporary name and rename when it is complete.
+- `opId` is the de-duplication key. The same `opId` is never applied twice, even if the file
+  could not be deleted afterwards.
+- `basis.termId` must match the current trimester. A file written for another trimester is
+  rejected with `term_changed` rather than landing in the wrong term.
+- Files older than 7 days are rejected with `stale`. Files are processed oldest first, so a
+  backlog that built up while the tab was closed is applied in the order it was written.
+- Every result is appended to `aiBridge.results` in the snapshot: `opId`, `type`, `status`
+  (`applied`, `pending_approval` or `rejected`), `reason`, `at`, `summaryJa` and the ids that
+  changed. The last 100 are kept.
+
+#### What applies on its own, and what needs approval
+
+Low-risk changes apply straight away: notes, personal events, study sessions, custom
+deadlines, deadline links and memos, appearance, and undo.
+
+Anything that touches attendance, marks, deletions, class cancellations or subject structure
+is only queued. It appears on the dashboard and in **Settings → Local AI**, with the value
+before and after, and nothing changes until you press **Approve**. Approving re-checks the
+operation against the data as it is at that moment; if you edited the same thing in the
+meantime it stops with a conflict instead of overwriting your edit. **Reject** records
+`rejected_by_user`. Queued changes expire after 14 days.
+
+Every applied change carries an **Undo**, both on the toast that appears right after it and
+in the results list in Settings. **Pause changes from the AI** stops the inbox being read at
+all; files stay where they are until you resume.
+
+#### When the tab is closed
+
+Nothing runs while BeeBoard is closed — there is no background process and no server. Files
+that pile up in `inbox/` are picked up the next time you open the app, oldest first. Only one
+tab imports at a time (`navigator.locks`); the others wait and take over if the holder is
+closed.
+
+If the browser drops the folder permission, usually after a restart, the dashboard shows a
+short band. Pressing it asks for the permission again — the app never opens that prompt on
+its own.
+
+#### Nothing leaves this computer
+
+The bridge reads and writes only inside the folder you picked. There is no upload, no account
+and no API call. The AI side is whatever you run locally; BeeBoard only sees the JSON files
+it leaves behind.
+
+You can check what an operation would do without saving anything:
+
+```js
+BB.bridge.dryRun({
+  schema: 'beeboard-op/1',
+  opId: 'x',
+  type: 'note.add',
+  basis: { termId: BB.store.get().term.id },
+  args: { kind: 'memo', text: 'hi', subjectCode: null, date: '2024-11-12', due: '' }
+});
+BB.bridge.status();
 ```
 
 ## First-time setup
@@ -173,6 +272,7 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 │   │   ├── app.js        # shared UI shell, dashboard logic, calculations
 │   │   ├── subject-form.js   # subject fields shared by the editor and the wizard
 │   │   ├── snapshot.js   # JSON snapshot + folder export for a local AI
+│   │   ├── bridge.js     # reads inbox/*.json and applies it, with approval
 │   │   └── pages/        # one file per page
 │   ├── logo.svg
 │   └── favicon.svg
@@ -186,7 +286,7 @@ The app is a PWA. Chrome and Edge show an install icon in the address bar; Andro
 offers "Add to Home screen". The install button on Settings appears only when the browser
 fires `beforeinstallprompt`, and disappears once the app is installed.
 
-`sw.js` precaches every page and asset into a versioned cache (`mmu-beeboard-v1`) and serves
+`sw.js` precaches every page and asset into a versioned cache (`mmu-beeboard-v<N>`) and serves
 them cache-first, so the app opens offline after the first visit. When you ship a change,
 bump `CACHE` in `sw.js`; the old cache is deleted on activate.
 

@@ -617,6 +617,99 @@
       '</div></div>';
   }
 
+  /* ローカルAIの承認待ち。0 件なら何も出さない。承認そのものは設定画面で行う。 */
+  function renderAiPending(state) {
+    var host = $('#ai-pending');
+    if (!host) return;
+    var bridge = state.aiBridge;
+    var count = bridge && Array.isArray(bridge.pending) ? bridge.pending.length : 0;
+    var html = '';
+    if (count) {
+      html +=
+        '<div class="flex flex-wrap items-center gap-3 rounded-card border border-primary/25 bg-surface-sunken px-4 py-3">' +
+        '<span class="material-symbols-outlined text-[20px] text-primary">smart_toy</span>' +
+        '<p class="text-body-sm text-body flex-1 min-w-0">' + escHtml(t('ai.pending.banner', { n: count })) + '</p>' +
+        '<a class="bb-btn bb-btn-primary bb-btn-sm shrink-0" href="settings.html#ai-bridge">' +
+        escHtml(t('ai.pending.open')) + '</a></div>';
+    }
+    /* ブラウザの再起動などで許可が 'prompt' に戻ったときだけ出す。
+       フォルダを一度も選んでいなければ出さない。押されたときだけ requestPermission を呼ぶ。 */
+    if (aiPermission === 'prompt') {
+      html +=
+        '<div class="flex flex-wrap items-center gap-3 rounded-card border border-border bg-surface-sunken px-4 py-3">' +
+        '<span class="material-symbols-outlined text-[20px] text-muted">folder_off</span>' +
+        '<p class="text-body-sm text-body flex-1 min-w-0">' + escHtml(t('ai.permission.banner')) + '</p>' +
+        '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm shrink-0" data-ai-grant>' +
+        escHtml(t('ai.permission.action')) + '</button></div>';
+    }
+    host.innerHTML = html;
+  }
+
+  /* 選んだフォルダの許可を読むだけ。requestPermission はここでは呼ばない。 */
+  var aiPermission = 'unknown';
+
+  function checkAiPermission() {
+    /* 帯を出す場所があるページだけで読む。 */
+    if (!document.getElementById('ai-pending')) return;
+    if (!BB.snapshot || typeof BB.snapshot.readDirHandle !== 'function') return;
+    BB.snapshot
+      .readDirHandle()
+      .then(function (dir) {
+        if (!dir) {
+          aiPermission = 'none';
+          return null;
+        }
+        if (typeof dir.queryPermission !== 'function') {
+          aiPermission = 'none';
+          return null;
+        }
+        return dir.queryPermission({ mode: 'readwrite' }).then(function (permission) {
+          aiPermission = permission || 'none';
+        });
+      })
+      .catch(function () {
+        aiPermission = 'none';
+      })
+      .then(function () {
+        renderAiPending(BB.store.get());
+      });
+  }
+
+  /* 帯のボタンからだけ呼ぶ。許可が戻ったら、溜まっていた操作をその場で取り込む。 */
+  function grantAiPermission(button) {
+    button.disabled = true;
+    BB.snapshot
+      .readDirHandle()
+      .then(function (dir) {
+        if (!dir || typeof dir.requestPermission !== 'function') return null;
+        return dir.requestPermission({ mode: 'readwrite' });
+      })
+      .then(function (permission) {
+        aiPermission = permission || 'prompt';
+        if (permission === 'granted') {
+          BB.ui.toast(t('ai.permission.granted'));
+          if (BB.bridge && typeof BB.bridge.scan === 'function') BB.bridge.scan();
+        }
+        renderAiPending(BB.store.get());
+      })
+      .catch(function () {
+        button.disabled = false;
+      });
+  }
+
+  document.addEventListener('click', function (event) {
+    var button = event.target.closest ? event.target.closest('[data-ai-grant]') : null;
+    if (!button) return;
+    grantAiPermission(button);
+  });
+
+  /* 許可はタブを離れている間に変わる。戻ってきたら読み直す。 */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') return;
+    checkAiPermission();
+  });
+  window.addEventListener('focus', checkAiPermission);
+
   function renderNextClass(next, now, preview) {
     var host = $('#next-class');
     if (!host) return;
@@ -2009,6 +2102,7 @@
 
     bindHeader(state, now, preview);
     renderSetupCard(state);
+    renderAiPending(state);
     renderPreviewBanner(preview, now);
     renderNextClass(next, now, preview);
     renderLegend(state);
@@ -2252,88 +2346,114 @@
     return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
   }
 
+  /* 出席・休講・振替のルールはこの 4 つだけ。state を受け取って state を書き換え、
+     保存はしない。画面（下の markAttendance など）もブリッジもここを通す。 */
+
   /* 出席は「どのコマを・いつの分か」を明示して記録する。誤タップを取り消せるよう
      記録した log の位置を返し、unmark で同じ位置を消せるようにする。 */
-  function markAttendance(subjectId, status, meta) {
+  function markIn(state, subjectId, status, meta) {
     meta = meta || {};
-    var index = -1;
-    BB.store.update(function (state) {
-      var subject = null;
-      state.subjects.forEach(function (item) {
-        if (item.id === subjectId) subject = item;
-      });
-      if (!subject) return;
-      if (!subject.attendance) subject.attendance = { held: 0, attended: 0, absences: 0, log: [] };
-      subject.attendance.log = subject.attendance.log || [];
-      subject.attendance.held += 1;
-      if (status === 'present') subject.attendance.attended += 1;
-      else subject.attendance.absences += 1;
-      subject.attendance.log.push({
-        id: 'at' + Date.now(),
-        date: meta.date || new Date().toISOString().slice(0, 10),
-        status: status,
-        session: meta.session || '',
-        /* 表示用の文字列は言語に依存する。言語を切り替えても作り直せるよう、
-           元のコマ情報も残しておく。 */
-        sessionMeta: meta.sessionMeta || null
-      });
-      index = subject.attendance.log.length - 1;
+    var subject = null;
+    state.subjects.forEach(function (item) {
+      if (item.id === subjectId) subject = item;
     });
-    return index;
+    if (!subject) return -1;
+    if (!subject.attendance) subject.attendance = { held: 0, attended: 0, absences: 0, log: [] };
+    subject.attendance.log = subject.attendance.log || [];
+    subject.attendance.held += 1;
+    if (status === 'present') subject.attendance.attended += 1;
+    else subject.attendance.absences += 1;
+    subject.attendance.log.push({
+      id: 'at' + Date.now(),
+      date: meta.date || new Date().toISOString().slice(0, 10),
+      status: status,
+      session: meta.session || '',
+      /* 表示用の文字列は言語に依存する。言語を切り替えても作り直せるよう、
+         元のコマ情報も残しておく。 */
+      sessionMeta: meta.sessionMeta || null
+    });
+    return subject.attendance.log.length - 1;
   }
 
   /* 出席記録を 1 件取り消す。held と attended/absences の集計も同時に戻す。 */
-  function unmarkAttendance(subjectId, index) {
-    BB.store.update(function (state) {
-      var subject = null;
-      state.subjects.forEach(function (item) {
-        if (item.id === subjectId) subject = item;
-      });
-      if (!subject || !subject.attendance || !subject.attendance.log) return;
-      var entry = subject.attendance.log[index];
-      if (!entry) return;
-      subject.attendance.log.splice(index, 1);
-      subject.attendance.held = Math.max(0, subject.attendance.held - 1);
-      if (entry.status === 'present') {
-        subject.attendance.attended = Math.max(0, subject.attendance.attended - 1);
-      } else {
-        subject.attendance.absences = Math.max(0, subject.attendance.absences - 1);
-      }
+  function unmarkIn(state, subjectId, index) {
+    var subject = null;
+    state.subjects.forEach(function (item) {
+      if (item.id === subjectId) subject = item;
     });
+    if (!subject || !subject.attendance || !subject.attendance.log) return null;
+    var entry = subject.attendance.log[index];
+    if (!entry) return null;
+    subject.attendance.log.splice(index, 1);
+    subject.attendance.held = Math.max(0, subject.attendance.held - 1);
+    if (entry.status === 'present') {
+      subject.attendance.attended = Math.max(0, subject.attendance.attended - 1);
+    } else {
+      subject.attendance.absences = Math.max(0, subject.attendance.absences - 1);
+    }
+    return entry;
   }
 
   /* 休講・振替は定例コマの定義を書き換えず、sessionOverrides に 1 件だけ持つ。
      同じ科目・コマ・日付に二重登録しないよう、既存があれば上書きする。 */
+  function setOverrideIn(state, subjectId, sessionIndex, date, kind, target) {
+    state.sessionOverrides = state.sessionOverrides || [];
+    var existing = null;
+    state.sessionOverrides.forEach(function (entry) {
+      if (entry.subjectId === subjectId && entry.sessionIndex === sessionIndex && entry.date === date) {
+        existing = entry;
+      }
+    });
+    if (existing) {
+      existing.kind = kind;
+      existing.target = target || null;
+      return existing;
+    }
+    var created = {
+      id: 'so' + Date.now(),
+      subjectId: subjectId,
+      sessionIndex: sessionIndex,
+      date: date,
+      kind: kind,
+      target: target || null
+    };
+    state.sessionOverrides.push(created);
+    return created;
+  }
+
+  function removeOverrideIn(state, id) {
+    var removed = null;
+    state.sessionOverrides = (state.sessionOverrides || []).filter(function (entry) {
+      if (entry.id !== id) return true;
+      removed = entry;
+      return false;
+    });
+    return removed;
+  }
+
+  function markAttendance(subjectId, status, meta) {
+    var index = -1;
+    BB.store.update(function (state) {
+      index = markIn(state, subjectId, status, meta);
+    });
+    return index;
+  }
+
+  function unmarkAttendance(subjectId, index) {
+    BB.store.update(function (state) {
+      unmarkIn(state, subjectId, index);
+    });
+  }
+
   function setOverride(subjectId, sessionIndex, date, kind, target) {
     BB.store.update(function (state) {
-      state.sessionOverrides = state.sessionOverrides || [];
-      var existing = null;
-      state.sessionOverrides.forEach(function (entry) {
-        if (entry.subjectId === subjectId && entry.sessionIndex === sessionIndex && entry.date === date) {
-          existing = entry;
-        }
-      });
-      if (existing) {
-        existing.kind = kind;
-        existing.target = target || null;
-        return;
-      }
-      state.sessionOverrides.push({
-        id: 'so' + Date.now(),
-        subjectId: subjectId,
-        sessionIndex: sessionIndex,
-        date: date,
-        kind: kind,
-        target: target || null
-      });
+      setOverrideIn(state, subjectId, sessionIndex, date, kind, target);
     });
   }
 
   function removeOverride(id) {
     BB.store.update(function (state) {
-      state.sessionOverrides = (state.sessionOverrides || []).filter(function (entry) {
-        return entry.id !== id;
-      });
+      removeOverrideIn(state, id);
     });
   }
 
@@ -2426,20 +2546,58 @@
     global.location.reload();
   }
 
+  /* 押されたら待機中の版を有効化し、確実に読み直す。controllerchange が来ない
+     ブラウザもあるため、worker の状態遷移と時間でも拾う。どれも起きなければ登録を
+     捨てて読み直す。待機中の版が残ったまま固まると、再読み込みでも直らないため。 */
   function applyUpdate() {
-    var waiting = updateRegistration && updateRegistration.waiting;
+    var registration = updateRegistration;
+    var waiting = registration && registration.waiting;
+    updateRequested = true;
+
     /* waiting が既に有効化済みなら、読み直すだけで新しい版になる。 */
     if (!waiting) {
       reloadForUpdate();
       return;
     }
-    updateRequested = true;
+
+    var settled = false;
+
+    function activated() {
+      if (settled) return;
+      settled = true;
+      reloadForUpdate();
+    }
+
+    /* 有効化できなかった。登録を捨てれば、次の読み込みはネットワークから来る。
+       オフラインで捨てると次に開けなくなるので、そのときは読み直すだけにする。 */
+    function recover() {
+      if (settled) return;
+      settled = true;
+      if (registration.unregister && global.navigator.onLine !== false) {
+        registration.unregister().then(reloadForUpdate, reloadForUpdate);
+        return;
+      }
+      reloadForUpdate();
+    }
+
+    waiting.addEventListener('statechange', function () {
+      if (waiting.state === 'activated') activated();
+      else if (waiting.state === 'redundant') recover();
+    });
+
     try {
       waiting.postMessage({ type: 'SKIP_WAITING' });
     } catch (e) {
-      /* 送れない状態（既に redundant など）なら、読み直すだけにする。 */
-      reloadForUpdate();
+      /* 送れない状態（既に redundant など）。 */
+      recover();
+      return;
     }
+
+    global.setTimeout(function () {
+      if (settled) return;
+      if (waiting.state === 'activated') activated();
+      else recover();
+    }, 3000);
   }
 
   function showUpdateBanner() {
@@ -2499,6 +2657,22 @@
     });
   }
 
+  /* 開きっぱなしのタブやインストール済みアプリは、読み込み時にしか新しい版を探さない。
+     表示に戻ったときと 30 分ごとにも探し、見つかればバナーを出す。 */
+  var UPDATE_CHECK_MS = 30 * 60 * 1000;
+  var updateCheckedAt = 0;
+
+  function checkForUpdate() {
+    if (!updateRegistration || !updateRegistration.update) return;
+    /* タブを何度も切り替えたときに連続で問い合わせない。 */
+    var now = Date.now();
+    if (now - updateCheckedAt < 60 * 1000) return;
+    updateCheckedAt = now;
+    updateRegistration.update().catch(function () {
+      /* オフラインなどで確認できなくても、今の版のまま動かす。 */
+    });
+  }
+
   /* Service Worker は全ページ共通のこのファイルから 1 回だけ登録する。
      各ページに登録コードを置くと、ページごとに重複して持つことになる。 */
   if (global.navigator && 'serviceWorker' in global.navigator) {
@@ -2509,8 +2683,14 @@
 
     global.addEventListener('load', function () {
       global.navigator.serviceWorker
-        .register('./sw.js')
-        .then(watchRegistration)
+        .register('./sw.js', { updateViaCache: 'none' })
+        .then(function (registration) {
+          watchRegistration(registration);
+          global.setInterval(checkForUpdate, UPDATE_CHECK_MS);
+          document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') checkForUpdate();
+          });
+        })
         .catch(function () {
           /* 登録できなくてもアプリは動く。オフライン対応だけが効かない。 */
         });
@@ -2536,7 +2716,12 @@
     mark: markAttendance,
     unmark: unmarkAttendance,
     setOverride: setOverride,
-    removeOverride: removeOverride
+    removeOverride: removeOverride,
+    /* state を受け取る純粋な版。bridge.js は保存を自分で行うのでこちらを使う。 */
+    markIn: markIn,
+    unmarkIn: unmarkIn,
+    setOverrideIn: setOverrideIn,
+    removeOverrideIn: removeOverrideIn
   };
 
   BB.install = install;
@@ -2605,6 +2790,7 @@
 
   if (typeof document !== 'undefined' && document.body && document.body.dataset.page === 'dashboard') {
     init();
+    checkAiPermission();
     bindNotes();
     bindNoteTriggers();
     bindEvents();

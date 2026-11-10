@@ -9,7 +9,7 @@
   var tn = BB.i18n.tn;
 
   /* カテゴリの並び順。キーは辞書の faq.categories.* と一致させる。 */
-  var CATEGORIES = ['start', 'data', 'grades', 'attendance', 'install', 'trouble'];
+  var CATEGORIES = ['start', 'data', 'ai', 'grades', 'attendance', 'install', 'trouble'];
 
   /* 質問の並び順と、回答から張るリンク先。文言は辞書側が持つ。 */
   var ITEMS = [
@@ -22,6 +22,10 @@
     { key: 'q5', cat: 'data', href: 'settings.html' },
     { key: 'q6', cat: 'data' },
     { key: 'q19', cat: 'data', href: 'settings.html' },
+    { key: 'q22', cat: 'ai', href: 'settings.html' },
+    { key: 'q23', cat: 'ai' },
+    { key: 'q24', cat: 'ai', href: 'settings.html' },
+    { key: 'q25', cat: 'ai', href: 'settings.html' },
     { key: 'q10', cat: 'grades', href: 'simulator.html' },
     { key: 'q11', cat: 'grades', href: 'simulator.html' },
     { key: 'q12', cat: 'grades' },

@@ -96,6 +96,97 @@
         action: 'Update',
         dismiss: 'Dismiss'
       },
+      ai: {
+        title: 'Local AI',
+        subtitle: 'Changes the local AI asked for. Nothing is applied until you approve it.',
+        pendingTitle: 'Waiting for approval',
+        empty: 'Nothing is waiting for approval.',
+        approve: 'Approve',
+        reject: 'Reject',
+        none: '(none)',
+        pause: {
+          label: 'Pause changes from the AI',
+          hint: 'While paused, the inbox folder is not read. Files stay where they are.',
+          notice: 'Paused. Nothing is read from the inbox.'
+        },
+        pending: {
+          banner: '{n} change(s) from the local AI are waiting for approval.',
+          open: 'Review',
+          toast: 'Waiting for approval. Open Settings to review it.'
+        },
+        permission: {
+          banner: 'To pick up changes from the local AI, press here to restore access to the folder.',
+          action: 'Restore access',
+          granted: 'Folder access restored'
+        },
+        status: {
+          loading: 'Reading the folder status…',
+          folder: 'Folder',
+          granted: 'Access granted',
+          prompt: 'Access needs restoring',
+          denied: 'Access denied',
+          noFolder: 'No folder chosen',
+          holder: 'Importing',
+          holderYes: 'This tab',
+          holderNo: 'Another tab',
+          lastImport: 'Last import',
+          statusFile: 'bridge-status.json written',
+          snapshot: 'Snapshot written',
+          snapshotPermission: 'folder access is missing',
+          snapshotFailed: 'write failed ({reason})',
+          never: 'Not yet',
+          repick: 'Choose the folder again',
+          repicked: 'Folder updated'
+        },
+        results: {
+          title: 'Recent results',
+          empty: 'No results yet.',
+          applied: 'Applied',
+          pending: 'Waiting',
+          rejected: 'Rejected',
+          undo: 'Undo',
+          undone: 'Undone'
+        },
+        toast: {
+          approved: 'Approved',
+          rejected: 'Rejected',
+          paused: 'Paused',
+          resumed: 'Resumed',
+          notApplied: 'Not applied: {reason}'
+        },
+        reason: {
+          conflict: 'the value changed on screen',
+          not_found: 'the target no longer exists',
+          not_supported: 'this operation is not supported',
+          duplicate: 'the same session is already recorded',
+          date_mismatch: 'the date does not match the session day',
+          out_of_term: 'the date is outside the term',
+          invalid_args: 'the operation is malformed',
+          invalid_date: 'the date is invalid',
+          invalid_time: 'the time is invalid',
+          invalid_kind: 'the kind is invalid',
+          invalid_status: 'the status is invalid',
+          invalid_session: 'the session does not exist',
+          invalid_assessment: 'the assessment does not exist',
+          invalid_score: 'the score is invalid',
+          invalid_target: 'the transfer target is invalid',
+          invalid_url: 'the URL must start with https://',
+          invalid_week: 'the week is invalid',
+          invalid_weight: 'the weighting is invalid',
+          invalid_max: 'the maximum must be greater than 0',
+          invalid_name: 'the name is required',
+          invalid_weekday: 'the weekday is invalid',
+          invalid_type: 'the type is invalid',
+          invalid_cgpa: 'the CGPA target must be 0–4',
+          invalid_threshold: 'the attendance threshold must be 1–100',
+          invalid_study_target: 'the weekly study target must be 0–80',
+          unknown_subject: 'the subject does not exist',
+          unknown_deadline: 'the deadline does not exist',
+          not_allowed: 'this change is not allowed',
+          expired: 'it expired',
+          stale: 'the file is more than 7 days old'
+        }
+      },
       day: {
         sun: 'Sun',
         mon: 'Mon',
@@ -1204,8 +1295,16 @@
             body: 'BeeBoard can be installed like an app and opened without a connection.',
             step1: 'Open Settings and press Install app when the button appears.',
             step2: 'On a phone, use Add to home screen from the browser menu.',
-            step3: 'After an update, reload twice so the new version is picked up.',
-            tip: 'The first reload downloads the new version; the second one shows it.'
+            step3: 'When a new version is ready, a banner appears at the bottom. Press Update to switch to it.',
+            tip: 'The banner appears on its own. If it does not, close the app and open it again.'
+          },
+          f10: {
+            title: 'Local AI',
+            body: 'Changes a local AI asked for, and how to approve, undo or pause them.',
+            step1: 'Open Settings and scroll to Local AI.',
+            step2: 'Read each waiting change: what it is now and what it would become.',
+            step3: 'Press Approve to apply it, or Reject to drop it.',
+            tip: 'Nothing is applied until you approve it. Undo sits next to each applied change.'
           }
         },
         mock: {
@@ -1247,6 +1346,7 @@
         categories: {
           start: 'Getting started',
           data: 'Data and privacy',
+          ai: 'Local AI',
           grades: 'Grades',
           attendance: 'Attendance',
           install: 'Install and updates',
@@ -1307,8 +1407,8 @@
           q9: {
             q: 'The update does not show up. What now?',
             a:
-              'Reload twice. The first reload downloads the new version in the background, and the second one ' +
-              'shows it. If it still looks old, close the installed app and open it again.'
+              'A banner appears at the bottom of the screen when a new version is ready. Press Update on it. ' +
+              'If no banner appears, close the installed app and open it again.'
           },
           q10: {
             q: 'Why does the simulator say undetermined?',
@@ -1388,6 +1488,34 @@
             a:
               'Reload once, then reload again to pick up the latest version. If it persists, open the browser ' +
               'console and note any error message before reporting it.'
+          },
+          q22: {
+            q: 'Where do I see changes from the local AI?',
+            a:
+              'Open Settings and scroll to Local AI. The dashboard shows a short banner while something is ' +
+              'waiting, and the same section lists the last 20 results with the reason for each rejection.',
+            link: 'Open settings'
+          },
+          q23: {
+            q: 'What is the difference between approving and rejecting?',
+            a:
+              'Approving checks the change again against the current data and then applies it. Rejecting drops ' +
+              'it and records why. Either way the operation file leaves the inbox.'
+          },
+          q24: {
+            q: 'How do I undo a change the local AI made?',
+            a:
+              'Press Undo next to the change in Settings, or on the toast that appears right after it is ' +
+              'applied. If you changed the same value on screen in the meantime, the undo stops with a conflict ' +
+              'instead of overwriting your edit.',
+            link: 'Open settings'
+          },
+          q25: {
+            q: 'How do I stop the local AI from changing anything?',
+            a:
+              'Turn on Pause changes from the AI in Settings. While paused the inbox folder is not read and ' +
+              'files stay where they are, so you can resume later without losing them.',
+            link: 'Open settings'
           }
         }
       },
@@ -1550,6 +1678,97 @@
         available: '新しいバージョンがあります',
         action: '更新',
         dismiss: '閉じる'
+      },
+      ai: {
+        title: 'ローカルAI連携',
+        subtitle: 'ローカルAIからの変更依頼です。承認するまでデータは変わりません。',
+        pendingTitle: '承認待ち',
+        empty: '承認待ちはありません。',
+        approve: '承認',
+        reject: '却下',
+        none: '（なし）',
+        pause: {
+          label: 'AIからの変更を一時停止',
+          hint: '停止中は inbox フォルダを読みません。置かれたファイルはそのまま残ります。',
+          notice: '一時停止中です。inbox は読んでいません。'
+        },
+        pending: {
+          banner: 'ローカルAIからの変更が {n} 件、承認待ちです。',
+          open: '確認する',
+          toast: '承認待ちです。設定画面で確認してください。'
+        },
+        permission: {
+          banner: 'ローカルAIの変更を取り込むには、ここを押してフォルダの許可を戻してください。',
+          action: '許可を戻す',
+          granted: 'フォルダの許可を戻しました'
+        },
+        status: {
+          loading: 'フォルダの状態を読んでいます…',
+          folder: 'フォルダ',
+          granted: '許可あり',
+          prompt: '許可を戻す必要があります',
+          denied: '拒否されています',
+          noFolder: 'フォルダ未選択',
+          holder: '取り込み',
+          holderYes: 'このタブ',
+          holderNo: '別のタブ',
+          lastImport: '最後に取り込んだ時刻',
+          statusFile: 'bridge-status.json を書いた時刻',
+          snapshot: 'スナップショットの書き出し',
+          snapshotPermission: 'フォルダの許可がありません',
+          snapshotFailed: '書き込みに失敗（{reason}）',
+          never: 'まだありません',
+          repick: 'フォルダを選び直す',
+          repicked: 'フォルダを選び直しました'
+        },
+        results: {
+          title: '直近の結果',
+          empty: 'まだ結果はありません。',
+          applied: '反映',
+          pending: '承認待ち',
+          rejected: '却下',
+          undo: '元に戻す',
+          undone: '元に戻しました'
+        },
+        toast: {
+          approved: '承認しました',
+          rejected: '却下しました',
+          paused: '一時停止しました',
+          resumed: '再開しました',
+          notApplied: '反映しませんでした: {reason}'
+        },
+        reason: {
+          conflict: '画面の値が変わっています',
+          not_found: '対象が見つかりません',
+          not_supported: 'この操作には対応していません',
+          duplicate: '同じ回の記録がすでにあります',
+          date_mismatch: 'そのコマの曜日と日付が合いません',
+          out_of_term: '学期の範囲外の日付です',
+          invalid_args: '操作の内容が不正です',
+          invalid_date: '日付が不正です',
+          invalid_time: '時刻が不正です',
+          invalid_kind: '種別が不正です',
+          invalid_status: '出席の種別が不正です',
+          invalid_session: 'コマが見つかりません',
+          invalid_assessment: '評価項目が見つかりません',
+          invalid_score: '点数が不正です',
+          invalid_target: '振替先が不正です',
+          invalid_url: 'URL は https:// で始まる必要があります',
+          invalid_week: '週が不正です',
+          invalid_weight: '配点が不正です',
+          invalid_max: '満点は 0 より大きい値にしてください',
+          invalid_name: '名前を入力してください',
+          invalid_weekday: '曜日が不正です',
+          invalid_type: '種別が不正です',
+          invalid_cgpa: 'CGPA 目標は 0〜4 です',
+          invalid_threshold: '出席しきい値は 1〜100 です',
+          invalid_study_target: '週間学習目標は 0〜80 時間です',
+          unknown_subject: '科目が見つかりません',
+          unknown_deadline: '締切が見つかりません',
+          not_allowed: 'この変更は許可されていません',
+          expired: '期限が切れています',
+          stale: '作成から 7 日を過ぎています'
+        }
       },
       day: {
         sun: '日',
@@ -2631,8 +2850,16 @@
             body: 'BeeBoard はアプリのようにインストールでき、通信なしでも開けます。',
             step1: '設定を開き、ボタンが出ていれば「アプリをインストール」を押します。',
             step2: 'スマホではブラウザのメニューから「ホーム画面に追加」を使います。',
-            step3: '更新後は2回再読み込みすると新しい版が反映されます。',
-            tip: '1回目の再読み込みで新しい版を取得し、2回目で表示が切り替わります。'
+            step3: '新しい版があると画面の下にバナーが出ます。「更新」を押すと切り替わります。',
+            tip: 'バナーは自動で出ます。出ないときはアプリを閉じて開き直してください。'
+          },
+          f10: {
+            title: 'ローカルAI連携',
+            body: 'ローカルAIからの変更依頼と、承認・取り消し・一時停止のしかた。',
+            step1: '設定画面を開き、「ローカルAI連携」まで進みます。',
+            step2: '承認待ちを 1 件ずつ、変更前と変更後を見ます。',
+            step3: '「承認」で反映、「却下」で取り下げます。',
+            tip: '承認するまでデータは変わりません。反映した変更の横には「元に戻す」があります。'
           }
         },
         mock: {
@@ -2674,6 +2901,7 @@
         categories: {
           start: 'はじめる',
           data: 'データとプライバシー',
+          ai: 'ローカルAI',
           grades: '成績',
           attendance: '出席',
           install: 'インストールと更新',
@@ -2723,8 +2951,8 @@
           q9: {
             q: '更新が反映されません。',
             a:
-              '2回再読み込みしてください。1回目で新しい版を裏で取得し、2回目で表示が切り替わります。それでも古いままなら、' +
-              'インストールしたアプリを閉じて開き直します。'
+              '新しい版があると画面の下にバナーが出ます。その「更新」を押してください。' +
+              'バナーが出ないときは、インストールしたアプリを閉じて開き直します。'
           },
           q10: {
             q: 'シミュレーターが「未確定」と出るのはなぜですか？',
@@ -2792,6 +3020,33 @@
             a:
               'まず再読み込みし、もう一度再読み込みして最新版を反映してください。それでも直らないときは、' +
               'ブラウザのコンソールにエラーが出ていないか確認してから報告してください。'
+          },
+          q22: {
+            q: 'ローカルAIからの変更はどこで確認しますか？',
+            a:
+              '設定画面の「ローカルAI連携」を開きます。承認待ちがあるとダッシュボードにも短い帯が出ます。' +
+              '同じ場所に直近 20 件の結果と、却下した理由も並びます。',
+            link: '設定を開く'
+          },
+          q23: {
+            q: '承認と却下は何が違いますか？',
+            a:
+              '承認すると、その時点のデータでもう一度検査してから反映します。却下すると何も変えず、理由を' +
+              '記録します。どちらでも操作ファイルは inbox から消えます。'
+          },
+          q24: {
+            q: 'ローカルAIが反映した変更を取り消すには？',
+            a:
+              '設定画面の結果の横にある「元に戻す」を押します。反映直後のトーストからも戻せます。' +
+              'その間に画面で同じ値を変えていると、上書きせずに conflict で止まります。',
+            link: '設定を開く'
+          },
+          q25: {
+            q: 'ローカルAIに何も変えさせないようにできますか？',
+            a:
+              '設定画面の「AIからの変更を一時停止」を入れます。停止中は inbox を読まず、ファイルはそのまま' +
+              '残るので、あとで解除すれば取り込まれます。',
+            link: '設定を開く'
           }
         }
       },

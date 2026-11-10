@@ -183,16 +183,30 @@
     });
   }
 
+  /* 書き出しの成否はここで 1 か所に記録する。手動の書き出しも自動も同じ道を通る。 */
   function writeTo(dir, json) {
-    return dir.getFileHandle(FILE_NAME, { create: true }).then(function (handle) {
-      return handle.createWritable().then(function (writable) {
-        return writable
-          .write(json)
-          .then(function () {
-            return writable.close();
-          });
+    return dir
+      .getFileHandle(FILE_NAME, { create: true })
+      .then(function (handle) {
+        return handle.createWritable().then(function (writable) {
+          return writable
+            .write(json)
+            .then(function () {
+              return writable.close();
+            });
+        });
+      })
+      .then(function () {
+        writtenAt = new Date().toISOString();
+        lastError = '';
+        lastErrorDetail = '';
+        dirty = false;
+        retryDelay = RETRY_DELAY;
+        if (retryTimer) {
+          clearTimeout(retryTimer);
+          retryTimer = null;
+        }
       });
-    });
   }
 
   function download(json) {
@@ -208,29 +222,119 @@
   /* ---------- automatic write ---------- */
 
   var timer = null;
+  var retryTimer = null;
+  /* 失敗したときの再試行間隔。成功するまで倍にして、上限で止める。 */
+  var RETRY_DELAY = 5000;
+  var RETRY_MAX = 60000;
+  var retryDelay = RETRY_DELAY;
+  /* 最後に書き出した時刻と、直近の失敗理由。bridge-status.json と設定画面に出す。 */
+  var writtenAt = null;
+  var lastError = '';
+  var lastErrorDetail = '';
+  /* 保存内容が最後の書き出しより新しいか。起動直後は「まだ書いていない」ので true。 */
+  var dirty = true;
+  /* 同じファイルへの書き込みを重ねない。重なると createWritable が失敗する。 */
+  var writing = false;
+  var queued = false;
+
+  function fail(error) {
+    lastError = 'write_failed';
+    lastErrorDetail = error && error.name ? String(error.name) : '';
+    scheduleRetry();
+  }
+
+  /* 失敗したら数秒後にやり直す。放置すると、反映済みの結果がファイルに出ないまま残る。 */
+  function scheduleRetry() {
+    if (retryTimer) return;
+    retryTimer = setTimeout(function () {
+      retryTimer = null;
+      retryDelay = Math.min(retryDelay * 2, RETRY_MAX);
+      autoWrite();
+    }, retryDelay);
+  }
 
   /* 許可が残っているフォルダにだけ書く。無ければ何もしない。
-     失敗しても画面の編集は壊さない（静かに諦める）。 */
-  function autoWrite() {
+     失敗しても画面の編集は壊さないが、理由は残して後で追いつく。 */
+  function writeNow() {
     return readDirHandle()
       .then(function (dir) {
-        if (!dir) return null;
+        if (!dir) {
+          /* フォルダを選んでいないだけ。失敗ではない。 */
+          dirty = false;
+          return null;
+        }
         return dir.queryPermission({ mode: 'readwrite' }).then(function (permission) {
-          if (permission !== 'granted') return null;
-          return writeTo(dir, toJson());
+          if (permission !== 'granted') {
+            /* 許可が切れている。押してもらうまで書けないので、再試行はしない。 */
+            lastError = 'permission';
+            lastErrorDetail = '';
+            return null;
+          }
+          return writeTo(dir, toJson()).catch(function (error) {
+            fail(error);
+            return null;
+          });
         });
       })
-      .catch(function () {
+      .catch(function (error) {
+        fail(error);
         return null;
       });
   }
 
+  function autoWrite() {
+    if (writing) {
+      /* 書き込み中に来た分は、終わってからもう一度だけ流す。 */
+      queued = true;
+      return Promise.resolve(null);
+    }
+    writing = true;
+    return writeNow().then(
+      function (value) {
+        writing = false;
+        if (queued) {
+          queued = false;
+          return autoWrite();
+        }
+        return value;
+      },
+      function (error) {
+        /* ここに来ても書き込みの鍵は必ず外す。外し忘れると以後ずっと書けなくなる。 */
+        writing = false;
+        fail(error);
+        return null;
+      }
+    );
+  }
+
   function scheduleAutoWrite() {
+    dirty = true;
     if (timer) clearTimeout(timer);
     timer = setTimeout(function () {
       timer = null;
       autoWrite();
     }, AUTO_WRITE_DELAY);
+  }
+
+  /* 保存内容が最後の書き出しより新しければ、待たずに書く。
+     タブが前面に戻ったときと、ブリッジのハートビートから呼ぶ。 */
+  function flush() {
+    if (!dirty) return Promise.resolve(null);
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    return autoWrite();
+  }
+
+  /* 設定画面と bridge-status.json が読む。 */
+  function status() {
+    return {
+      writtenAt: writtenAt,
+      error: lastError,
+      errorDetail: lastErrorDetail,
+      dirty: dirty
+    };
   }
 
   BB.snapshot = {
@@ -243,7 +347,9 @@
     writeTo: writeTo,
     download: download,
     autoWrite: autoWrite,
-    scheduleAutoWrite: scheduleAutoWrite
+    scheduleAutoWrite: scheduleAutoWrite,
+    flush: flush,
+    status: status
   };
 
   /* このタブの保存は onWrite、他タブの保存は subscribe で届く。 */

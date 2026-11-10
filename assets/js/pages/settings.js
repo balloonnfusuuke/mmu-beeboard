@@ -44,9 +44,9 @@
     BB.theme.apply(theme);
   }
 
-  function section(icon, title, subtitle, body, compact) {
+  function section(icon, title, subtitle, body, compact, id) {
     return (
-      '<section class="bb-card overflow-hidden">' +
+      '<section class="bb-card overflow-hidden"' + (id ? ' id="' + id + '"' : '') + '>' +
       '<div class="px-6 py-4 border-b border-border flex items-start gap-3">' +
       '<span class="material-symbols-outlined text-[20px] text-primary mt-0.5">' + icon + '</span>' +
       '<div><h2 class="text-title-md font-bold text-ink">' + title + '</h2>' +
@@ -430,6 +430,198 @@
     );
   }
 
+  /* 承認待ちの「変更前 → 変更後」。bridge.js が undo の段から作った行を並べる。 */
+  function previewHtml(preview) {
+    var rows = preview && Array.isArray(preview.rows) ? preview.rows : [];
+    if (!rows.length) return '';
+    return (
+      '<dl class="text-body-sm space-y-1">' +
+      rows
+        .map(function (row) {
+          return (
+            '<div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">' +
+            '<dt class="text-caption uppercase tracking-wider text-muted min-w-[5rem]">' + esc(row.label) + '</dt>' +
+            '<dd class="text-body min-w-0 break-words">' +
+            '<span class="text-muted line-through">' + esc(row.before || t('ai.none')) + '</span>' +
+            '<span class="material-symbols-outlined text-[16px] align-middle mx-1">arrow_forward</span>' +
+            '<span class="font-semibold text-ink">' + esc(row.after || t('ai.none')) + '</span>' +
+            '</dd></div>'
+          );
+        })
+        .join('') +
+      '</dl>'
+    );
+  }
+
+  /* ---------- ローカルAI連携 ---------- */
+
+  /* 状態表示はフォルダを読むので非同期。描き直しのたびに走らせないよう少し待つ。 */
+  var aiStatusCache = '';
+  var aiStatusTimer = null;
+
+  function refreshAiStatus() {
+    if (aiStatusTimer) clearTimeout(aiStatusTimer);
+    aiStatusTimer = setTimeout(function () {
+      aiStatusTimer = null;
+      loadAiStatus();
+    }, 300);
+  }
+
+  function loadAiStatus() {
+    if (!BB.bridge || typeof BB.bridge.status !== 'function') return;
+    BB.bridge
+      .status()
+      .then(function (info) {
+        aiStatusCache = aiStatusHtml(info);
+        var host = document.getElementById('ai-status');
+        if (host) host.innerHTML = aiStatusCache;
+      })
+      .catch(function () {});
+  }
+
+  function statusRow(label, value) {
+    return (
+      '<div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">' +
+      '<dt class="text-caption uppercase tracking-wider text-muted min-w-[7rem]">' + esc(label) + '</dt>' +
+      '<dd class="text-body-sm min-w-0 break-words">' + value + '</dd></div>'
+    );
+  }
+
+  function permissionLabel(permission) {
+    if (permission === 'granted') return t('ai.status.granted');
+    if (permission === 'prompt') return t('ai.status.prompt');
+    if (permission === 'denied') return t('ai.status.denied');
+    return t('ai.status.noFolder');
+  }
+
+  function timeLabel(value) {
+    if (!value) return t('ai.status.never');
+    return BB.dash.fmtDateTime(value) || String(value);
+  }
+
+  function aiStatusHtml(info) {
+    var snap = info.snapshot || {};
+    var written = timeLabel(snap.writtenAt);
+    if (snap.error === 'permission') {
+      written += ' · ' + t('ai.status.snapshotPermission');
+    } else if (snap.error) {
+      written += ' · ' + t('ai.status.snapshotFailed', { reason: snap.errorDetail || snap.error });
+    }
+    var statusFileAt = info.statusFile && info.statusFile.heartbeatAt ? info.statusFile.heartbeatAt : '';
+    return (
+      '<dl class="space-y-2">' +
+      statusRow(t('ai.status.folder'), esc(permissionLabel(info.permission))) +
+      statusRow(t('ai.status.holder'), esc(info.holder ? t('ai.status.holderYes') : t('ai.status.holderNo'))) +
+      statusRow(t('ai.status.lastImport'), esc(timeLabel(info.lastImportAt))) +
+      statusRow(t('ai.status.statusFile'), esc(timeLabel(statusFileAt))) +
+      statusRow(t('ai.status.snapshot'), esc(written)) +
+      '</dl>'
+    );
+  }
+
+  function resultStatusLabel(status) {
+    if (status === 'applied') return t('ai.results.applied');
+    if (status === 'pending_approval') return t('ai.results.pending');
+    return t('ai.results.rejected');
+  }
+
+  /* 理由は辞書にあれば訳す。無ければ記録された文字列をそのまま出す。 */
+  function resultReason(entry) {
+    if (!entry.reason) return '';
+    var key = 'ai.reason.' + entry.reason;
+    var text = t(key);
+    return text === key ? entry.reason : text;
+  }
+
+  /* 直近 20 件。反映したものには「元に戻す」を付ける。 */
+  function aiResultsHtml(bridge) {
+    var results = Array.isArray(bridge.results) ? bridge.results.slice(-20).reverse() : [];
+    if (!results.length) return '<p class="text-body-sm text-muted">' + t('ai.results.empty') + '</p>';
+    return (
+      '<ul class="space-y-2">' +
+      results
+        .map(function (entry) {
+          var undo =
+            entry.status === 'applied' && entry.undo && entry.opId && !entry.undoneAt
+              ? '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-ai-undo="' +
+                esc(entry.opId) + '">' +
+                '<span class="material-symbols-outlined text-[16px]">undo</span>' +
+                t('ai.results.undo') + '</button>'
+              : '';
+          var reason = resultReason(entry);
+          return (
+            '<li class="border border-border rounded-card px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-1">' +
+            '<span class="text-caption font-semibold uppercase tracking-wider text-muted">' +
+            esc(resultStatusLabel(entry.status)) + '</span>' +
+            '<span class="text-body-sm text-ink flex-1 min-w-0 break-words">' +
+            esc(entry.summaryJa || entry.type || '') + '</span>' +
+            '<span class="text-caption text-muted num">' + esc(timeLabel(entry.at)) + '</span>' +
+            (reason ? '<span class="text-caption text-alert w-full">' + esc(reason) + '</span>' : '') +
+            undo +
+            '</li>'
+          );
+        })
+        .join('') +
+      '</ul>'
+    );
+  }
+
+  /* ローカルAI連携。状態・承認待ち・直近の結果・一時停止・フォルダの選び直し。 */
+  function aiBridgeSection() {
+    var data = state();
+    var bridge = data.aiBridge || {};
+    var pending = Array.isArray(bridge.pending) ? bridge.pending : [];
+    var paused = !!bridge.paused;
+
+    var list = pending.length
+      ? '<ul class="space-y-3">' +
+        pending
+          .map(function (item) {
+            return (
+              '<li class="border border-border rounded-card p-4 space-y-3">' +
+              '<div class="min-w-0">' +
+              '<p class="text-body-md font-semibold text-ink break-words">' +
+              esc(item.summaryJa || item.type) + '</p>' +
+              '<p class="text-caption text-muted">' + esc(item.type) + ' · ' +
+              esc(fmtDate(String(item.receivedAt || '').slice(0, 10))) + '</p></div>' +
+              previewHtml(item.preview) +
+              '<div class="flex flex-wrap gap-2">' +
+              '<button type="button" class="bb-btn bb-btn-primary bb-btn-sm" data-ai-approve="' +
+              esc(item.opId) + '">' + t('ai.approve') + '</button>' +
+              '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" data-ai-reject="' +
+              esc(item.opId) + '">' + t('ai.reject') + '</button>' +
+              '</div></li>'
+            );
+          })
+          .join('') +
+        '</ul>'
+      : '<p class="text-body-sm text-muted">' + t('ai.empty') + '</p>';
+
+    var body =
+      '<div class="space-y-4">' +
+      '<div id="ai-status">' +
+      (aiStatusCache || '<p class="text-body-sm text-muted">' + t('ai.status.loading') + '</p>') +
+      '</div>' +
+      '<div class="flex flex-wrap gap-2">' +
+      '<button type="button" class="bb-btn bb-btn-ghost bb-btn-sm" id="ai-repick">' +
+      t('ai.status.repick') + '</button></div>' +
+      '<label class="flex items-start gap-3 cursor-pointer">' +
+      '<input type="checkbox" id="ai-paused" class="mt-1"' + (paused ? ' checked' : '') + '>' +
+      '<span><span class="text-body-md font-semibold text-ink">' + t('ai.pause.label') + '</span>' +
+      '<span class="block text-caption text-muted">' + t('ai.pause.hint') + '</span></span></label>' +
+      (paused ? '<p class="text-body-sm text-alert">' + t('ai.pause.notice') + '</p>' : '') +
+      '<div class="pt-3 border-t border-border-subtle">' +
+      '<p class="text-body-md font-semibold text-ink mb-2">' + t('ai.pendingTitle') + '</p>' +
+      list +
+      '</div>' +
+      '<div class="pt-3 border-t border-border-subtle">' +
+      '<p class="text-body-md font-semibold text-ink mb-2">' + t('ai.results.title') + '</p>' +
+      aiResultsHtml(bridge) +
+      '</div></div>';
+
+    return section('smart_toy', t('ai.title'), t('ai.subtitle'), body, false, 'ai-bridge');
+  }
+
   function render() {
     document.getElementById('settings').innerHTML =
       profileSection() +
@@ -440,9 +632,11 @@
       goalsSection() +
       timetableSection() +
       termSection() +
+      aiBridgeSection() +
       dataSection() +
       installSection() +
       helpSection();
+    refreshAiStatus();
   }
 
   document.addEventListener('submit', function (event) {
@@ -492,6 +686,14 @@
     BB.ui.refreshChrome();
   });
 
+  /* 一時停止。停止中は inbox を読まず、置かれたファイルはそのまま残る。 */
+  document.addEventListener('change', function (event) {
+    if (event.target.id !== 'ai-paused') return;
+    BB.bridge.setPaused(event.target.checked);
+    BB.ui.toast(event.target.checked ? t('ai.toast.paused') : t('ai.toast.resumed'));
+    render();
+  });
+
   document.addEventListener('change', function (event) {
     var field = event.target.closest('[data-setting]');
     if (!field) return;
@@ -523,6 +725,55 @@
   });
 
   document.addEventListener('click', function (event) {
+    var approveButton = event.target.closest('[data-ai-approve]');
+    if (approveButton) {
+      var approved = BB.bridge.approve(approveButton.getAttribute('data-ai-approve'));
+      if (approved.applied) {
+        BB.ui.toast(t('ai.toast.approved') + (approved.summaryJa ? ' · ' + approved.summaryJa : ''));
+      } else {
+        BB.ui.toast(t('ai.toast.notApplied', { reason: t('ai.reason.' + approved.reason) }));
+      }
+      render();
+      return;
+    }
+
+    var rejectButton = event.target.closest('[data-ai-reject]');
+    if (rejectButton) {
+      BB.bridge.reject(rejectButton.getAttribute('data-ai-reject'));
+      BB.ui.toast(t('ai.toast.rejected'));
+      render();
+      return;
+    }
+
+    /* 直近の結果から 1 件だけ戻す。値が変わっていれば undo 側が conflict で止める。 */
+    var undoButton = event.target.closest('[data-ai-undo]');
+    if (undoButton) {
+      var undone = BB.bridge.undo(undoButton.getAttribute('data-ai-undo'));
+      if (undone && undone.applied) BB.ui.toast(t('ai.results.undone'));
+      render();
+      return;
+    }
+
+    /* フォルダを選び直す。押されたときだけピッカーを出す。 */
+    if (event.target.closest('#ai-repick')) {
+      BB.snapshot
+        .ensureFolder()
+        .then(function (dir) {
+          return BB.snapshot.writeTo(dir, BB.snapshot.toJson());
+        })
+        .then(function () {
+          BB.ui.toast(t('ai.status.repicked'));
+          if (BB.bridge && typeof BB.bridge.scan === 'function') BB.bridge.scan();
+          render();
+        })
+        .catch(function (error) {
+          /* 利用者がピッカーを閉じただけなら、何も出さずに終わる。 */
+          if (error && error.name === 'AbortError') return;
+          render();
+        });
+      return;
+    }
+
     var restoreButton = event.target.closest('[data-restore-term]');
     if (restoreButton) {
       var index = Number(restoreButton.getAttribute('data-restore-term'));
@@ -626,6 +877,12 @@
 
   applyTheme(state().settings.theme);
   render();
+
+  /* ダッシュボードのバナーから #ai-bridge で来たら、その位置まで送る。 */
+  if (window.location.hash === '#ai-bridge') {
+    var aiSection = document.getElementById('ai-bridge');
+    if (aiSection && aiSection.scrollIntoView) aiSection.scrollIntoView({ block: 'start' });
+  }
 
   /* 他タブの保存を取り込んだら描き直す。入力中の欄があれば触らない。 */
   BB.store.subscribe(function () {
