@@ -5,7 +5,8 @@
   "description": "MMU BeeBoard — personal study dashboard",
   "scripts": {
     "build:css": "tailwindcss -i ./assets/css/tailwind.src.css -o ./assets/css/app.css --minify",
-    "watch:css": "tailwindcss -i ./assets/css/tailwind.src.css -o ./assets/css/app.css --watch"
+    "watch:css": "tailwindcss -i ./assets/css/tailwind.src.css -o ./assets/css/app.css --watch",
+    "test": "node --test tests/"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.9",

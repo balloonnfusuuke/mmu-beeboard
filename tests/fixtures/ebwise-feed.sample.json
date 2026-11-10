@@ -1,0 +1,170 @@
+{
+  "schema": "ebwise-feed/1",
+  "generatedAt": "2026-11-10T07:03:10+08:00",
+  "site": "https://ebwise.mmu.edu.my",
+  "windowDays": 21,
+  "lastSync": {
+    "result": "ok",
+    "finishedAt": "2026-11-10T07:03:10+08:00",
+    "messageJa": "21 日分を取得しました"
+  },
+  "filesRoot": "C:\\Users\\sample\\local-ai\\ebwise\\files",
+  "courses": [
+    {
+      "code": "CMA6114",
+      "shortname": "UGRD-FCI-CMA6114-2630",
+      "fullname": "Artificial Intelligence",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=101",
+      "counts": { "files": 40, "recentNew": 3, "recentUpdated": 1 }
+    },
+    {
+      "code": "CCP6114",
+      "shortname": "UGRD-FCI-CCP6114-2630",
+      "fullname": "Compiler Construction",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=102",
+      "counts": { "files": 12, "recentNew": 0, "recentUpdated": 2 }
+    },
+    {
+      "code": "X9001",
+      "shortname": "UGRD-FCI-TMA2002-2630",
+      "fullname": "Discrete Mathematics",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=103",
+      "counts": { "files": 8, "recentNew": 1, "recentUpdated": 0 }
+    },
+    {
+      "code": "F9002",
+      "shortname": "UGRD-FCI-F9002-2630",
+      "fullname": "Software Engineering Project",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=104",
+      "counts": { "files": 5, "recentNew": 0, "recentUpdated": 0 }
+    },
+    {
+      "code": "F9003",
+      "shortname": "UGRD-FCI-F9003-2630",
+      "fullname": "Software Engineering Lab",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=105",
+      "counts": { "files": 3, "recentNew": 0, "recentUpdated": 0 }
+    },
+    {
+      "code": "F9004",
+      "shortname": "UGRD-FCI-F9004-2630",
+      "fullname": "Data Structures and Algorithms",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=106",
+      "counts": { "files": 21, "recentNew": 2, "recentUpdated": 0 }
+    },
+    {
+      "code": "ZZZ9999",
+      "shortname": "UGRD-FCI-ZZZ9999-2630",
+      "fullname": "Sample Elective",
+      "url": "https://ebwise.mmu.edu.my/course/view.php?id=107",
+      "counts": { "files": 0, "recentNew": 0, "recentUpdated": 0 }
+    }
+  ],
+  "materials": [
+    {
+      "id": "ebw:mod:55501",
+      "course": "CMA6114",
+      "kind": "module",
+      "status": "updated",
+      "title": "Week 8 slides",
+      "fileName": "",
+      "section": "Topic 8",
+      "module": "Slides",
+      "modtype": "resource",
+      "changedAt": "2026-11-10T06:40:00+08:00",
+      "moodleModified": "2026-11-10T06:30:00+08:00",
+      "size": 2048000,
+      "localPath": "",
+      "url": "https://ebwise.mmu.edu.my/mod/resource/view.php?id=55501"
+    },
+    {
+      "id": "ebw:file:0123456789abcdef",
+      "course": "CMA6114",
+      "kind": "file",
+      "status": "new",
+      "title": "Sample Lab 1",
+      "fileName": "lab1.pdf",
+      "section": "Topic 1",
+      "module": "Lab 1",
+      "modtype": "resource",
+      "changedAt": "2026-11-09T10:15:00+08:00",
+      "moodleModified": "2026-11-08T22:00:00+08:00",
+      "size": 123456,
+      "localPath": "CMA6114/01 Topic 1/lab1.pdf",
+      "url": "https://labs.example.edu/materials/lab1.pdf"
+    },
+    {
+      "id": "ebw:file:0011223344556677",
+      "course": "CCP6114",
+      "kind": "file",
+      "status": "updated",
+      "title": "Assignment 2 brief",
+      "fileName": "a2.pdf",
+      "section": "Assessment",
+      "module": "Assignment 2",
+      "modtype": "resource",
+      "changedAt": "2026-11-07T14:20:00+08:00",
+      "moodleModified": "2026-11-07T14:00:00+08:00",
+      "size": 88000,
+      "localPath": "CCP6114/Assessment/a2.pdf",
+      "url": "https://ebwise.mmu.edu.my/mod/resource/view.php?id=55503"
+    },
+    {
+      "id": "ebw:file:fedcba9876543210",
+      "course": "CMA6114",
+      "kind": "file",
+      "status": "new",
+      "title": "Tutorial 3",
+      "fileName": "tut3.pdf",
+      "section": "Topic 3",
+      "module": "Tutorial",
+      "modtype": "resource",
+      "changedAt": "2026-11-04T09:00:00+08:00",
+      "moodleModified": null,
+      "size": 51200,
+      "localPath": "CMA6114/03 Topic 3/tut3.pdf",
+      "url": "https://ebwise.mmu.edu.my/mod/resource/view.php?id=55502"
+    }
+  ],
+  "deadlines": [
+    {
+      "id": "ebw:assign:9001",
+      "course": "CCP6114",
+      "kind": "assignment",
+      "name": "Assignment 2",
+      "dueAt": "2026-11-20T23:59:00+08:00",
+      "dueDate": "2026-11-20",
+      "dueTime": "23:59",
+      "opensAt": "2026-11-06T00:00:00+08:00",
+      "cutoffAt": "2026-11-27T23:59:00+08:00",
+      "submission": "draft",
+      "url": "https://ebwise.mmu.edu.my/mod/assign/view.php?id=9001"
+    },
+    {
+      "id": "ebw:quiz:9002",
+      "course": "CMA6114",
+      "kind": "quiz",
+      "name": "Quiz 3",
+      "dueAt": "2026-11-25T10:00:00+08:00",
+      "dueDate": "2026-11-25",
+      "dueTime": "10:00",
+      "opensAt": null,
+      "cutoffAt": null,
+      "submission": null,
+      "url": "https://ebwise.mmu.edu.my/mod/quiz/view.php?id=9002"
+    },
+    {
+      "id": "ebw:event:9003",
+      "course": "CMA6114",
+      "kind": "event",
+      "name": "Lab briefing",
+      "dueAt": "2026-11-18T09:00:00+08:00",
+      "dueDate": "2026-11-18",
+      "dueTime": "09:00",
+      "opensAt": null,
+      "cutoffAt": null,
+      "submission": null,
+      "url": "https://ebwise.mmu.edu.my/calendar/view.php?id=9003"
+    }
+  ]
+}
