@@ -283,6 +283,39 @@ textarea.bb-input { height: auto; padding: 0.625rem 1rem; resize: vertical; }
 }
 .tt-block-off:hover { filter: none; }
 
+/* 出席・欠席を付けた回。出席は右下に ✓ だけ、欠席は ✗ に加えて背景を少し沈める。
+   休講（破線）とは形で区別する。 */
+.tt-block-absent {
+  filter: saturate(.5) brightness(.9);
+}
+/* ホバーで沈んだ色が戻らないようにする（.tt-block:hover より後に置く）。 */
+.tt-block-absent:hover {
+  filter: saturate(.5) brightness(1);
+}
+.tt-block-mark {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+.tt-block-mark svg { width: 9px; height: 9px; }
+/* 印の下に文字が潜らないよう、右端を空けておく。 */
+.tt-block-present .tt-block-meta,
+.tt-block-absent .tt-block-meta,
+.tt-block-present .tt-block-room,
+.tt-block-absent .tt-block-room {
+  padding-right: 16px;
+}
+.tt-block-present .tt-block-mark { color: var(--bb-success); }
+.tt-block-absent .tt-block-mark { color: var(--bb-alert); }
+
 /* 振替の臨時セッション。定例コマと区別できるよう二重の縁を付ける。 */
 .tt-block-transfer {
   outline: 2px solid var(--bb-surface);
@@ -359,6 +392,20 @@ a.tt-block-off:hover { border-color: var(--bb-primary); color: var(--bb-text); }
   background: var(--bb-surface-sunken);
   border: 1px dashed var(--bb-border);
 }
+/* 出席・欠席の凡例。ブロックの右下の印と同じ形にする。 */
+.tt-legend-mark {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bb-surface);
+  border: 1px solid var(--bb-border);
+}
+.tt-legend-mark svg { width: 9px; height: 9px; }
+.tt-legend-present { color: var(--bb-success); }
+.tt-legend-absent { color: var(--bb-alert); }
 
 /* 時間割ブロックの「メモを追加」。ブロックの邪魔をしないよう普段は隠す。 */
 .tt-note {

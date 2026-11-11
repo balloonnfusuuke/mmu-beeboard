@@ -320,6 +320,32 @@
     };
   }
 
+  /* その科目・日付・コマに付けた出席の記録。同じ回に何度も付けたら最後のもの。
+     コマの情報が無い記録は、日付だけで照合する。 */
+  function attendanceMarkOf(subject, dateIso, session) {
+    var log = (subject.attendance && subject.attendance.log) || [];
+    var found = null;
+    log.forEach(function (entry) {
+      if (!entry || isoKey(entry.date) !== dateIso) return;
+      var meta = entry.sessionMeta;
+      if (meta && session && (meta.start !== session.start || meta.end !== session.end)) return;
+      found = entry;
+    });
+    return found;
+  }
+
+  /* 出席・欠席の印。フォントに依存しないよう、小さな SVG を直に置く。 */
+  function markGlyph(status) {
+    if (status === 'present') {
+      return '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"' +
+        ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M2.5 6.3 4.9 8.7 9.5 3.9"/></svg>';
+    }
+    return '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"' +
+      ' stroke-linecap="round" aria-hidden="true">' +
+      '<path d="M3.2 3.2 8.8 8.8M8.8 3.2 3.2 8.8"/></svg>';
+  }
+
   function securedOf(subject) {
     var secured = 0;
     var possible = 0;
@@ -824,6 +850,28 @@
         '<span class="text-muted">' + tn('tt.overridesElsewhere', elsewhere, { n: elsewhere }) + '</span></div>'
       );
     }
+    /* 出席・欠席の印。表示中の週に付けたものがあるときだけ凡例に出す。 */
+    var weekMarks = { present: 0, absent: 0 };
+    state.subjects.forEach(function (subject) {
+      var log = (subject.attendance && subject.attendance.log) || [];
+      log.forEach(function (entry) {
+        if (!entry || weekList.indexOf(isoKey(entry.date)) < 0) return;
+        if (entry.status === 'present') weekMarks.present += 1;
+        else if (entry.status === 'absent') weekMarks.absent += 1;
+      });
+    });
+    if (weekMarks.present) {
+      items.push(
+        '<div class="flex items-center gap-1.5"><span class="tt-legend-mark tt-legend-present">' +
+        markGlyph('present') + '</span><span class="text-muted">' + t('att.present') + '</span></div>'
+      );
+    }
+    if (weekMarks.absent) {
+      items.push(
+        '<div class="flex items-center gap-1.5"><span class="tt-legend-mark tt-legend-absent">' +
+        markGlyph('absent') + '</span><span class="text-muted">' + t('att.absent') + '</span></div>'
+      );
+    }
     host.innerHTML = items.join('');
   }
 
@@ -950,13 +998,23 @@
               );
               return;
             }
+            /* 出席・欠席を付けた回は、右下の印と（欠席なら）沈んだ色で示す。
+               休講の破線とは形で区別する。 */
+            var mark = dayIso ? attendanceMarkOf(subject, dayIso, session) : null;
+            var markClass = mark
+              ? (mark.status === 'present' ? ' tt-block-present' : ' tt-block-absent')
+              : '';
+            var markBadge = mark
+              ? '<span class="tt-block-mark">' + markGlyph(mark.status) + '</span>'
+              : '';
             /* 教室が空のときに区切り記号だけが残らないよう、要素を集めてから繋ぐ。 */
             var blockTitle = [subject.id, session.type, session.start + '–' + session.end];
             if (online) blockTitle.push(t('tt.online'));
             if (session.room) blockTitle.push(session.room);
             if (roomText) blockTitle.push(roomText);
+            if (mark) blockTitle.push(mark.status === 'present' ? t('att.present') : t('att.absent'));
             blocks.push(
-              '<a class="tt-block" href="' + sessionHref(subject.id, index, dayIso || dateOfWeekday(day)) + '"' +
+              '<a class="tt-block' + markClass + '" href="' + sessionHref(subject.id, index, dayIso || dateOfWeekday(day)) + '"' +
                 ' style="top:' + blockTop + 'px;height:' + (blockHeight - 3) + 'px;background:' + subject.color + '"' +
                 ' title="' + escHtml(blockTitle.join(' · ')) + '">' +
                 '<span class="tt-block-code">' + subject.id + '</span>' +
@@ -964,6 +1022,7 @@
                 (online ? ' · <span class="tt-block-online">' + t('tt.online') + '</span>' : '') +
                 (session.room ? ' · ' + escHtml(session.room) : '') + '</span>' +
                 (roomText ? '<span class="tt-block-room" title="' + escHtml(roomText) + '">' + roomText + '</span>' : '') +
+                markBadge +
               '</a>' +
               '<button type="button" class="tt-note" style="top:' + (blockTop + 3) + 'px"' +
                 ' data-note-for="' + subject.id + '" data-note-date="' + dateOfWeekday(day) + '"' +
