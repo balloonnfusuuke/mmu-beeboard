@@ -852,11 +852,13 @@ const FOLD_ITEMS = [
   }
 ];
 
-test('materialRowsHtml は章もモジュールも開いて描く', () => {
+test('materialRowsHtml は章を開き、モジュールを閉じて描く', () => {
   const html = ui.materialRowsHtml(FOLD_ITEMS, { site: SITE, subjectId: 's1' });
-  /* 新着は 5 件しか出さないので、畳まずに行を見せる。 */
+  /* 章は開いた状態から始める。 */
   assert.equal(html.includes('data-ebwise-fold="s1|ns|Topic 8" open>'), true);
-  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides" open>'), true);
+  /* モジュールは閉じた状態から始める（章を開いただけで何十行も並ばないように）。 */
+  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides">'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides" open>'), false);
   assert.equal(html.includes('<summary'), true);
 });
 
