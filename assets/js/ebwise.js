@@ -594,7 +594,8 @@
           '<span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ' +
           badgeClass + '">' + escHtml(status) + '</span>' +
           '<div class="min-w-0 flex-1">' +
-          '<div class="text-body-sm font-semibold text-ink break-words">' +
+          /* 既読の行は落ち着かせる。押した結果が見た目に出るようにするため。 */
+          '<div class="text-body-sm break-words ' + (unread ? 'font-semibold text-ink' : 'text-muted') + '">' +
           (canOpen
             ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
               'class="text-left hover:text-primary hover:underline">' + escHtml(item.title) + '</button>'
@@ -1042,14 +1043,32 @@
     return true;
   };
 
+  /* 既読の基準は「今」ではなく、その科目の一番新しい changedAt と今の遅いほう。
+     パソコンの時計が遅れている・feed の日付が先になっているときでも、押したのに
+     未読のまま残らないようにするため。 */
+  function seenStampFor(subjectId) {
+    var stamp = Date.now();
+    if (!feed) return stamp;
+    var data = BB.store && typeof BB.store.get === 'function' ? BB.store.get() : null;
+    if (!data) return stamp;
+    var manual = data.ebwise && data.ebwise.mapping ? data.ebwise.mapping : {};
+    var map = core.mapCourses(data.subjects || [], feed.courses || [], manual).map;
+    materialsFor(feed, map, subjectId, '').forEach(function (item) {
+      var at = timeOf(item.changedAt);
+      if (at > stamp) stamp = at;
+    });
+    return stamp;
+  }
+
   BB.ebwise.markSeen = function (subjectId) {
     if (typeof subjectId !== 'string' || !subjectId || isUnsafe(subjectId)) return false;
     if (!BB.store || typeof BB.store.update !== 'function') return false;
+    var iso = new Date(seenStampFor(subjectId)).toISOString();
     BB.store.update(function (state) {
       state.ebwise = state.ebwise ||
         { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false };
       state.ebwise.seenAt = state.ebwise.seenAt || {};
-      state.ebwise.seenAt[subjectId] = new Date().toISOString();
+      state.ebwise.seenAt[subjectId] = iso;
     });
     return true;
   };

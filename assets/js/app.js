@@ -1440,6 +1440,7 @@
         BB.ebwise.markSeen(seen.getAttribute('data-ebwise-seen'));
         renderEbwise(BB.store.get());
         renderTopics(BB.store.get());
+        toast(t('ebwise.dash.seenDone'));
         return;
       }
       var more = event.target.closest('[data-ebwise-more]');

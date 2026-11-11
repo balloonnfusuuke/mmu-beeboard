@@ -468,6 +468,22 @@ test('materialRowsHtml は changedAt の曜日を Date から出す', () => {
   assert.equal(html.includes('11 Nov (Wed)'), true);
 });
 
+test('materialRowsHtml は既読の行を落ち着かせる', () => {
+  const unread = ui.materialRowsHtml(
+    [{ id: 'ebw:file:1', title: 'Lab', status: 'new', unread: true, localPath: '' }],
+    { site: SITE }
+  );
+  const read = ui.materialRowsHtml(
+    [{ id: 'ebw:file:1', title: 'Lab', status: 'new', unread: false, localPath: '' }],
+    { site: SITE }
+  );
+  assert.equal(unread.includes('font-semibold text-ink'), true);
+  assert.equal(read.includes('font-semibold text-ink'), false);
+  assert.equal(read.includes('text-muted'), true);
+  /* 既読でも一覧からは消さない。 */
+  assert.equal(read.includes('Lab'), true);
+});
+
 /* ---------- deadlineOps ---------- */
 
 const TODAY = '2026-11-10';
