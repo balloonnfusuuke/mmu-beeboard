@@ -27,12 +27,16 @@ request is Vercel Web Analytics (aggregate page views, no cookies).
 - **English and Japanese** — the whole interface switches, and the choice is remembered
 - **Local AI bridge** — a folder the app watches for operation files, with approval for
   anything that touches attendance, marks or deletions
+- **eBwise materials (local only)** — new files and deadlines read from a JSON file your own
+  sync writes on this PC, every file of a subject under its fold, and deadlines offered as
+  approval candidates
 - **Trimester switching** that archives the previous trimester instead of deleting it
 - **Safe with several tabs open** — every save re-reads the stored state first, and other
   tabs pick up the change through the `storage` event
 - **Reversible deletes** — destructive actions ask in an in-page dialog, and single-item
   deletes offer an Undo
-- Everything persists in `localStorage` — nothing leaves the browser
+- Everything persists in `localStorage`, and in the folder you pick if you pick one — nothing
+  is uploaded
 
 ### Deliberately not included
 
@@ -52,6 +56,8 @@ A local server is recommended if your browser restricts `file://` storage:
 python -m http.server 8000
 # then visit http://localhost:8000/
 ```
+
+`npm test` runs the Node test suite in `tests/`; nothing beyond Node itself is needed.
 
 ### API
 
@@ -187,7 +193,8 @@ already picked, and BeeBoard reads that file at runtime. The format is documente
 [docs/ebwise-feed.md](docs/ebwise-feed.md).
 
 - **Saved:** only `state.ebwise` — the course mapping, which deadlines you approved or rejected,
-  when you last marked a subject as read, and whether the materials folder is linked.
+  when you last marked a subject as read, which subjects are folded open, and whether the
+  materials folder is linked.
 - **Not saved:** the feed itself. File names, links and deadlines are never written into
   `localStorage`, and no course file contents are ever in the feed.
 - **Permission:** the folder is read only while the permission you granted is still valid. The
@@ -197,6 +204,10 @@ already picked, and BeeBoard reads that file at runtime. The format is documente
   anything else is shown as text.
 - **Materials folder (optional):** link the folder the sync writes files into, and pressing a
   material name opens the file from this PC. Without it the list still shows what is new.
+
+The dashboard shows the new items of each subject — materials from the last 21 days, at most
+300 — and opening a subject shows every file the feed lists, grouped by section, up to 2000.
+Older materials stay reachable that way after you mark a subject as read.
 
 Deadlines from the feed arrive as approval candidates in Settings → Local AI. Nothing is added
 until you approve it, and rejecting one keeps it out of the list until you press
@@ -271,12 +282,18 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 ├── index.html            # dashboard
 ├── simulator.html        # grade simulator
 ├── deadlines.html        # deadline timeline
+├── deadline-detail.html  # one deadline, with links and memo
 ├── notes.html            # every memo and homework, newest first
 ├── attendance.html       # attendance tracker
 ├── studylog.html         # study log
+├── session-detail.html   # one class session, with its eBwise files
+├── roadmap.html          # assessment roadmap
 ├── settings.html         # preferences, trimester switching, data export
 ├── subject-edit.html     # per-module editor
 ├── setup.html            # first-time setup wizard
+├── guide.html            # how to use
+├── faq.html              # questions and answers
+├── contact.html          # build a message for GitHub
 ├── manifest.webmanifest  # PWA manifest
 ├── sw.js                 # service worker (bump CACHE to ship an update)
 ├── assets/
@@ -296,9 +313,16 @@ for the *same* field — two tabs editing the same mark at the same moment is no
 │   │   ├── subject-form.js   # subject fields shared by the editor and the wizard
 │   │   ├── snapshot.js   # JSON snapshot + folder export for a local AI
 │   │   ├── bridge.js     # reads inbox/*.json and applies it, with approval
+│   │   ├── ebwise.js     # reads ebwise-feed.json, maps courses, renders the lists
+│   │   ├── i18n.js       # en / ja dictionary and t()
 │   │   └── pages/        # one file per page
 │   ├── logo.svg
 │   └── favicon.svg
+├── docs/
+│   └── ebwise-feed.md    # the feed format the PC sync writes
+├── tests/                # node --test, with fixtures
+├── tools/
+│   └── collect-icons.js  # lists the icons in use, and checks the subset
 ├── tailwind.config.js
 └── package.json
 ```
@@ -332,27 +356,33 @@ source — `'border-' + colour` will not be picked up.
 Both fonts are self-hosted; the app makes no external requests at all.
 
 - **Plus Jakarta Sans** — variable (weight 400–800), four unicode-range subsets
-- **Material Symbols Outlined** — subset containing only the 67 icons actually used
+- **Material Symbols Outlined** — a subset containing only the icons the app actually uses
 
 Icons are rendered by ligature, so the markup reads `<span class="material-symbols-outlined">schedule</span>`.
 If you use a new icon, regenerate the subset or it will render as literal text:
 
 ```bash
-UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-ICONS=$(grep -rhoE 'material-symbols-outlined[^>]*>[a-z_]+' --include=*.js --include=*.html . \
-  | grep -v node_modules | sed 's/.*>//' | sort -u | paste -sd, -)
-curl -s -H "User-Agent: $UA" \
-  "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=$ICONS&display=block" \
-  | grep -o 'url(https[^)]*)' | head -1 | sed 's/url(//;s/)//' \
-  | xargs curl -sL -o assets/fonts/material-symbols-outlined.woff2
+node tools/collect-icons.js           # every icon name in use, comma separated
+node tools/collect-icons.js --check   # compare with ICON_NAMES and the woff2
 ```
+
+`--check` exits non-zero when a name is missing from `ICON_NAMES` or from the font itself,
+which is what catches an icon that would otherwise render as literal text. To refetch the
+subset, follow the steps at the top of `assets/css/fonts.css`: paste the output of
+`collect-icons.js` into `ICON_NAMES`, download the woff2 from the URL given there, then run
+`--check` again.
 
 ## Privacy
 
 The only network request the app makes is Vercel Web Analytics, which records aggregate
 page views (path, referrer, country, device type) with no cookies and no cross-site tracking.
-All state lives in your browser's `localStorage` under the key `mmu-beeboard`. Use **Settings →
-Export data** to take a JSON backup, or **Reset all data** to wipe it.
+Nothing you type is ever sent anywhere.
+
+All state lives in your browser's `localStorage` under the key `mmu-beeboard`. If you pick a
+folder, the same content is also written there as `beeboard-snapshot.json`, next to
+`bridge-status.json`, `inbox/` and `ebwise-feed.json` — all of them on your own disk, and none
+of them uploaded. Use **Settings → Export data** to take a JSON backup, or **Reset all data**
+to wipe the browser copy.
 
 ## License
 

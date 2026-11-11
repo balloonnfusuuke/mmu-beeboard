@@ -698,7 +698,7 @@
           snapshotHint:
             'Writes beeboard-snapshot.json to a folder you pick, and keeps it up to date while ' +
             'the app is open. If the browser cannot write files, the same file is downloaded.',
-          hint: 'All data is stored locally in this browser. Nothing is sent to MMU.'
+          hint: 'All data is stored in this browser, and in the folder if you picked one. Nothing is sent to MMU or anywhere else.'
         },
         install: {
           title: 'Install app',
@@ -753,8 +753,10 @@
             'A personal study dashboard for your trimester. Three short steps and your timetable is yours.',
           privacyTitle: 'Your data stays in this browser.',
           privacyBody:
-            "Everything you enter is saved to this browser's local storage only — no account, no server, " +
-            'no analytics, no network requests. Clearing site data removes it.',
+            "Everything you enter is saved to this browser's local storage only — no account and nothing " +
+            'sent to a server. If you pick a folder, the same content is also written there. Only page views ' +
+            'are counted by Vercel Web Analytics, which uses no cookies and never receives what you type. ' +
+            'Clearing site data removes it.',
           skip: 'Skip setup',
           start: 'Get started',
           f1t: 'Weekly timetable',
@@ -802,7 +804,7 @@
         },
         done: {
           title: 'Setup complete',
-          body: 'Everything is stored in this browser. You can change any of it later in Settings.',
+          body: 'Everything is stored in this browser, and in the folder if you picked one. You can change any of it later in Settings.',
           trimester: 'Trimester',
           week1: 'Week 1 starts',
           teachingWeeks: 'Teaching weeks',
@@ -1237,7 +1239,7 @@
           p1Title: 'No sign-up',
           p1Body: 'There is no account and no login. Open the page and start working.',
           p2Title: 'Data stays in this browser',
-          p2Body: 'Subjects, marks and notes are stored locally. Nothing is uploaded to a server.',
+          p2Body: 'Subjects, marks and notes are stored in this browser. Pick a folder and the same content is copied there too. Nothing is sent anywhere else.',
           p3Title: 'Works offline',
           p3Body: 'After the first visit the app opens without a connection.',
           startTour: 'Start the tour',
@@ -1404,7 +1406,7 @@
           },
           f11: {
             title: 'eBwise materials',
-            body: 'New files and deadlines from eBwise, read from a JSON file on this PC.',
+            body: 'New files and deadlines from eBwise, read from a JSON file on this PC. The new list covers 21 days; open a subject to see all of its files.',
             step1: 'Run the sync on your PC so it writes ebwise-feed.json into the folder you picked.',
             step2: 'Open Settings, then eBwise, and link each eBwise course to a BeeBoard subject.',
             step3: 'Approve the deadlines you want. New materials appear on the dashboard and on each class page.',
@@ -1472,8 +1474,8 @@
           q3: {
             q: 'Where is my data stored?',
             a:
-              'In this browser, on this device, using local storage. Nothing is uploaded to a server, and there ' +
-              'is no account that could hold a copy.',
+              'In this browser, on this device, using local storage. If you pick a folder, the same content is ' +
+              'also written there. Nothing is sent to a server, and there is no account that could hold a copy.',
             link: 'Open the data settings'
           },
           q4: {
@@ -1492,8 +1494,9 @@
           q6: {
             q: 'Can I get my data back if I clear the browser data?',
             a:
-              'No. Clearing site data removes everything, and there is no server copy to restore from. Export a ' +
-              'backup before you clear anything.'
+              'If you picked a folder, open Settings, then Import, and load the beeboard-snapshot.json from that ' +
+              'folder to go back to the last time it was written. Without a folder there is nothing to restore ' +
+              'from, so export a backup before you clear anything.'
           },
           q7: {
             q: 'Does it work offline?',
@@ -1604,7 +1607,9 @@
             q: 'What is the difference between approving and rejecting?',
             a:
               'Approving checks the change again against the current data and then applies it. Rejecting drops ' +
-              'it and records why. Either way the operation file leaves the inbox.'
+              'it and records why. Either way the operation file leaves the inbox as soon as BeeBoard reads it, ' +
+              'and the waiting approval stays inside BeeBoard. eBwise deadline candidates never go through the ' +
+              'inbox.'
           },
           q24: {
             q: 'How do I undo a change the local AI made?',
@@ -1619,27 +1624,56 @@
             a:
               'Turn on Pause changes from the AI in Settings. While paused the inbox folder is not read and ' +
               'files stay where they are, so you can resume later without losing them.',
+            link: 'Open settings'
+          },
           q26: {
             q: 'What does BeeBoard read from eBwise?',
             a:
-              'Only a JSON file the sync writes on your PC: course names, new file names and deadlines. ' +
-              'BeeBoard never signs in to eBwise, and the file is read at runtime only — it is never uploaded ' +
-              'and never saved into your browser data.'
+              'Only the JSON file the sync writes on your PC. It holds course names, the name, section and ' +
+              'date of every file, what is new, and deadlines. File contents are not in it. BeeBoard never ' +
+              'signs in to eBwise. The list is not saved in your browser: only the course mapping, the times ' +
+              'you marked things as read, which subjects are folded open, and the deadlines you approved are ' +
+              'kept.',
+            link: 'Open settings'
           },
           q27: {
             q: 'Can I open the course files from BeeBoard?',
             a:
               'Yes, if you link the materials folder in Settings. Pressing a material name opens the file from ' +
               'this PC. The folder is optional: without it the list still shows what is new, and the link to ' +
-              'eBwise still works.'
-          },
+              'eBwise still works.',
             link: 'Open settings'
+          },
+          q28: {
+            q: 'Do the materials stay visible after I mark them as read?',
+            a:
+              'Yes. Marking a subject as read only clears the unread badge; nothing leaves the list. The new ' +
+              'items list shows materials for 21 days after they appear in eBwise, up to 300 of them. Older ' +
+              'ones are always there under All files when you open the subject. The files themselves stay in ' +
+              'the sync folder on your PC, and the local AI can search or summarise them too.'
+          },
+          q29: {
+            q: 'How do eBwise deadlines get in?',
+            a:
+              'When eBwise has an assignment or quiz deadline, it appears in Settings under Local AI as a ' +
+              'waiting approval. Approve it and it becomes a deadline; reject it and it stops appearing. ' +
+              'The Offer rejected deadlines again button in the eBwise link section of Settings brings ' +
+              'it back. ' +
+              'Operations of type ebwise.* placed in the inbox by an AI are refused.',
+            link: 'Open settings'
+          },
+          q30: {
+            q: 'What if it says the eBwise login has expired?',
+            a:
+              'The key the sync uses on your PC has expired. Open the sync folder on your PC, run ' +
+              'python -m ebwise_sync login and sign in with Microsoft again. Then run ' +
+              'python -m ebwise_sync sync; the next read picks it up.'
           }
         }
       },
       contact: {
         title: 'Ask the developer',
-        subtitle: 'This app has no server, so nothing is sent from here. Build the text, then post it on GitHub.',
+        subtitle: 'Nothing you write here is sent by BeeBoard. Build the text, then post it on GitHub yourself.',
         form: {
           type: 'Type',
           typeQuestion: 'Question',
@@ -2393,7 +2427,7 @@
           snapshot: 'ローカルAI用に書き出す',
           snapshotHint:
             '選んだフォルダに beeboard-snapshot.json を書き出し、アプリを開いている間は変更のたびに更新します。書き込めないブラウザでは同じ名前でダウンロードします。',
-          hint: 'データはすべてこのブラウザ内に保存されます。MMU に送信されることはありません。'
+          hint: 'データはすべてこのブラウザ内に保存されます。フォルダを選んでいれば、そのフォルダにも書かれます。MMU にも外にも送信しません。'
         },
         install: {
           title: 'アプリをインストール',
@@ -2445,8 +2479,10 @@
           body: '学期のための個人用学習ダッシュボードです。3つの短いステップで、あなたの時間割になります。',
           privacyTitle: 'データはこのブラウザ内に残ります。',
           privacyBody:
-            '入力した内容はこのブラウザのローカルストレージにのみ保存されます。アカウントもサーバーも' +
-            '解析も通信もありません。サイトデータを消去すると削除されます。',
+            '入力した内容はこのブラウザのローカルストレージにのみ保存されます。アカウントはなく、' +
+            'サーバーへ送信することもありません。フォルダを選ぶと、同じ内容がそのフォルダにも書かれます。' +
+            'ページの表示回数だけは Vercel Web Analytics で数えていて、cookie は使わず、入力した内容は' +
+            '送りません。サイトデータを消去すると削除されます。',
           skip: 'セットアップをスキップ',
           start: 'はじめる',
           f1t: '週間時間割',
@@ -2493,7 +2529,7 @@
         },
         done: {
           title: 'セットアップ完了',
-          body: 'すべてこのブラウザ内に保存されました。あとから設定でいつでも変更できます。',
+          body: 'すべてこのブラウザ内に保存されました。フォルダを選んでいれば、そのフォルダにも書かれます。あとから設定でいつでも変更できます。',
           trimester: '学期',
           week1: '第1週の開始日',
           teachingWeeks: '授業週数',
@@ -2917,7 +2953,7 @@
           p1Title: '登録不要',
           p1Body: 'アカウントもログインもありません。ページを開けばすぐ使えます。',
           p2Title: 'データはこのブラウザの中だけ',
-          p2Body: '科目・点数・メモはこのブラウザに保存されます。サーバーへは送信しません。',
+          p2Body: '科目・点数・メモはこのブラウザに保存されます。フォルダを選べば、そのフォルダにもコピーされます。外へは送信しません。',
           p3Title: 'オフラインでも動く',
           p3Body: '一度開けば、通信がなくても起動できます。',
           startTour: 'ツアーを始める',
@@ -3077,7 +3113,7 @@
           },
           f11: {
             title: 'eBwise の資料',
-            body: 'eBwise の新着資料と締切を、このパソコンの JSON ファイルから読みます。',
+            body: 'eBwise の新着資料と締切を、このパソコンの JSON ファイルから読みます。新着は 21 日分で、科目の欄を開くと全部のファイルが出ます。',
             step1: 'パソコンで同期を実行し、選んだフォルダに ebwise-feed.json を置きます。',
             step2: '設定画面の「eBwise 連携」で、eBwise の科目を BeeBoard の科目に対応させます。',
             step3: '必要な締切だけ承認します。新着資料はダッシュボードと各回のページに出ます。',
@@ -3143,7 +3179,7 @@
           q3: {
             q: 'データはどこに保存されますか？',
             a:
-              'この端末の、このブラウザの中です（ローカルストレージ）。サーバーへの送信はなく、コピーを持つアカウントもありません。',
+              'この端末の、このブラウザの中です（ローカルストレージ）。フォルダを選んでいれば、同じ内容がそのフォルダにも書かれます。サーバーへの送信はなく、コピーを持つアカウントもありません。',
             link: 'データ設定を開く'
           },
           q4: {
@@ -3159,7 +3195,7 @@
           },
           q6: {
             q: 'ブラウザのデータを消したら復元できますか？',
-            a: 'できません。サイトデータを消すとすべて失われ、復元できるサーバー側のコピーはありません。消す前にエクスポートしてください。'
+            a: 'フォルダを選んでいれば、設定の「読み込み」でそのフォルダの beeboard-snapshot.json を入れると、最後に書き出した時点まで戻せます。選んでいなければ戻せないので、消す前にエクスポートしてください。'
           },
           q7: {
             q: 'オフラインで使えますか？',
@@ -3254,7 +3290,8 @@
             q: '承認と却下は何が違いますか？',
             a:
               '承認すると、その時点のデータでもう一度検査してから反映します。却下すると何も変えず、理由を' +
-              '記録します。どちらでも操作ファイルは inbox から消えます。'
+              '記録します。どちらでも操作ファイルは BeeBoard が読んだ時点で inbox から消え、承認待ちは' +
+              'BeeBoard の中に残ります。eBwise の締切の候補は inbox を通りません。'
           },
           q24: {
             q: 'ローカルAIが反映した変更を取り消すには？',
@@ -3268,26 +3305,53 @@
             a:
               '設定画面の「AIからの変更を一時停止」を入れます。停止中は inbox を読まず、ファイルはそのまま' +
               '残るので、あとで解除すれば取り込まれます。',
+            link: '設定を開く'
+          },
           q26: {
             q: 'eBwise から何を読みますか？',
             a:
-              'パソコンで動く同期が置いた JSON ファイルだけです。中身は科目名、新着ファイル名、締切です。' +
-              'BeeBoard が eBwise にログインすることはなく、ファイルは実行時に読むだけで、どこにも送信せず、' +
-              'ブラウザの保存データにも入れません。'
+              'パソコンで動く同期が置いた JSON ファイルだけです。中身は科目名、全部のファイルの名前・章・' +
+              '日付、新着、締切で、ファイルの中身は入っていません。BeeBoard が eBwise にログインすることは' +
+              'ありません。一覧はブラウザに保存しません。保存するのは、科目の対応、既読にした時刻、' +
+              'たたみの開閉、承認した締切だけです。',
+            link: '設定を開く'
           },
           q27: {
             q: 'eBwise の資料は BeeBoard から開けますか？',
             a:
               '設定で資料フォルダをつなぐと開けます。資料名を押すと、このパソコンのファイルとして開きます。' +
-              'つながなくても、新着の一覧と eBwise へのリンクはそのまま使えます。'
-          },
+              'つながなくても、新着の一覧と eBwise へのリンクはそのまま使えます。',
             link: '設定を開く'
+          },
+          q28: {
+            q: '既読にしたあとも資料は見られますか？',
+            a:
+              'はい。既読にすると「未読」の印が消えるだけで、一覧からは消えません。新着の一覧には、' +
+              'eBwise に出てから 21 日間（最大 300 件）出ます。それより古い資料も、科目の欄を開いた' +
+              '「すべてのファイル」から、いつでも見られます。ファイルそのものは、パソコンの同期の' +
+              'フォルダに残っています。ローカルAI からも、ファイルを探したり要約したりできます。'
+          },
+          q29: {
+            q: 'eBwise の締切はどう入りますか？',
+            a:
+              'eBwise に課題やクイズの締切があると、設定の「ローカルAI連携」に承認待ちとして出ます。' +
+              '承認すると締切に入り、却下すると次からは出ません。設定の eBwise 連携の' +
+              '「却下した候補をもう一度出す」で戻せます。AI が inbox に置いた ebwise.* の操作は' +
+              '受け付けません。',
+            link: '設定を開く'
+          },
+          q30: {
+            q: '「eBwise のログインが切れています」と出たら？',
+            a:
+              'パソコンの同期の鍵が切れています。パソコンで同期のフォルダを開き、' +
+              'python -m ebwise_sync login を実行して、Microsoft でサインインし直してください。' +
+              'そのあと python -m ebwise_sync sync を実行すると、次の読み込みで直ります。'
           }
         }
       },
       contact: {
         title: '開発者への質問',
-        subtitle: 'このアプリはサーバーを持たないので、ここから何かが送信されることはありません。文面を作って GitHub に投稿します。',
+        subtitle: 'ここで書いた内容は BeeBoard からは送信しません。文面を作って GitHub に自分で投稿します。',
         form: {
           type: '種別',
           typeQuestion: '質問',
