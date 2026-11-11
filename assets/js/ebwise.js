@@ -565,15 +565,17 @@
     return textOf(subjectId) + '|' + prefix + '|' + textOf(name);
   }
 
-  /* 既定は開く。閉じたものだけ覚える。 */
-  function foldOpen(key) {
-    return folds[key] !== false;
+  /* 触ったものだけ覚える。触っていなければ、章は開いてモジュールは閉じる
+     （モジュールを全部開くと、章を開いただけで何十行も並ぶため）。 */
+  function foldOpen(key, defaultOpen) {
+    var saved = folds[key];
+    return saved === undefined ? defaultOpen : saved;
   }
 
   /* 章の見出しと中身。新着の一覧とファイル一覧で同じ形にする。 */
   function sectionBlockHtml(heading, body, key) {
     return (
-      '<details class="bb-fold pt-3" data-ebwise-fold="' + escHtml(key) + '"' + (foldOpen(key) ? ' open' : '') + '>' +
+      '<details class="bb-fold pt-3" data-ebwise-fold="' + escHtml(key) + '"' + (foldOpen(key, true) ? ' open' : '') + '>' +
       '<summary class="cursor-pointer text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
       escHtml(heading) + '</summary>' +
       body +
@@ -585,7 +587,7 @@
   function moduleBlockHtml(name, notes, body, key) {
     return (
       '<details class="bb-fold mt-2 pl-3 border-l-2 border-border-subtle" data-ebwise-fold="' + escHtml(key) + '"' +
-      (foldOpen(key) ? ' open' : '') + '>' +
+      (foldOpen(key, false) ? ' open' : '') + '>' +
       '<summary class="cursor-pointer pb-0.5">' +
       '<span class="flex items-baseline gap-2">' +
       '<span class="text-caption font-bold text-ink break-words">' + escHtml(name) + '</span>' +

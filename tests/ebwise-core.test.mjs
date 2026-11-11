@@ -852,10 +852,13 @@ const FOLD_ITEMS = [
   }
 ];
 
-test('materialRowsHtml は章とモジュールを既定で開いた details にする', () => {
+test('materialRowsHtml は章を開き、モジュールを閉じて描く', () => {
   const html = ui.materialRowsHtml(FOLD_ITEMS, { site: SITE, subjectId: 's1' });
+  /* 章は開いた状態から始める。 */
   assert.equal(html.includes('data-ebwise-fold="s1|ns|Topic 8" open>'), true);
-  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides" open>'), true);
+  /* モジュールは閉じた状態から始める（章を開いただけで何十行も並ばないように）。 */
+  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides">'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides" open>'), false);
   assert.equal(html.includes('<summary'), true);
 });
 
@@ -880,7 +883,7 @@ test('materialRowsHtml は閉じた章とモジュールを閉じたまま描く
 test('fileGroupsHtml は章とモジュールを科目ごとのキーで開閉する', () => {
   const html = ui.fileGroupsHtml(FILE_GROUPS, { site: SITE, subjectId: 's1' });
   assert.equal(html.includes('data-ebwise-fold="s1|fs|Topic 1" open>'), true);
-  assert.equal(html.includes('data-ebwise-fold="s1|fm|Topic 1/Lab 1" open>'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|fm|Topic 1/Lab 1">'), true);
   /* 新着の一覧とは別のキーなので、片方を閉じてももう片方は開いたまま。 */
   ebwise.setFold('s1|fs|Topic 1', false);
   assert.equal(
