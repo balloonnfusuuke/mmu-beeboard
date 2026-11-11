@@ -1257,8 +1257,16 @@
   /* 5 件を超えた科目は、押されたときだけ全件にする。 */
   var ebwiseExpanded = {};
 
-  function ebwiseSubjectBlock(subject, items, unread, site) {
-    var chip = BB.color.chip(subject.color);
+  function ebwiseFileTotal(groups) {
+    var total = 0;
+    groups.forEach(function (group) {
+      total += group.items.length;
+    });
+    return total;
+  }
+
+  /* 開いている科目の中身。開いたときだけ作る（2000 件をまとめて描かないため）。 */
+  function ebwiseSubjectBodyHtml(subject, items, groups, site, files) {
     var expanded = !!ebwiseExpanded[subject.id];
     var shown = expanded ? items : items.slice(0, 5);
     var more =
@@ -1268,10 +1276,32 @@
           escHtml(expanded ? t('ebwise.dash.less') : t('ebwise.dash.more', { n: items.length })) +
           '</button>'
         : '';
+    var total = ebwiseFileTotal(groups);
+    var filesBlock = total
+      ? '<div class="mt-3 pt-3 border-t border-border-subtle">' +
+        '<h3 class="text-body-sm font-bold text-ink">' +
+        escHtml(t('ebwise.dash.allFiles', { n: total })) + '</h3>' +
+        BB.ebwise.ui.fileGroupsHtml(groups, { site: site, files: files }) +
+        '</div>'
+      : '';
     return (
-      '<div class="bg-surface border border-border rounded-card p-4 shadow-rest">' +
-      '<div class="flex items-center justify-between gap-2 pb-2 border-b border-border-subtle">' +
-      '<div class="flex items-center gap-2 min-w-0">' +
+      '<div class="pt-2">' +
+      '<h3 class="text-body-sm font-bold text-ink">' + escHtml(t('ebwise.dash.newTitle')) + '</h3>' +
+      BB.ebwise.ui.materialRowsHtml(shown, { site: site, files: files }) +
+      more +
+      filesBlock +
+      '</div>'
+    );
+  }
+
+  /* 科目 1 つぶんの、たためるブロック。閉じているときは summary だけを描く。 */
+  function ebwiseSubjectBlock(subject, items, unread, site, files, groups, open) {
+    var chip = BB.color.chip(subject.color);
+    var total = ebwiseFileTotal(groups);
+    var summary =
+      '<summary class="cursor-pointer">' +
+      '<span class="flex items-center justify-between gap-2">' +
+      '<span class="flex items-center gap-2 min-w-0">' +
       '<span class="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold" style="background:' + chip.background +
       ';color:' + chip.color + ';border:1px solid ' + chip.borderColor + '">' + escHtml(subject.id) + '</span>' +
       '<span class="text-body-sm font-semibold text-ink truncate">' + escHtml(subject.name) + '</span>' +
@@ -1279,18 +1309,54 @@
         ? '<span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-on-primary">' +
           escHtml(t('ebwise.dash.unread', { n: unread })) + '</span>'
         : '') +
-      '</div>' +
+      (items.length
+        ? '<span class="shrink-0 text-caption text-muted">' +
+          escHtml(t('ebwise.dash.newCount', { n: items.length })) + '</span>'
+        : '') +
+      (total
+        ? '<span class="shrink-0 text-caption text-muted">' +
+          escHtml(t('ebwise.dash.allFiles', { n: total })) + '</span>'
+        : '') +
+      '</span>' +
       '<button type="button" data-ebwise-seen="' + escHtml(subject.id) +
       '" class="shrink-0 text-caption font-semibold text-primary hover:underline">' +
       escHtml(t('ebwise.dash.seen')) + '</button>' +
-      '</div>' +
-      BB.ebwise.ui.materialRowsHtml(shown, {
-        site: site,
-        files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
-      }) +
-      more +
-      '</div>'
+      '</span>' +
+      '</summary>';
+    var body = open
+      ? '<div data-ebwise-body>' + ebwiseSubjectBodyHtml(subject, items, groups, site, files) + '</div>'
+      : '';
+    return (
+      '<details data-ebwise-subject="' + escHtml(subject.id) + '"' + (open ? ' open' : '') +
+      ' class="bg-surface border border-border rounded-card p-4 shadow-rest">' +
+      summary + body +
+      '</details>'
     );
+  }
+
+  /* 開いた科目のブロックだけに中身を入れる。ほかの科目は触らない。 */
+  function fillEbwiseBody(details, subjectId) {
+    if (!BB.ebwise || typeof BB.ebwise.feed !== 'function') return;
+    var feed = BB.ebwise.feed();
+    if (!feed) return;
+    var state = BB.store.get();
+    var subject = null;
+    state.subjects.forEach(function (item) {
+      if (item.id === subjectId) subject = item;
+    });
+    if (!subject) return;
+    var info = BB.ebwise.mapping();
+    var seenAt = (state.ebwise && state.ebwise.seenAt) || {};
+    var items = BB.ebwise.core.materialsFor(feed, info.map, subject.id, seenAt[subject.id] || '');
+    var groups = BB.ebwise.core.filesFor(feed, info.map, subject.id);
+    var files = typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked();
+    var body = details.querySelector('[data-ebwise-body]');
+    if (!body) {
+      body = document.createElement('div');
+      body.setAttribute('data-ebwise-body', '');
+      details.appendChild(body);
+    }
+    body.innerHTML = ebwiseSubjectBodyHtml(subject, items, groups, feed.site, files);
   }
 
   /* 状態が ok のときだけ科目ごとの一覧を出す。それ以外は 1 行だけ。 */
@@ -1322,14 +1388,17 @@
     var feed = BB.ebwise.feed();
     var info = BB.ebwise.mapping();
     var seenAt = (state.ebwise && state.ebwise.seenAt) || {};
+    var open = (state.ebwise && state.ebwise.open) || {};
+    var files = typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked();
     var blocks = [];
     state.subjects.forEach(function (subject) {
       var items = BB.ebwise.core.materialsFor(feed, info.map, subject.id, seenAt[subject.id] || '');
-      if (!items.length) return;
+      var groups = BB.ebwise.core.filesFor(feed, info.map, subject.id);
+      if (!items.length && !ebwiseFileTotal(groups)) return;
       var unread = items.filter(function (item) {
         return item.unread;
       }).length;
-      blocks.push(ebwiseSubjectBlock(subject, items, unread, feed.site));
+      blocks.push(ebwiseSubjectBlock(subject, items, unread, feed.site, files, groups, !!open[subject.id]));
     });
 
     var unmatched = info.unmatched.length
@@ -1350,10 +1419,14 @@
       ? '<div class="space-y-3">' + blocks.join('') + '</div>'
       : '<p class="text-body-sm text-muted">' + escHtml(t('ebwise.dash.empty')) + '</p>';
 
-    host.innerHTML = head + unmatched + body;
+    var truncated = feed.filesTruncated
+      ? '<p class="text-caption text-muted">' + escHtml(t('ebwise.dash.truncated')) + '</p>'
+      : '';
+
+    host.innerHTML = head + unmatched + body + truncated;
   }
 
-  /* 既読と「もっと見る」。行は描き直されるので、置き換わらない親で受ける。 */
+  /* 既読と「もっと見る」と、開いたときの中身。行は描き直されるので、置き換わらない親で受ける。 */
   function bindEbwise() {
     var host = $('#ebwise');
     if (!host || host.getAttribute('data-bound') === '1') return;
@@ -1361,6 +1434,9 @@
     host.addEventListener('click', function (event) {
       var seen = event.target.closest('[data-ebwise-seen]');
       if (seen) {
+        /* summary の中のボタンなので、押しても開いたり閉じたりさせない。 */
+        event.preventDefault();
+        event.stopPropagation();
         BB.ebwise.markSeen(seen.getAttribute('data-ebwise-seen'));
         renderEbwise(BB.store.get());
         renderTopics(BB.store.get());
@@ -1372,6 +1448,28 @@
       ebwiseExpanded[id] = !ebwiseExpanded[id];
       renderEbwise(BB.store.get());
     });
+    /* toggle は上へ伝わらないので、捕まえて受ける。保存されている値と同じなら何もしない
+       （描き直しで起きた toggle で保存を繰り返さないため）。 */
+    host.addEventListener(
+      'toggle',
+      function (event) {
+        var details = event.target;
+        if (!details || typeof details.getAttribute !== 'function') return;
+        var id = details.getAttribute('data-ebwise-subject');
+        if (!id) return;
+        var state = BB.store.get();
+        var saved = !!(state.ebwise && state.ebwise.open && state.ebwise.open[id]);
+        if (saved === details.open) return;
+        BB.ebwise.setOpen(id, details.open);
+        if (details.open) {
+          fillEbwiseBody(details, id);
+          return;
+        }
+        var body = details.querySelector('[data-ebwise-body]');
+        if (body) body.innerHTML = '';
+      },
+      true
+    );
   }
 
   function renderTopics(state) {

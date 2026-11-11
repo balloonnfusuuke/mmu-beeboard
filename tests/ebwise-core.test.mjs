@@ -38,6 +38,8 @@ test('parseFeed は見本を通す', () => {
   assert.equal(result.feed.site, sample.site);
   assert.equal(result.feed.materials.length, sample.materials.length);
   assert.equal(result.feed.deadlines.length, sample.deadlines.length);
+  assert.equal(result.feed.files.length, sample.files.length);
+  assert.equal(result.feed.filesTruncated, false);
 });
 
 test('parseFeed は schema 違いを落とす', () => {
@@ -62,7 +64,7 @@ test('parseFeed は壊れた JSON を落とす', () => {
 });
 
 test('parseFeed は http の site を落とす', () => {
-  const text = JSON.stringify({ ...sample, site: 'http://ebwise.mmu.edu.my' });
+  const text = JSON.stringify({ ...sample, site: 'http://ebwise.example' });
   const result = core.parseFeed(text, text.length);
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'bad_site');
@@ -105,14 +107,68 @@ test('parseFeed は materials 300 件・deadlines 200 件で打ち切る', () =>
   assert.equal(result.feed.deadlines.length, 200);
 });
 
+test('parseFeed は files の無い古い feed も通す', () => {
+  const old = { ...sample };
+  delete old.files;
+  delete old.filesTruncated;
+  const text = JSON.stringify(old);
+  const result = core.parseFeed(text, text.length);
+  assert.equal(result.ok, true);
+  assert.equal(result.reason, '');
+  assert.deepEqual(plain(result.feed.files), []);
+  assert.equal(result.feed.filesTruncated, false);
+  assert.equal(result.dropped, 0);
+});
+
+test('parseFeed は filesTruncated を真偽値で写す', () => {
+  const text = JSON.stringify({ ...sample, filesTruncated: true });
+  assert.equal(core.parseFeed(text, text.length).feed.filesTruncated, true);
+  const other = JSON.stringify({ ...sample, filesTruncated: 'yes' });
+  assert.equal(core.parseFeed(other, other.length).feed.filesTruncated, false);
+});
+
+test('parseFeed は形の悪い files を数えて捨てる', () => {
+  const broken = {
+    ...sample,
+    files: [
+      ...sample.files,
+      { id: 'ebw:file:deadbeefdeadbeef', course: 'CMA6114' },
+      { course: 'CMA6114', fileName: 'no-id.pdf' },
+      { id: 'ebw:file:aaaaaaaaaaaaaaaa', fileName: 'no-course.pdf' },
+      { id: 'ebw:file:bbbbbbbbbbbbbbbb', course: 'CMA6114', fileName: 'odd-section.pdf', sectionNo: '8' }
+    ]
+  };
+  const text = JSON.stringify(broken);
+  const result = core.parseFeed(text, text.length);
+  assert.equal(result.ok, true);
+  assert.equal(result.dropped, 3);
+  assert.equal(result.feed.files.length, sample.files.length + 1);
+  const fixed = result.feed.files.find((item) => item.id === 'ebw:file:bbbbbbbbbbbbbbbb');
+  assert.equal(fixed.sectionNo, 0);
+});
+
+test('parseFeed は files 2000 件で打ち切る', () => {
+  const many = Array.from({ length: 2001 }, (_, index) => ({
+    id: 'ebw:file:' + String(index).padStart(16, '0'),
+    course: 'CMA6114',
+    fileName: 'f' + index + '.pdf',
+    sectionNo: 1
+  }));
+  const text = JSON.stringify({ ...sample, files: many });
+  const result = core.parseFeed(text, text.length);
+  assert.equal(result.ok, true);
+  assert.equal(result.feed.files.length, 2000);
+  assert.equal(result.dropped, 0);
+});
+
 /* ---------- safeUrl ---------- */
 
 test('safeUrl は同じ origin の https だけ通す', () => {
   const site = sample.site;
-  const ok = 'https://ebwise.mmu.edu.my/mod/resource/view.php?id=1';
+  const ok = 'https://ebwise.example/mod/resource/view.php?id=1';
   assert.equal(core.safeUrl(ok, site), ok);
   assert.equal(core.safeUrl('javascript:alert(1)', site), '');
-  assert.equal(core.safeUrl('http://ebwise.mmu.edu.my/x', site), '');
+  assert.equal(core.safeUrl('http://ebwise.example/x', site), '');
   assert.equal(core.safeUrl('//evil.example.com/x', site), '');
   assert.equal(core.safeUrl('', site), '');
   assert.equal(core.safeUrl(null, site), '');
@@ -248,6 +304,75 @@ test('materialsFor は対応の無い科目で空を返す', () => {
   assert.deepEqual(plain(core.materialsFor(sample, { CMA6114: 'CMA6114' }, 'ZZZ9999', '')), []);
 });
 
+/* ---------- filesFor ---------- */
+
+const FILE_MAP = { CMA6114: 's1', CCP6114: 's2' };
+
+test('filesFor は sectionNo の順にまとめる', () => {
+  const groups = plain(core.filesFor(sample, FILE_MAP, 's1'));
+  assert.deepEqual(
+    groups.map((group) => group.sectionNo),
+    [1, 3, 8]
+  );
+  assert.deepEqual(
+    groups.map((group) => group.section),
+    ['Topic 1', 'Topic 3', 'Topic 8']
+  );
+  assert.deepEqual(
+    groups.map((group) => group.items.length),
+    [2, 1, 2]
+  );
+});
+
+test('filesFor はまとまりの中を module、fileName の順に並べる', () => {
+  const groups = plain(core.filesFor(sample, FILE_MAP, 's1'));
+  assert.deepEqual(
+    groups[0].items.map((item) => item.fileName),
+    ['lab1.pdf', '[TEST] week1.pdf']
+  );
+  assert.deepEqual(
+    groups[2].items.map((item) => item.fileName),
+    ['[TEST] week8-handout.pdf', '[TEST] week8.pdf']
+  );
+  const ccp = plain(core.filesFor(sample, FILE_MAP, 's2'));
+  assert.deepEqual(
+    ccp.map((group) => group.sectionNo),
+    [0, 2]
+  );
+  assert.deepEqual(
+    ccp[1].items.map((item) => item.fileName),
+    ['[TEST] a2-rubric.pdf', 'a2.pdf', '[TEST] quiz1-answers.pdf', '[TEST] quiz1-sample.pdf']
+  );
+});
+
+test('filesFor は materials と同じ id に recent を付ける', () => {
+  const cma = plain(core.filesFor(sample, FILE_MAP, 's1'));
+  const lab = cma[0].items.find((item) => item.id === 'ebw:file:0123456789abcdef');
+  assert.equal(lab.recent, 'new');
+  const other = cma[0].items.find((item) => item.id === 'ebw:file:1111111111111111');
+  assert.equal('recent' in other, false);
+  const ccp = plain(core.filesFor(sample, FILE_MAP, 's2'));
+  const a2 = ccp[1].items.find((item) => item.id === 'ebw:file:0011223344556677');
+  assert.equal(a2.recent, 'updated');
+});
+
+test('filesFor は対応の無い科目で空を返し、feed を書き換えない', () => {
+  const before = JSON.stringify(sample);
+  assert.deepEqual(plain(core.filesFor(sample, FILE_MAP, 'ZZZ9999')), []);
+  core.filesFor(sample, FILE_MAP, 's1');
+  assert.equal(JSON.stringify(sample), before);
+});
+
+test('materialById は materials に無い id を files から探す', () => {
+  const fromMaterials = core.materialById(sample, 'ebw:file:0123456789abcdef');
+  assert.equal(fromMaterials.title, 'Sample Lab 1');
+  const fromFiles = core.materialById(sample, 'ebw:file:1111111111111111');
+  assert.equal(fromFiles.fileName, '[TEST] week1.pdf');
+  assert.equal(fromFiles.downloaded, true);
+  assert.equal(core.materialById(sample, 'ebw:file:0000000000000000'), null);
+  assert.equal(core.materialById(null, 'ebw:file:1111111111111111'), null);
+});
+
 /* ---------- termRange ---------- */
 
 test('termRange は開始日と週数から学期の末日を返す', () => {
@@ -279,7 +404,7 @@ test('window が無い context では読み込みを動かさない', () => {
 
 /* ---------- ui.materialRowsHtml ---------- */
 
-const SITE = 'https://ebwise.mmu.edu.my';
+const SITE = 'https://ebwise.example';
 
 test('materialRowsHtml は title をエスケープする', () => {
   const html = ui.materialRowsHtml(
@@ -309,7 +434,7 @@ test('materialRowsHtml は別の origin の url をリンクにしない', () =>
 });
 
 test('materialRowsHtml は同じ origin の url だけリンクにする', () => {
-  const url = 'https://ebwise.mmu.edu.my/mod/resource/view.php?id=1';
+  const url = 'https://ebwise.example/mod/resource/view.php?id=1';
   const html = ui.materialRowsHtml(
     [{ id: 'ebw:mod:1', title: 'Slides', status: 'updated', url, localPath: '' }],
     { site: SITE }
@@ -386,7 +511,7 @@ test('deadlineOps は見本から import を 2 件だけ返す', () => {
   assert.equal(ops[0].args.time, '10:00');
   assert.equal(ops[0].args.kind, 'testPrep');
   assert.equal(ops[0].args.course, 'CMA6114');
-  assert.equal(ops[0].args.url, 'https://ebwise.mmu.edu.my/mod/quiz/view.php?id=9002');
+  assert.equal(ops[0].args.url, 'https://ebwise.example/mod/quiz/view.php?id=9002');
   assert.equal(ops[1].args.kind, 'other');
 });
 
@@ -400,7 +525,7 @@ test('deadlineOps は学期外と提出済みを候補にしない', () => {
     dueDate: '2027-06-01',
     dueTime: '23:59',
     submission: null,
-    url: 'https://ebwise.mmu.edu.my/mod/assign/view.php?id=9101'
+    url: 'https://ebwise.example/mod/assign/view.php?id=9101'
   });
   feed.deadlines.push({
     id: 'ebw:assign:9102',
@@ -410,7 +535,7 @@ test('deadlineOps は学期外と提出済みを候補にしない', () => {
     dueDate: '2026-11-21',
     dueTime: '23:59',
     submission: 'submitted',
-    url: 'https://ebwise.mmu.edu.my/mod/assign/view.php?id=9102'
+    url: 'https://ebwise.example/mod/assign/view.php?id=9102'
   });
   const state = deadlineState();
   const ops = plain(core.deadlineOps(feed, mapFor(state), state, TODAY));
@@ -552,4 +677,84 @@ test('materialRowsHtml は資料フォルダをつないだときだけ資料名
     files: true
   });
   assert.equal(noPath.includes('data-ebwise-open'), false);
+});
+
+/* ---------- ui.fileGroupsHtml ---------- */
+
+const FILE_GROUPS = [
+  {
+    sectionNo: 1,
+    section: 'Topic 1',
+    items: [
+      {
+        id: 'ebw:file:1',
+        fileName: '<script>alert(1)</script>.pdf',
+        module: 'Lab 1',
+        moodleModified: '2026-11-08T22:00:00+08:00',
+        size: 123456,
+        localPath: 'CMA6114/01 Topic 1/x.pdf',
+        downloaded: true,
+        url: 'https://ebwise.example/mod/resource/view.php?id=1',
+        recent: 'new'
+      },
+      {
+        id: 'ebw:file:2',
+        fileName: 'lab2.pdf',
+        module: '',
+        moodleModified: null,
+        size: 2048000,
+        localPath: '',
+        downloaded: false,
+        url: 'https://ebwise.example/mod/resource/view.php?id=2'
+      },
+      {
+        id: 'ebw:file:3',
+        fileName: 'lab3.pdf',
+        module: 'Lab 3',
+        moodleModified: '2026-11-01T09:00:00+08:00',
+        size: 512,
+        localPath: 'CMA6114/01 Topic 1/lab3.pdf',
+        downloaded: true,
+        url: 'https://labs.example.edu/lab3.pdf'
+      }
+    ]
+  }
+];
+
+test('fileGroupsHtml は fileName をエスケープする', () => {
+  const html = ui.fileGroupsHtml(FILE_GROUPS, { site: SITE });
+  assert.equal(html.includes('<script>'), false);
+  assert.equal(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;.pdf'), true);
+});
+
+test('fileGroupsHtml は別の origin の url をリンクにしない', () => {
+  const html = ui.fileGroupsHtml(FILE_GROUPS, { site: SITE });
+  assert.equal(html.includes('labs.example.edu'), false);
+  assert.equal(html.includes('https://ebwise.example/mod/resource/view.php?id=1'), true);
+});
+
+test('fileGroupsHtml は downloaded が false の行にボタンを出さない', () => {
+  const html = ui.fileGroupsHtml(
+    [{ sectionNo: 2, section: 'Topic 2', items: [FILE_GROUPS[0].items[1]] }],
+    { site: SITE, files: true }
+  );
+  assert.equal(html.includes('data-ebwise-open'), false);
+  assert.equal(html.includes('data-ebwise-copy'), false);
+  assert.equal(html.includes('href='), false);
+  assert.equal(html.includes('Not downloaded yet'), true);
+});
+
+test('fileGroupsHtml は recent のバッジを出す', () => {
+  const html = ui.fileGroupsHtml(FILE_GROUPS, { site: SITE });
+  assert.equal(html.includes('>New</span>'), true);
+  const updated = ui.fileGroupsHtml(
+    [{ sectionNo: 1, section: 'Topic 1', items: [{ ...FILE_GROUPS[0].items[0], recent: 'updated' }] }],
+    { site: SITE }
+  );
+  assert.equal(updated.includes('>Updated</span>'), true);
+  const none = ui.fileGroupsHtml(
+    [{ sectionNo: 1, section: 'Topic 1', items: [{ ...FILE_GROUPS[0].items[0], recent: undefined }] }],
+    { site: SITE }
+  );
+  assert.equal(none.includes('>New</span>'), false);
 });

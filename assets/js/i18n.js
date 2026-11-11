@@ -240,7 +240,13 @@
           more: 'Show all ({n})',
           less: 'Show less',
           unmatched: 'Some eBwise courses are not linked.',
-          badge: 'eBwise new {n}'
+          badge: 'eBwise new {n}',
+          newTitle: 'New',
+          newCount: 'New {n}',
+          allFiles: 'All files ({n})',
+          notDownloaded: 'Not downloaded yet',
+          truncated: 'Too many files, so only some are shown.',
+          section: 'Section'
         },
         files: {
           title: 'Materials folder (optional)',
@@ -1934,7 +1940,13 @@
           more: 'もっと見る（{n}）',
           less: '閉じる',
           unmatched: '対応していない eBwise の科目があります。設定で対応させてください。',
-          badge: 'eBwise 新着 {n}'
+          badge: 'eBwise 新着 {n}',
+          newTitle: '新着',
+          newCount: '新着 {n}',
+          allFiles: 'すべてのファイル（{n}）',
+          notDownloaded: 'まだ取得していません',
+          truncated: 'ファイルが多いため、一部だけを表示しています。',
+          section: '章'
         },
         files: {
           title: '資料フォルダ（任意）',

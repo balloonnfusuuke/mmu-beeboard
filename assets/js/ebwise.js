@@ -17,6 +17,7 @@
   var MAX_BYTES = 1024 * 1024;
   var MAX_MATERIALS = 300;
   var MAX_DEADLINES = 200;
+  var MAX_FILES = 2000;
   /* 学期の週数が読めないときの既定値。store.js の学期と同じ。 */
   var DEFAULT_WEEKS = 14;
   /* JSON から来たキーをそのまま object のキーにしない。 */
@@ -28,6 +29,10 @@
 
   function textOf(value) {
     return typeof value === 'string' ? value : '';
+  }
+
+  function isInt(value) {
+    return typeof value === 'number' && isFinite(value) && Math.floor(value) === value;
   }
 
   function isUnsafe(key) {
@@ -80,6 +85,15 @@
       isText(item.name) && isText(item.dueDate);
   }
 
+  /* files の 1 件。id・course・fileName が文字列であること。
+     sectionNo は整数にそろえる（読めない値は 0）。parseFeed が持っている複製を直す。 */
+  function isFile(item) {
+    if (!item || typeof item !== 'object') return false;
+    if (!isText(item.id) || !isText(item.course) || !isText(item.fileName)) return false;
+    item.sectionNo = isInt(item.sectionNo) ? item.sectionNo : 0;
+    return true;
+  }
+
   /* 壊れた項目を数えながら、上限まで残す。上限を超えた分は壊れてはいないので数えない。 */
   function keep(list, test, max) {
     var items = Array.isArray(list) ? list : [];
@@ -120,6 +134,8 @@
 
     var materials = keep(parsed.materials, isMaterial, MAX_MATERIALS);
     var deadlines = keep(parsed.deadlines, isDeadline, MAX_DEADLINES);
+    /* files の無い古い feed も正しいものとして扱う（空の一覧になる）。 */
+    var files = keep(parsed.files, isFile, MAX_FILES);
 
     /* 知っている項目だけを写す。JSON の __proto__ などをそのまま持ち込まない。 */
     var feed = {
@@ -131,10 +147,17 @@
       filesRoot: textOf(parsed.filesRoot),
       courses: Array.isArray(parsed.courses) ? parsed.courses : [],
       materials: materials.items,
-      deadlines: deadlines.items
+      deadlines: deadlines.items,
+      files: files.items,
+      filesTruncated: parsed.filesTruncated === true
     };
 
-    return { ok: true, feed: feed, reason: '', dropped: materials.dropped + deadlines.dropped };
+    return {
+      ok: true,
+      feed: feed,
+      reason: '',
+      dropped: materials.dropped + deadlines.dropped + files.dropped
+    };
   }
 
   /* ---------- safeUrl ---------- */
@@ -251,17 +274,22 @@
 
   /* ---------- materialsFor ---------- */
 
+  /* map（code -> subjectId）から、その科目の code を集める。 */
+  function codesFor(map, subjectId) {
+    var mapping = map && typeof map === 'object' ? map : {};
+    var codes = {};
+    for (var code in mapping) {
+      if (!Object.prototype.hasOwnProperty.call(mapping, code)) continue;
+      if (mapping[code] === subjectId) codes[code] = true;
+    }
+    return codes;
+  }
+
   /* その科目の資料を changedAt の新しい順に返す。seenAt より新しいものに unread を付ける。
      seenAt が空なら全部 unread。feed は書き換えない。 */
   function materialsFor(feed, map, subjectId, seenAt) {
     var materials = feed && Array.isArray(feed.materials) ? feed.materials : [];
-    var mapping = map && typeof map === 'object' ? map : {};
-    var codes = {};
-    var code;
-    for (code in mapping) {
-      if (!Object.prototype.hasOwnProperty.call(mapping, code)) continue;
-      if (mapping[code] === subjectId) codes[code] = true;
-    }
+    var codes = codesFor(map, subjectId);
 
     var seen = timeOf(seenAt);
     var list = [];
@@ -278,6 +306,60 @@
       return timeOf(b.changedAt) - timeOf(a.changedAt);
     });
     return list;
+  }
+
+  /* ---------- filesFor ---------- */
+
+  /* 大文字小文字を無視した文字列の比較。 */
+  function compareText(a, b) {
+    var left = lower(a);
+    var right = lower(b);
+    if (left < right) return -1;
+    if (left > right) return 1;
+    return 0;
+  }
+
+  /* その科目のファイルを sectionNo の順にまとめる。まとまりの中は module、fileName の順。
+     materials に同じ id があれば recent（'new' か 'updated'）を付ける。feed は書き換えない。 */
+  function filesFor(feed, map, subjectId) {
+    var files = feed && Array.isArray(feed.files) ? feed.files : [];
+    var materials = feed && Array.isArray(feed.materials) ? feed.materials : [];
+    var codes = codesFor(map, subjectId);
+
+    var recent = {};
+    for (var i = 0; i < materials.length; i++) {
+      var material = materials[i];
+      if (!material || typeof material !== 'object') continue;
+      if (material.status !== 'new' && material.status !== 'updated') continue;
+      recent[material.id] = material.status;
+    }
+
+    var groups = [];
+    var byNumber = {};
+    for (var j = 0; j < files.length; j++) {
+      var item = files[j];
+      if (!item || typeof item !== 'object') continue;
+      if (!Object.prototype.hasOwnProperty.call(codes, item.course)) continue;
+      var number = isInt(item.sectionNo) ? item.sectionNo : 0;
+      var group = byNumber[number];
+      if (!group) {
+        group = byNumber[number] = { sectionNo: number, section: textOf(item.section), items: [] };
+        groups.push(group);
+      }
+      var copy = shallow(item);
+      if (Object.prototype.hasOwnProperty.call(recent, item.id)) copy.recent = recent[item.id];
+      group.items.push(copy);
+    }
+
+    groups.sort(function (a, b) {
+      return a.sectionNo - b.sectionNo;
+    });
+    for (var k = 0; k < groups.length; k++) {
+      groups[k].items.sort(function (a, b) {
+        return compareText(a.module, b.module) || compareText(a.fileName, b.fileName);
+      });
+    }
+    return groups;
   }
 
   /* ---------- termRange ---------- */
@@ -527,18 +609,131 @@
       .join('');
   }
 
+  /* ---------- ファイルの行 ---------- */
+
+  /* ファイル 1 件の大きさ。読めない値は ''。 */
+  function sizeLabel(size) {
+    if (typeof size !== 'number' || !isFinite(size) || size <= 0) return '';
+    if (size >= 1024 * 1024) return Math.round((size / (1024 * 1024)) * 10) / 10 + ' MB';
+    return Math.max(1, Math.round(size / 1024)) + ' KB';
+  }
+
+  /* 章ごとのファイル一覧。DOM を使わないので、node でも文字列として試せる。
+     opts.site は feed の site、opts.files は資料フォルダをつないでいるか。
+     downloaded が false の行は「まだ取得していません」だけを出し、開くボタンもコピーのボタンも出さない。 */
+  function fileGroupsHtml(groups, opts) {
+    var list = Array.isArray(groups) ? groups : [];
+    var options = opts || {};
+    var site = typeof options.site === 'string' ? options.site : '';
+    var linked = options.files === true;
+
+    return list
+      .map(function (group) {
+        if (!group || typeof group !== 'object') return '';
+        var items = Array.isArray(group.items) ? group.items : [];
+        if (!items.length) return '';
+        var heading = typeof group.section === 'string' && group.section !== ''
+          ? group.section
+          : label('ebwise.dash.section', 'Section') + ' ' + String(group.sectionNo);
+        var rows = items
+          .map(function (item) {
+            if (!item || typeof item !== 'object') return '';
+            var id = typeof item.id === 'string' ? item.id : '';
+            var name = typeof item.fileName === 'string' && item.fileName !== ''
+              ? item.fileName
+              : textOf(item.title);
+            var downloaded = item.downloaded !== false;
+            var localPath = typeof item.localPath === 'string' ? item.localPath : '';
+            var canOpen = linked && downloaded && localPath !== '';
+            var meta = [];
+            if (typeof item.module === 'string' && item.module !== '') meta.push(item.module);
+            var when = dateLabel(item.moodleModified);
+            if (when) meta.push(when);
+            var size = sizeLabel(item.size);
+            if (size) meta.push(size);
+            var recent = item.recent === 'updated'
+              ? label('ebwise.material.updated', 'Updated')
+              : item.recent === 'new' ? label('ebwise.material.new', 'New') : '';
+            var url = downloaded ? safeUrl(item.url, site) : '';
+            var open = url
+              ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
+                'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
+                escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
+              : '';
+            var copy = downloaded && localPath !== ''
+              ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
+                'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
+                escHtml(label('ebwise.material.copy', 'Copy path')) + '</button>'
+              : '';
+            var note = downloaded
+              ? ''
+              : '<div class="text-caption text-muted">' +
+                escHtml(label('ebwise.dash.notDownloaded', 'Not downloaded yet')) + '</div>';
+
+            return (
+              '<div class="flex items-start gap-3 py-2 border-b border-border-subtle last:border-0">' +
+              '<div class="min-w-0 flex-1">' +
+              '<div class="text-body-sm font-semibold text-ink break-words">' +
+              (canOpen
+                ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
+                  'class="text-left hover:text-primary hover:underline">' + escHtml(name) + '</button>'
+                : escHtml(name)) +
+              (recent
+                ? ' <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-on-primary">' +
+                  escHtml(recent) + '</span>'
+                : '') +
+              '</div>' +
+              (meta.length
+                ? '<div class="text-caption text-muted break-words">' + escHtml(meta.join(' · ')) + '</div>'
+                : '') +
+              note +
+              '</div>' +
+              (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
+              '</div>'
+            );
+          })
+          .join('');
+        return (
+          '<div class="pt-3">' +
+          '<h4 class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
+          escHtml(heading) + '</h4>' +
+          rows +
+          '</div>'
+        );
+      })
+      .join('');
+  }
+
+  /* ---------- materialById ---------- */
+
+  /* 資料の id から 1 件。materials に無ければ files からも探す（全部のファイルを開けるように）。
+     feed は書き換えない。 */
+  function materialById(feed, id) {
+    var materials = feed && Array.isArray(feed.materials) ? feed.materials : [];
+    for (var i = 0; i < materials.length; i++) {
+      if (materials[i] && materials[i].id === id) return materials[i];
+    }
+    var files = feed && Array.isArray(feed.files) ? feed.files : [];
+    for (var j = 0; j < files.length; j++) {
+      if (files[j] && files[j].id === id) return files[j];
+    }
+    return null;
+  }
+
   var core = {
     parseFeed: parseFeed,
     safeUrl: safeUrl,
     mapCourses: mapCourses,
     materialsFor: materialsFor,
+    filesFor: filesFor,
+    materialById: materialById,
     termRange: termRange,
     deadlineOps: deadlineOps
   };
 
   BB.ebwise = {
     core: core,
-    ui: { materialRowsHtml: materialRowsHtml }
+    ui: { materialRowsHtml: materialRowsHtml, fileGroupsHtml: fileGroupsHtml }
   };
 
   /* ---------- loader ---------- */
@@ -571,7 +766,7 @@
       reason: reason || '',
       generatedAt: '',
       lastSync: null,
-      counts: { courses: 0, materials: 0, deadlines: 0, dropped: 0 }
+      counts: { courses: 0, materials: 0, deadlines: 0, files: 0, dropped: 0 }
     };
   }
 
@@ -585,6 +780,7 @@
         courses: parsed.courses.length,
         materials: parsed.materials.length,
         deadlines: parsed.deadlines.length,
+        files: parsed.files.length,
         dropped: dropped
       }
     };
@@ -600,6 +796,7 @@
         courses: value.counts.courses,
         materials: value.counts.materials,
         deadlines: value.counts.deadlines,
+        files: value.counts.files,
         dropped: value.counts.dropped
       }
     };
@@ -825,6 +1022,26 @@
   };
 
   /* その科目の資料を今まで読んだことにする。unread の基準はこの時刻。 */
+  /* 開いている科目を覚える。保存するのはこれだけで、feed の中身は保存しない。 */
+  BB.ebwise.setOpen = function (subjectId, open) {
+    if (typeof subjectId !== 'string' || !subjectId || isUnsafe(subjectId)) return false;
+    if (!BB.store || typeof BB.store.update !== 'function') return false;
+    BB.store.update(function (state) {
+      state.ebwise = state.ebwise ||
+        { schema: 1, mapping: {}, suggested: {}, seenAt: {}, filesLinked: false };
+      var current = state.ebwise.open && typeof state.ebwise.open === 'object' ? state.ebwise.open : {};
+      var next = {};
+      for (var key in current) {
+        if (!Object.prototype.hasOwnProperty.call(current, key)) continue;
+        if (current[key]) next[key] = true;
+      }
+      if (open) next[subjectId] = true;
+      else delete next[subjectId];
+      state.ebwise.open = next;
+    });
+    return true;
+  };
+
   BB.ebwise.markSeen = function (subjectId) {
     if (typeof subjectId !== 'string' || !subjectId || isUnsafe(subjectId)) return false;
     if (!BB.store || typeof BB.store.update !== 'function') return false;
@@ -988,10 +1205,12 @@
     });
   }
 
-  /* 資料を開く。許可が 'prompt' のときだけ、押されたこの瞬間に尋ねる。 */
+  /* 資料を開く。許可が 'prompt' のときだけ、押されたこの瞬間に尋ねる。
+     この PC に無いファイル（downloaded が false）は開かない。 */
   function openMaterial(id) {
-    var item = materialById(id);
+    var item = itemById(id);
     if (!item) return Promise.resolve(false);
+    if (item.downloaded === false) return Promise.resolve(false);
     var parts = pathParts(item.localPath);
     if (!parts) return Promise.resolve(false);
     return readFilesHandle()
@@ -1029,12 +1248,9 @@
     if (BB.ui && typeof BB.ui.toast === 'function') BB.ui.toast(message);
   }
 
-  function materialById(id) {
-    if (!feed || !Array.isArray(feed.materials)) return null;
-    for (var i = 0; i < feed.materials.length; i++) {
-      if (feed.materials[i] && feed.materials[i].id === id) return feed.materials[i];
-    }
-    return null;
+  /* 資料の id から 1 件。materials に無ければ files からも探す（全部のファイルを開けるように）。 */
+  function itemById(id) {
+    return materialById(feed, id);
   }
 
   /* filesRoot と localPath を Windows のパスにつなぐ。 */
@@ -1045,7 +1261,7 @@
   }
 
   function copyPath(id) {
-    var path = fullPathOf(materialById(id));
+    var path = fullPathOf(itemById(id));
     if (!path) return;
     var clipboard = global.navigator && global.navigator.clipboard;
     if (!clipboard || typeof clipboard.writeText !== 'function') {
