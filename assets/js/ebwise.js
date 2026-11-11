@@ -572,10 +572,12 @@
     return saved === undefined ? defaultOpen : saved;
   }
 
-  /* 章の見出しと中身。新着の一覧とファイル一覧で同じ形にする。 */
-  function sectionBlockHtml(heading, body, key) {
+  /* 章の見出しと中身。新着の一覧とファイル一覧で同じ形にする。
+     defaultOpen は、まだ触っていないときの開閉。 */
+  function sectionBlockHtml(heading, body, key, defaultOpen) {
     return (
-      '<details class="bb-fold pt-3" data-ebwise-fold="' + escHtml(key) + '"' + (foldOpen(key, true) ? ' open' : '') + '>' +
+      '<details class="bb-fold pt-3" data-ebwise-fold="' + escHtml(key) + '"' +
+      (foldOpen(key, defaultOpen) ? ' open' : '') + '>' +
       '<summary class="cursor-pointer text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
       escHtml(heading) + '</summary>' +
       body +
@@ -584,10 +586,10 @@
   }
 
   /* モジュールの見出しと中身。notes は「フォルダ」「2 件」など。 */
-  function moduleBlockHtml(name, notes, body, key) {
+  function moduleBlockHtml(name, notes, body, key, defaultOpen) {
     return (
       '<details class="bb-fold mt-2 pl-3 border-l-2 border-border-subtle" data-ebwise-fold="' + escHtml(key) + '"' +
-      (foldOpen(key, false) ? ' open' : '') + '>' +
+      (foldOpen(key, defaultOpen) ? ' open' : '') + '>' +
       '<summary class="cursor-pointer pb-0.5">' +
       '<span class="flex items-baseline gap-2">' +
       '<span class="text-caption font-bold text-ink break-words">' + escHtml(name) + '</span>' +
@@ -716,11 +718,12 @@
               mod.module,
               moduleNotes(mod),
               mod.items.map(row).join(''),
-              foldKeyOf(subjectId, 'nm', section.section + '/' + mod.module)
+              foldKeyOf(subjectId, 'nm', section.section + '/' + mod.module),
+              true
             );
           })
           .join('');
-        return sectionBlockHtml(section.section, body, foldKeyOf(subjectId, 'ns', section.section));
+        return sectionBlockHtml(section.section, body, foldKeyOf(subjectId, 'ns', section.section), true);
       })
       .join('');
     return loose + sections;
@@ -853,11 +856,12 @@
                   return fileRowHtml(item, ctx);
                 })
                 .join(''),
-              foldKeyOf(subjectId, 'fm', heading + '/' + mod.module)
+              foldKeyOf(subjectId, 'fm', heading + '/' + mod.module),
+              false
             );
           })
           .join('');
-        return sectionBlockHtml(heading, loose + modules, foldKeyOf(subjectId, 'fs', heading));
+        return sectionBlockHtml(heading, loose + modules, foldKeyOf(subjectId, 'fs', heading), true);
       })
       .join('');
   }
