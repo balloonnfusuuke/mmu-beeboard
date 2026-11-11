@@ -557,66 +557,149 @@
     return parts.day + ' ' + EN_MONTHS[parts.month - 1] + ' (' + EN_DAYS[parts.weekday] + ')';
   }
 
-  /* 資料 1 件ぶんの行。DOM を使わないので、node でも文字列として試せる。
-     opts.site は feed の site。リンクは safeUrl が通ったときだけ出す。 */
+  /* 章の見出しと中身。新着の一覧とファイル一覧で同じ形にする。 */
+  function sectionBlockHtml(heading, body) {
+    return (
+      '<div class="pt-3">' +
+      '<h4 class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
+      escHtml(heading) + '</h4>' +
+      body +
+      '</div>'
+    );
+  }
+
+  /* モジュールの見出しと中身。notes は「フォルダ」「2 件」など。 */
+  function moduleBlockHtml(name, notes, body) {
+    return (
+      '<div class="mt-2 pl-3 border-l-2 border-border-subtle">' +
+      '<div class="flex items-baseline gap-2 pb-0.5">' +
+      '<span class="text-caption font-bold text-ink break-words">' + escHtml(name) + '</span>' +
+      (notes.length
+        ? '<span class="text-caption text-muted whitespace-nowrap">' + escHtml(notes.join(' · ')) + '</span>'
+        : '') +
+      '</div>' +
+      body +
+      '</div>'
+    );
+  }
+
+  /* モジュールの見出しに添える言葉。 */
+  function moduleNotes(mod) {
+    var notes = [];
+    if (mod.modtype === 'folder') notes.push(label('ebwise.dash.folder', 'Folder'));
+    if (mod.items.length > 1) notes.push(labelN('ebwise.dash.fileCount', '{n} files', mod.items.length));
+    return notes;
+  }
+
+  /* 資料 1 件ぶんの行。ctx は { site, files }。リンクは safeUrl が通ったときだけ出す。 */
+  function materialRowHtml(item, ctx) {
+    if (!item || typeof item !== 'object') return '';
+    var id = typeof item.id === 'string' ? item.id : '';
+    var unread = !!item.unread;
+    var status = item.status === 'updated'
+      ? label('ebwise.material.updated', 'Updated')
+      : label('ebwise.material.new', 'New');
+    var badgeClass = unread ? 'bg-primary text-on-primary' : 'bg-surface-sunken text-muted';
+    var when = dateLabel(item.changedAt);
+    var url = safeUrl(item.url, ctx.site);
+    var open = url
+      ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
+        'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
+        escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
+      : '';
+    /* 資料フォルダをつないでいるときだけ、資料名を押して開ける。 */
+    var canOpen = ctx.files && typeof item.localPath === 'string' && item.localPath !== '';
+    var copy = typeof item.localPath === 'string' && item.localPath !== ''
+      ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
+        'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
+        escHtml(label('ebwise.material.copy', 'Copy path')) + '</button>'
+      : '';
+
+    return (
+      '<div class="flex items-start gap-3 py-2.5 border-b border-border-subtle last:border-0">' +
+      '<span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ' +
+      badgeClass + '">' + escHtml(status) + '</span>' +
+      '<div class="min-w-0 flex-1">' +
+      /* 既読の行は落ち着かせる。押した結果が見た目に出るようにするため。 */
+      '<div class="text-body-sm break-words ' + (unread ? 'font-semibold text-ink' : 'text-muted') + '">' +
+      (canOpen
+        ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
+          'class="text-left hover:text-primary hover:underline">' + escHtml(item.title) + '</button>'
+        : escHtml(item.title)) +
+      '</div>' +
+      (when ? '<div class="text-caption text-muted break-words">' + escHtml(when) + '</div>' : '') +
+      '</div>' +
+      (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  /* 新着の一覧を章とモジュールでまとめる。materials には sectionNo が無いので、
+     出てきた順（新しい順）のまま、章とモジュールを最初に出てきた順で作る。 */
+  function materialGroupsOf(items) {
+    var loose = [];
+    var sections = [];
+    var bySection = {};
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (!item || typeof item !== 'object') continue;
+      var sectionName = textOf(item.section);
+      if (sectionName === '') {
+        loose.push(item);
+        continue;
+      }
+      var section = bySection[sectionName];
+      if (!section) {
+        section = bySection[sectionName] = { section: sectionName, loose: [], modules: [], byModule: {} };
+        sections.push(section);
+      }
+      var moduleName = textOf(item.module);
+      if (moduleName === '') {
+        section.loose.push(item);
+        continue;
+      }
+      var mod = section.byModule[moduleName];
+      if (!mod) {
+        mod = section.byModule[moduleName] = {
+          module: moduleName,
+          modtype: textOf(item.modtype),
+          items: []
+        };
+        section.modules.push(mod);
+      }
+      mod.items.push(item);
+    }
+    return { loose: loose, sections: sections };
+  }
+
+  /* 新着の一覧。章 → モジュール → 行の順に、ファイル一覧と同じ形で出す。
+     DOM を使わないので、node でも文字列として試せる。
+     opts.site は feed の site、opts.files は資料フォルダをつないでいるか。 */
   function materialRowsHtml(items, opts) {
     var list = Array.isArray(items) ? items : [];
     var options = opts || {};
-    var site = typeof options.site === 'string' ? options.site : '';
+    var ctx = {
+      site: typeof options.site === 'string' ? options.site : '',
+      files: options.files === true
+    };
+    function row(item) {
+      return materialRowHtml(item, ctx);
+    }
 
-    return list
-      .map(function (item) {
-        if (!item || typeof item !== 'object') return '';
-        var id = typeof item.id === 'string' ? item.id : '';
-        var unread = !!item.unread;
-        var status = item.status === 'updated'
-          ? label('ebwise.material.updated', 'Updated')
-          : label('ebwise.material.new', 'New');
-        var badgeClass = unread ? 'bg-primary text-on-primary' : 'bg-surface-sunken text-muted';
-        var where = [item.section, item.module]
-          .filter(function (part) {
-            return typeof part === 'string' && part !== '';
+    var parts = materialGroupsOf(list);
+    var loose = parts.loose.map(row).join('');
+    var sections = parts.sections
+      .map(function (section) {
+        var body = section.loose.map(row).join('');
+        body += section.modules
+          .map(function (mod) {
+            return moduleBlockHtml(mod.module, moduleNotes(mod), mod.items.map(row).join(''));
           })
-          .join(' › ');
-        var when = dateLabel(item.changedAt);
-        var meta = [where, when]
-          .filter(function (part) {
-            return part !== '';
-          })
-          .join(' · ');
-        var url = safeUrl(item.url, site);
-        var open = url
-          ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
-            'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
-            escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
-          : '';
-        /* 資料フォルダをつないでいるときだけ、資料名を押して開ける。 */
-        var canOpen = options.files === true && typeof item.localPath === 'string' && item.localPath !== '';
-        var copy = typeof item.localPath === 'string' && item.localPath !== ''
-          ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
-            'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
-            escHtml(label('ebwise.material.copy', 'Copy path')) + '</button>'
-          : '';
-
-        return (
-          '<div class="flex items-start gap-3 py-2.5 border-b border-border-subtle last:border-0">' +
-          '<span class="shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ' +
-          badgeClass + '">' + escHtml(status) + '</span>' +
-          '<div class="min-w-0 flex-1">' +
-          /* 既読の行は落ち着かせる。押した結果が見た目に出るようにするため。 */
-          '<div class="text-body-sm break-words ' + (unread ? 'font-semibold text-ink' : 'text-muted') + '">' +
-          (canOpen
-            ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
-              'class="text-left hover:text-primary hover:underline">' + escHtml(item.title) + '</button>'
-            : escHtml(item.title)) +
-          '</div>' +
-          (meta ? '<div class="text-caption text-muted break-words">' + escHtml(meta) + '</div>' : '') +
-          '</div>' +
-          (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
-          '</div>'
-        );
+          .join('');
+        return sectionBlockHtml(section.section, body);
       })
       .join('');
+    return loose + sections;
   }
 
   /* ---------- ファイルの行 ---------- */
@@ -737,36 +820,18 @@
           .join('');
         var modules = parts.modules
           .map(function (mod) {
-            var notes = [];
-            if (mod.modtype === 'folder') notes.push(label('ebwise.dash.folder', 'Folder'));
-            if (mod.items.length > 1) {
-              notes.push(labelN('ebwise.dash.fileCount', '{n} files', mod.items.length));
-            }
-            return (
-              '<div class="mt-2 pl-3 border-l-2 border-border-subtle">' +
-              '<div class="flex items-baseline gap-2 pb-0.5">' +
-              '<span class="text-caption font-bold text-ink break-words">' + escHtml(mod.module) + '</span>' +
-              (notes.length
-                ? '<span class="text-caption text-muted whitespace-nowrap">' +
-                  escHtml(notes.join(' · ')) + '</span>'
-                : '') +
-              '</div>' +
+            return moduleBlockHtml(
+              mod.module,
+              moduleNotes(mod),
               mod.items
                 .map(function (item) {
                   return fileRowHtml(item, ctx);
                 })
-                .join('') +
-              '</div>'
+                .join('')
             );
           })
           .join('');
-        return (
-          '<div class="pt-3">' +
-          '<h4 class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
-          escHtml(heading) + '</h4>' +
-          loose + modules +
-          '</div>'
-        );
+        return sectionBlockHtml(heading, loose + modules);
       })
       .join('');
   }

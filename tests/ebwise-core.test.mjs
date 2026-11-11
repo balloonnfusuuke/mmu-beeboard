@@ -484,6 +484,46 @@ test('materialRowsHtml は既読の行を落ち着かせる', () => {
   assert.equal(read.includes('Lab'), true);
 });
 
+test('materialRowsHtml は章とモジュールでまとめる', () => {
+  const items = [
+    {
+      id: 'ebw:mod:1',
+      title: 'Week 8 slides',
+      status: 'updated',
+      section: 'Topic 8',
+      module: 'Slides',
+      changedAt: '2026-11-10T10:00:00+08:00'
+    },
+    {
+      id: 'ebw:file:2',
+      title: 'Sample Lab 1',
+      status: 'new',
+      section: 'Topic 1',
+      module: 'Lab 1',
+      changedAt: '2026-11-09T10:00:00+08:00'
+    },
+    {
+      id: 'ebw:file:3',
+      title: 'Course outline',
+      status: 'new',
+      section: '',
+      module: '',
+      changedAt: '2026-11-08T10:00:00+08:00'
+    }
+  ];
+  const html = ui.materialRowsHtml(items, { site: SITE });
+  /* 章とモジュールは見出しとして出る。 */
+  assert.equal(html.includes('>Topic 8</h4>'), true);
+  assert.equal(html.includes('>Slides</span>'), true);
+  assert.equal(html.includes('>Topic 1</h4>'), true);
+  assert.equal(html.includes('>Lab 1</span>'), true);
+  /* 章は出てきた順。章の無いものは見出しより前に出る。 */
+  assert.equal(html.indexOf('>Topic 8</h4>') < html.indexOf('>Topic 1</h4>'), true);
+  assert.equal(html.indexOf('Course outline') < html.indexOf('>Topic 8</h4>'), true);
+  /* 行の説明で章とモジュールを繰り返さない。 */
+  assert.equal(html.includes('Topic 8 › Slides'), false);
+});
+
 /* ---------- deadlineOps ---------- */
 
 const TODAY = '2026-11-10';
