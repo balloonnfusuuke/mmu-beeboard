@@ -1281,13 +1281,13 @@
       ? '<div class="mt-3 pt-3 border-t border-border-subtle">' +
         '<h3 class="text-body-sm font-bold text-ink">' +
         escHtml(t('ebwise.dash.allFiles', { n: total })) + '</h3>' +
-        BB.ebwise.ui.fileGroupsHtml(groups, { site: site, files: files }) +
+        BB.ebwise.ui.fileGroupsHtml(groups, { site: site, files: files, subjectId: subject.id }) +
         '</div>'
       : '';
     return (
       '<div class="pt-2">' +
       '<h3 class="text-body-sm font-bold text-ink">' + escHtml(t('ebwise.dash.newTitle')) + '</h3>' +
-      BB.ebwise.ui.materialRowsHtml(shown, { site: site, files: files }) +
+      BB.ebwise.ui.materialRowsHtml(shown, { site: site, files: files, subjectId: subject.id }) +
       more +
       filesBlock +
       '</div>'
@@ -1456,6 +1456,12 @@
       function (event) {
         var details = event.target;
         if (!details || typeof details.getAttribute !== 'function') return;
+        /* 章とモジュールの開閉は、描き直しても閉じたままにするため覚える。 */
+        var fold = details.getAttribute('data-ebwise-fold');
+        if (fold) {
+          BB.ebwise.setFold(fold, details.open);
+          return;
+        }
         var id = details.getAttribute('data-ebwise-subject');
         if (!id) return;
         var state = BB.store.get();

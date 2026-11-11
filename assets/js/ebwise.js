@@ -557,29 +557,45 @@
     return parts.day + ' ' + EN_MONTHS[parts.month - 1] + ' (' + EN_DAYS[parts.weekday] + ')';
   }
 
+  /* 章とモジュールの開閉。章やモジュールの名前は feed の中身なので保存しない。
+     ページを開いている間だけ覚えて、描き直しても閉じたままにする。 */
+  var folds = {};
+
+  function foldKeyOf(subjectId, prefix, name) {
+    return textOf(subjectId) + '|' + prefix + '|' + textOf(name);
+  }
+
+  /* 既定は開く。閉じたものだけ覚える。 */
+  function foldOpen(key) {
+    return folds[key] !== false;
+  }
+
   /* 章の見出しと中身。新着の一覧とファイル一覧で同じ形にする。 */
-  function sectionBlockHtml(heading, body) {
+  function sectionBlockHtml(heading, body, key) {
     return (
-      '<div class="pt-3">' +
-      '<h4 class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
-      escHtml(heading) + '</h4>' +
+      '<details class="pt-3" data-ebwise-fold="' + escHtml(key) + '"' + (foldOpen(key) ? ' open' : '') + '>' +
+      '<summary class="cursor-pointer text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
+      escHtml(heading) + '</summary>' +
       body +
-      '</div>'
+      '</details>'
     );
   }
 
   /* モジュールの見出しと中身。notes は「フォルダ」「2 件」など。 */
-  function moduleBlockHtml(name, notes, body) {
+  function moduleBlockHtml(name, notes, body, key) {
     return (
-      '<div class="mt-2 pl-3 border-l-2 border-border-subtle">' +
-      '<div class="flex items-baseline gap-2 pb-0.5">' +
+      '<details class="mt-2 pl-3 border-l-2 border-border-subtle" data-ebwise-fold="' + escHtml(key) + '"' +
+      (foldOpen(key) ? ' open' : '') + '>' +
+      '<summary class="cursor-pointer pb-0.5">' +
+      '<span class="flex items-baseline gap-2">' +
       '<span class="text-caption font-bold text-ink break-words">' + escHtml(name) + '</span>' +
       (notes.length
         ? '<span class="text-caption text-muted whitespace-nowrap">' + escHtml(notes.join(' · ')) + '</span>'
         : '') +
-      '</div>' +
+      '</span>' +
+      '</summary>' +
       body +
-      '</div>'
+      '</details>'
     );
   }
 
@@ -678,6 +694,7 @@
   function materialRowsHtml(items, opts) {
     var list = Array.isArray(items) ? items : [];
     var options = opts || {};
+    var subjectId = textOf(options.subjectId);
     var ctx = {
       site: typeof options.site === 'string' ? options.site : '',
       files: options.files === true
@@ -693,10 +710,15 @@
         var body = section.loose.map(row).join('');
         body += section.modules
           .map(function (mod) {
-            return moduleBlockHtml(mod.module, moduleNotes(mod), mod.items.map(row).join(''));
+            return moduleBlockHtml(
+              mod.module,
+              moduleNotes(mod),
+              mod.items.map(row).join(''),
+              foldKeyOf(subjectId, 'nm', section.section + '/' + mod.module)
+            );
           })
           .join('');
-        return sectionBlockHtml(section.section, body);
+        return sectionBlockHtml(section.section, body, foldKeyOf(subjectId, 'ns', section.section));
       })
       .join('');
     return loose + sections;
@@ -799,6 +821,7 @@
   function fileGroupsHtml(groups, opts) {
     var list = Array.isArray(groups) ? groups : [];
     var options = opts || {};
+    var subjectId = textOf(options.subjectId);
     var ctx = {
       site: typeof options.site === 'string' ? options.site : '',
       linked: options.files === true
@@ -827,11 +850,12 @@
                 .map(function (item) {
                   return fileRowHtml(item, ctx);
                 })
-                .join('')
+                .join(''),
+              foldKeyOf(subjectId, 'fm', heading + '/' + mod.module)
             );
           })
           .join('');
-        return sectionBlockHtml(heading, loose + modules);
+        return sectionBlockHtml(heading, loose + modules, foldKeyOf(subjectId, 'fs', heading));
       })
       .join('');
   }
@@ -865,7 +889,13 @@
 
   BB.ebwise = {
     core: core,
-    ui: { materialRowsHtml: materialRowsHtml, fileGroupsHtml: fileGroupsHtml }
+    ui: { materialRowsHtml: materialRowsHtml, fileGroupsHtml: fileGroupsHtml },
+    /* 章とモジュールの開閉を覚える。保存はしない（ページを閉じれば戻る）。 */
+    setFold: function (key, open) {
+      if (typeof key !== 'string' || key === '') return false;
+      folds[key] = !!open;
+      return true;
+    }
   };
 
   /* ---------- loader ---------- */

@@ -513,13 +513,13 @@ test('materialRowsHtml は章とモジュールでまとめる', () => {
   ];
   const html = ui.materialRowsHtml(items, { site: SITE });
   /* 章とモジュールは見出しとして出る。 */
-  assert.equal(html.includes('>Topic 8</h4>'), true);
+  assert.equal(html.includes('>Topic 8</summary>'), true);
   assert.equal(html.includes('>Slides</span>'), true);
-  assert.equal(html.includes('>Topic 1</h4>'), true);
+  assert.equal(html.includes('>Topic 1</summary>'), true);
   assert.equal(html.includes('>Lab 1</span>'), true);
   /* 章は出てきた順。章の無いものは見出しより前に出る。 */
-  assert.equal(html.indexOf('>Topic 8</h4>') < html.indexOf('>Topic 1</h4>'), true);
-  assert.equal(html.indexOf('Course outline') < html.indexOf('>Topic 8</h4>'), true);
+  assert.equal(html.indexOf('>Topic 8</summary>') < html.indexOf('>Topic 1</summary>'), true);
+  assert.equal(html.indexOf('Course outline') < html.indexOf('>Topic 8</summary>'), true);
   /* 行の説明で章とモジュールを繰り返さない。 */
   assert.equal(html.includes('Topic 8 › Slides'), false);
 });
@@ -837,4 +837,66 @@ test('fileGroupsHtml はフォルダのモジュールに種類と件数を出�
   /* 1 件だけのモジュールには件数を出さない。 */
   const one = ui.fileGroupsHtml([{ sectionNo: 1, section: 'Topic 1', items: [items[0]] }], { site: SITE });
   assert.equal(one.includes('1 files'), false);
+});
+
+/* ---------- 章とモジュールの開閉 ---------- */
+
+const FOLD_ITEMS = [
+  {
+    id: 'ebw:mod:1',
+    title: 'Week 8 slides',
+    status: 'updated',
+    section: 'Topic 8',
+    module: 'Slides',
+    changedAt: '2026-11-10T10:00:00+08:00'
+  }
+];
+
+test('materialRowsHtml は章とモジュールを既定で開いた details にする', () => {
+  const html = ui.materialRowsHtml(FOLD_ITEMS, { site: SITE, subjectId: 's1' });
+  assert.equal(html.includes('data-ebwise-fold="s1|ns|Topic 8" open>'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides" open>'), true);
+  assert.equal(html.includes('<summary'), true);
+});
+
+test('materialRowsHtml は閉じた章とモジュールを閉じたまま描く', () => {
+  ebwise.setFold('s1|ns|Topic 8', false);
+  ebwise.setFold('s1|nm|Topic 8/Slides', false);
+  const html = ui.materialRowsHtml(FOLD_ITEMS, { site: SITE, subjectId: 's1' });
+  assert.equal(html.includes('data-ebwise-fold="s1|ns|Topic 8">'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|nm|Topic 8/Slides">'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|ns|Topic 8" open>'), false);
+  /* 中身は消さない（閉じているだけ）。 */
+  assert.equal(html.includes('Week 8 slides'), true);
+  /* 開き直せば戻る。 */
+  ebwise.setFold('s1|ns|Topic 8', true);
+  ebwise.setFold('s1|nm|Topic 8/Slides', true);
+  assert.equal(
+    ui.materialRowsHtml(FOLD_ITEMS, { site: SITE, subjectId: 's1' }).includes('data-ebwise-fold="s1|ns|Topic 8" open>'),
+    true
+  );
+});
+
+test('fileGroupsHtml は章とモジュールを科目ごとのキーで開閉する', () => {
+  const html = ui.fileGroupsHtml(FILE_GROUPS, { site: SITE, subjectId: 's1' });
+  assert.equal(html.includes('data-ebwise-fold="s1|fs|Topic 1" open>'), true);
+  assert.equal(html.includes('data-ebwise-fold="s1|fm|Topic 1/Lab 1" open>'), true);
+  /* 新着の一覧とは別のキーなので、片方を閉じてももう片方は開いたまま。 */
+  ebwise.setFold('s1|fs|Topic 1', false);
+  assert.equal(
+    ui.fileGroupsHtml(FILE_GROUPS, { site: SITE, subjectId: 's1' }).includes('data-ebwise-fold="s1|fs|Topic 1">'),
+    true
+  );
+  assert.equal(
+    ui.materialRowsHtml(FOLD_ITEMS, { site: SITE, subjectId: 's1' }).includes('data-ebwise-fold="s1|ns|Topic 8" open>'),
+    true
+  );
+  ebwise.setFold('s1|fs|Topic 1', true);
+});
+
+test('setFold は空のキーを受け付けない', () => {
+  assert.equal(ebwise.setFold('', false), false);
+  assert.equal(ebwise.setFold(null, false), false);
+  assert.equal(ebwise.setFold('s1|fs|Topic 1', false), true);
+  ebwise.setFold('s1|fs|Topic 1', true);
 });

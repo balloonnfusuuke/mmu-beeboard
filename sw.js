@@ -4,7 +4,7 @@
    更新を配るときは CACHE の版を上げる。古いキャッシュは activate で削除する。 */
 'use strict';
 
-var CACHE = 'mmu-beeboard-v31';
+var CACHE = 'mmu-beeboard-v32';
 
 /* 更新バナーを持たない版のキャッシュ名。この版から上げるときだけ、待たせずに
    有効化して従来どおり 2 回の再読み込みで届ける（旧ページにはバナーが無いため、

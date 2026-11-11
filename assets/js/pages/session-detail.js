@@ -446,7 +446,8 @@
     var groups = BB.ebwise.core.filesFor(feed, BB.ebwise.mapping().map, found.subject.id);
     body.innerHTML = BB.ebwise.ui.fileGroupsHtml(groups, {
       site: feed.site,
-      files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
+      files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked(),
+      subjectId: found.subject.id
     });
     body.setAttribute('data-filled', '1');
   }
@@ -472,7 +473,8 @@
       ? '<div class="mt-2">' +
         BB.ebwise.ui.materialRowsHtml(items.slice(0, 5), {
           site: feed.site,
-          files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
+          files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked(),
+          subjectId: found.subject.id
         }) +
         '</div>'
       : '';
@@ -767,6 +769,12 @@
     function (event) {
       var details = event.target;
       if (!details || typeof details.hasAttribute !== 'function') return;
+      /* 章とモジュールの開閉は、描き直しても閉じたままにするため覚える。 */
+      var fold = details.getAttribute('data-ebwise-fold');
+      if (fold) {
+        BB.ebwise.setFold(fold, details.open);
+        return;
+      }
       if (!details.hasAttribute('data-sd-ebwise-files') || !details.open) return;
       var found = resolve();
       if (!found) return;
