@@ -430,7 +430,7 @@
   function filesDetailsHtml(total) {
     if (!total) return '';
     return (
-      '<details data-sd-ebwise-files class="mt-3 pt-3 border-t border-border-subtle">' +
+      '<details data-sd-ebwise-files class="bb-fold mt-3 pt-3 border-t border-border-subtle">' +
       '<summary class="cursor-pointer text-body-sm font-bold text-ink">' +
       esc(t('sd.ebwise.files', { n: total })) + '</summary>' +
       '<div data-sd-ebwise-files-body></div>' +

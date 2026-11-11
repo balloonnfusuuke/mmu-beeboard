@@ -1300,7 +1300,7 @@
     var total = ebwiseFileTotal(groups);
     var summary =
       '<summary class="cursor-pointer">' +
-      '<span class="flex items-center justify-between gap-2">' +
+      '<span class="flex flex-1 min-w-0 items-center justify-between gap-2">' +
       '<span class="flex items-center gap-2 min-w-0">' +
       '<span class="shrink-0 px-2 py-0.5 rounded text-[11px] font-bold" style="background:' + chip.background +
       ';color:' + chip.color + ';border:1px solid ' + chip.borderColor + '">' + escHtml(subject.id) + '</span>' +
@@ -1328,7 +1328,7 @@
       : '';
     return (
       '<details data-ebwise-subject="' + escHtml(subject.id) + '"' + (open ? ' open' : '') +
-      ' class="bg-surface border border-border rounded-card p-4 shadow-rest">' +
+      ' class="bb-fold bg-surface border border-border rounded-card p-4 shadow-rest">' +
       summary + body +
       '</details>'
     );

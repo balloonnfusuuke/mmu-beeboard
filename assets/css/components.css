@@ -867,3 +867,41 @@ a.tt-block-off:hover { border-color: var(--bb-primary); color: var(--bb-text); }
     transition: none;
   }
 }
+
+/* ---------- 折りたためる見出し ---------- */
+
+/* 既定の三角は、summary の中身がブロックだと名前の上の行に出てしまう。
+   三角は ::before で自前に出して、名前と同じ行に並べる。 */
+.bb-fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.bb-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bb-fold > summary::before {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  opacity: 0.6;
+  transition: transform 160ms ease;
+}
+
+.bb-fold[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-fold > summary::before {
+    transition: none;
+  }
+}

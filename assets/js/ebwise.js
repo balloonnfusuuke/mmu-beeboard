@@ -573,7 +573,7 @@
   /* 章の見出しと中身。新着の一覧とファイル一覧で同じ形にする。 */
   function sectionBlockHtml(heading, body, key) {
     return (
-      '<details class="pt-3" data-ebwise-fold="' + escHtml(key) + '"' + (foldOpen(key) ? ' open' : '') + '>' +
+      '<details class="bb-fold pt-3" data-ebwise-fold="' + escHtml(key) + '"' + (foldOpen(key) ? ' open' : '') + '>' +
       '<summary class="cursor-pointer text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
       escHtml(heading) + '</summary>' +
       body +
@@ -584,7 +584,7 @@
   /* モジュールの見出しと中身。notes は「フォルダ」「2 件」など。 */
   function moduleBlockHtml(name, notes, body, key) {
     return (
-      '<details class="mt-2 pl-3 border-l-2 border-border-subtle" data-ebwise-fold="' + escHtml(key) + '"' +
+      '<details class="bb-fold mt-2 pl-3 border-l-2 border-border-subtle" data-ebwise-fold="' + escHtml(key) + '"' +
       (foldOpen(key) ? ' open' : '') + '>' +
       '<summary class="cursor-pointer pb-0.5">' +
       '<span class="flex items-baseline gap-2">' +
