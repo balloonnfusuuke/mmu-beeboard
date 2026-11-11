@@ -206,7 +206,8 @@ already picked, and BeeBoard reads that file at runtime. The format is documente
   material name opens the file from this PC. Without it the list still shows what is new.
 
 The dashboard shows the new items of each subject — materials from the last 21 days, at most
-300 — and opening a subject shows every file the feed lists, grouped by section, up to 2000.
+300 — and opening a subject shows every file the feed lists, grouped by section and module the
+way eBwise lists them, up to 2000.
 Older materials stay reachable that way after you mark a subject as read.
 
 Deadlines from the feed arrive as approval candidates in Settings → Local AI. Nothing is added

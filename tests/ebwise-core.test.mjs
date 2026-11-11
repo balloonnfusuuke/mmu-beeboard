@@ -774,3 +774,27 @@ test('fileGroupsHtml は recent のバッジを出す', () => {
   );
   assert.equal(none.includes('>New</span>'), false);
 });
+
+test('fileGroupsHtml は章の中をモジュールごとに分ける', () => {
+  const html = ui.fileGroupsHtml(FILE_GROUPS, { site: SITE });
+  /* モジュール名は見出しとして出る。 */
+  assert.equal(html.includes('>Lab 1</span>'), true);
+  assert.equal(html.includes('>Lab 3</span>'), true);
+  /* module が空のファイルは、章の直下（最初のモジュール見出しより前）に出る。 */
+  assert.equal(html.indexOf('lab2.pdf') < html.indexOf('>Lab 1</span>'), true);
+  /* モジュール名を行の説明で繰り返さない。 */
+  assert.equal(html.includes('Lab 1 · '), false);
+});
+
+test('fileGroupsHtml はフォルダのモジュールに種類と件数を出す', () => {
+  const items = [
+    { id: 'a', fileName: 'a.pdf', module: 'Lecture notes', modtype: 'folder', downloaded: true, localPath: 'x/a.pdf' },
+    { id: 'b', fileName: 'b.pdf', module: 'Lecture notes', modtype: 'folder', downloaded: true, localPath: 'x/b.pdf' }
+  ];
+  const html = ui.fileGroupsHtml([{ sectionNo: 1, section: 'Topic 1', items }], { site: SITE });
+  assert.equal(html.includes('>Lecture notes</span>'), true);
+  assert.equal(html.includes('Folder · 2 files'), true);
+  /* 1 件だけのモジュールには件数を出さない。 */
+  const one = ui.fileGroupsHtml([{ sectionNo: 1, section: 'Topic 1', items: [items[0]] }], { site: SITE });
+  assert.equal(one.includes('1 files'), false);
+});

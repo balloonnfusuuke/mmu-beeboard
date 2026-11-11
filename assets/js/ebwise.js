@@ -528,6 +528,15 @@
     return fallback;
   }
 
+  /* {n} を差し込む label。辞書に無ければ fallback の {n} を置き換える。 */
+  function labelN(key, fallback, n) {
+    if (BB.i18n && typeof BB.i18n.t === 'function') {
+      var text = BB.i18n.t(key, { n: n });
+      if (typeof text === 'string' && text !== key) return text;
+    }
+    return String(fallback).replace('{n}', String(n));
+  }
+
   /* changedAt は +08:00 のまま書かれている。日付部分をそのまま読み、曜日だけ Date で出す。 */
   function dayParts(iso) {
     var match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso === undefined || iso === null ? '' : iso));
@@ -619,14 +628,98 @@
     return Math.max(1, Math.round(size / 1024)) + ' KB';
   }
 
-  /* 章ごとのファイル一覧。DOM を使わないので、node でも文字列として試せる。
+  /* ファイル 1 件ぶんの行。ctx は { site, linked }。 */
+  function fileRowHtml(item, ctx) {
+    if (!item || typeof item !== 'object') return '';
+    var id = typeof item.id === 'string' ? item.id : '';
+    var name = typeof item.fileName === 'string' && item.fileName !== ''
+      ? item.fileName
+      : textOf(item.title);
+    var downloaded = item.downloaded !== false;
+    var localPath = typeof item.localPath === 'string' ? item.localPath : '';
+    var canOpen = ctx.linked && downloaded && localPath !== '';
+    var meta = [];
+    var when = dateLabel(item.moodleModified);
+    if (when) meta.push(when);
+    var size = sizeLabel(item.size);
+    if (size) meta.push(size);
+    var recent = item.recent === 'updated'
+      ? label('ebwise.material.updated', 'Updated')
+      : item.recent === 'new' ? label('ebwise.material.new', 'New') : '';
+    var url = downloaded ? safeUrl(item.url, ctx.site) : '';
+    var open = url
+      ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
+        'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
+        escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
+      : '';
+    var copy = downloaded && localPath !== ''
+      ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
+        'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
+        escHtml(label('ebwise.material.copy', 'Copy path')) + '</button>'
+      : '';
+    var note = downloaded
+      ? ''
+      : '<div class="text-caption text-muted">' +
+        escHtml(label('ebwise.dash.notDownloaded', 'Not downloaded yet')) + '</div>';
+
+    return (
+      '<div class="flex items-start gap-3 py-2 border-b border-border-subtle last:border-0">' +
+      '<div class="min-w-0 flex-1">' +
+      '<div class="text-body-sm font-semibold text-ink break-words">' +
+      (canOpen
+        ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
+          'class="text-left hover:text-primary hover:underline">' + escHtml(name) + '</button>'
+        : escHtml(name)) +
+      (recent
+        ? ' <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-on-primary">' +
+          escHtml(recent) + '</span>'
+        : '') +
+      '</div>' +
+      (meta.length
+        ? '<div class="text-caption text-muted break-words">' + escHtml(meta.join(' · ')) + '</div>'
+        : '') +
+      note +
+      '</div>' +
+      (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  /* 章の中をモジュール（Moodle のフォルダやリソース）ごとに分ける。items は module、
+     fileName の順に並んでいる前提。module が空のファイルは章の直下に出す。 */
+  function moduleGroupsOf(items) {
+    var loose = [];
+    var modules = [];
+    var byName = {};
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (!item || typeof item !== 'object') continue;
+      var name = textOf(item.module);
+      if (name === '') {
+        loose.push(item);
+        continue;
+      }
+      var group = byName[name];
+      if (!group) {
+        group = byName[name] = { module: name, modtype: textOf(item.modtype), items: [] };
+        modules.push(group);
+      }
+      group.items.push(item);
+    }
+    return { loose: loose, modules: modules };
+  }
+
+  /* 章ごとのファイル一覧。eBwise の画面に近づけて、章 → モジュール → ファイルの順に出す。
+     DOM を使わないので、node でも文字列として試せる。
      opts.site は feed の site、opts.files は資料フォルダをつないでいるか。
      downloaded が false の行は「まだ取得していません」だけを出し、開くボタンもコピーのボタンも出さない。 */
   function fileGroupsHtml(groups, opts) {
     var list = Array.isArray(groups) ? groups : [];
     var options = opts || {};
-    var site = typeof options.site === 'string' ? options.site : '';
-    var linked = options.files === true;
+    var ctx = {
+      site: typeof options.site === 'string' ? options.site : '',
+      linked: options.files === true
+    };
 
     return list
       .map(function (group) {
@@ -636,60 +729,33 @@
         var heading = typeof group.section === 'string' && group.section !== ''
           ? group.section
           : label('ebwise.dash.section', 'Section') + ' ' + String(group.sectionNo);
-        var rows = items
+        var parts = moduleGroupsOf(items);
+        var loose = parts.loose
           .map(function (item) {
-            if (!item || typeof item !== 'object') return '';
-            var id = typeof item.id === 'string' ? item.id : '';
-            var name = typeof item.fileName === 'string' && item.fileName !== ''
-              ? item.fileName
-              : textOf(item.title);
-            var downloaded = item.downloaded !== false;
-            var localPath = typeof item.localPath === 'string' ? item.localPath : '';
-            var canOpen = linked && downloaded && localPath !== '';
-            var meta = [];
-            if (typeof item.module === 'string' && item.module !== '') meta.push(item.module);
-            var when = dateLabel(item.moodleModified);
-            if (when) meta.push(when);
-            var size = sizeLabel(item.size);
-            if (size) meta.push(size);
-            var recent = item.recent === 'updated'
-              ? label('ebwise.material.updated', 'Updated')
-              : item.recent === 'new' ? label('ebwise.material.new', 'New') : '';
-            var url = downloaded ? safeUrl(item.url, site) : '';
-            var open = url
-              ? '<a href="' + escHtml(url) + '" target="_blank" rel="noopener noreferrer" ' +
-                'class="text-caption font-semibold text-primary hover:underline whitespace-nowrap">' +
-                escHtml(label('ebwise.material.open', 'Open in eBwise')) + '</a>'
-              : '';
-            var copy = downloaded && localPath !== ''
-              ? '<button type="button" data-ebwise-copy="' + escHtml(id) + '" ' +
-                'class="text-caption font-semibold text-muted hover:text-primary whitespace-nowrap">' +
-                escHtml(label('ebwise.material.copy', 'Copy path')) + '</button>'
-              : '';
-            var note = downloaded
-              ? ''
-              : '<div class="text-caption text-muted">' +
-                escHtml(label('ebwise.dash.notDownloaded', 'Not downloaded yet')) + '</div>';
-
+            return fileRowHtml(item, ctx);
+          })
+          .join('');
+        var modules = parts.modules
+          .map(function (mod) {
+            var notes = [];
+            if (mod.modtype === 'folder') notes.push(label('ebwise.dash.folder', 'Folder'));
+            if (mod.items.length > 1) {
+              notes.push(labelN('ebwise.dash.fileCount', '{n} files', mod.items.length));
+            }
             return (
-              '<div class="flex items-start gap-3 py-2 border-b border-border-subtle last:border-0">' +
-              '<div class="min-w-0 flex-1">' +
-              '<div class="text-body-sm font-semibold text-ink break-words">' +
-              (canOpen
-                ? '<button type="button" data-ebwise-open="' + escHtml(id) + '" ' +
-                  'class="text-left hover:text-primary hover:underline">' + escHtml(name) + '</button>'
-                : escHtml(name)) +
-              (recent
-                ? ' <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-on-primary">' +
-                  escHtml(recent) + '</span>'
+              '<div class="mt-2 pl-3 border-l-2 border-border-subtle">' +
+              '<div class="flex items-baseline gap-2 pb-0.5">' +
+              '<span class="text-caption font-bold text-ink break-words">' + escHtml(mod.module) + '</span>' +
+              (notes.length
+                ? '<span class="text-caption text-muted whitespace-nowrap">' +
+                  escHtml(notes.join(' · ')) + '</span>'
                 : '') +
               '</div>' +
-              (meta.length
-                ? '<div class="text-caption text-muted break-words">' + escHtml(meta.join(' · ')) + '</div>'
-                : '') +
-              note +
-              '</div>' +
-              (open || copy ? '<div class="flex items-center gap-2 shrink-0">' + open + copy + '</div>' : '') +
+              mod.items
+                .map(function (item) {
+                  return fileRowHtml(item, ctx);
+                })
+                .join('') +
               '</div>'
             );
           })
@@ -698,7 +764,7 @@
           '<div class="pt-3">' +
           '<h4 class="text-caption font-bold text-muted uppercase tracking-wider pb-1">' +
           escHtml(heading) + '</h4>' +
-          rows +
+          loose + modules +
           '</div>'
         );
       })

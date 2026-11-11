@@ -247,7 +247,9 @@
           allFiles: 'All files ({n})',
           notDownloaded: 'Not downloaded yet',
           truncated: 'Too many files, so only some are shown.',
-          section: 'Section'
+          section: 'Section',
+          folder: 'Folder',
+          fileCount: '{n} files'
         },
         files: {
           title: 'Materials folder (optional)',
@@ -1983,7 +1985,9 @@
           allFiles: 'すべてのファイル（{n}）',
           notDownloaded: 'まだ取得していません',
           truncated: 'ファイルが多いため、一部だけを表示しています。',
-          section: '章'
+          section: '章',
+          folder: 'フォルダ',
+          fileCount: '{n} 件'
         },
         files: {
           title: '資料フォルダ（任意）',
