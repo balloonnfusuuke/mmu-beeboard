@@ -418,24 +418,63 @@
     );
   }
 
-  /* この科目に結びついた eBwise の資料。対応が無い・0 件なら空文字を返す。 */
+  function fileTotal(groups) {
+    var total = 0;
+    groups.forEach(function (group) {
+      total += group.items.length;
+    });
+    return total;
+  }
+
+  /* 全部のファイル。中身は開いたときに初めて作る（このページでは開いた状態を保存しない）。 */
+  function filesDetailsHtml(total) {
+    if (!total) return '';
+    return (
+      '<details data-sd-ebwise-files class="mt-3 pt-3 border-t border-border-subtle">' +
+      '<summary class="cursor-pointer text-body-sm font-bold text-ink">' +
+      esc(t('sd.ebwise.files', { n: total })) + '</summary>' +
+      '<div data-sd-ebwise-files-body></div>' +
+      '</details>'
+    );
+  }
+
+  function fillFiles(details, found) {
+    var body = details.querySelector('[data-sd-ebwise-files-body]');
+    if (!body || body.getAttribute('data-filled') === '1') return;
+    var feed = BB.ebwise.feed();
+    if (!feed) return;
+    var groups = BB.ebwise.core.filesFor(feed, BB.ebwise.mapping().map, found.subject.id);
+    body.innerHTML = BB.ebwise.ui.fileGroupsHtml(groups, {
+      site: feed.site,
+      files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
+    });
+    body.setAttribute('data-filled', '1');
+  }
+
+  /* この科目に結びついた eBwise の資料と、全部のファイル。対応が無い・どちらも 0 件なら空文字。 */
   function ebwiseInner(found) {
     if (!BB.ebwise || typeof BB.ebwise.mapping !== 'function') return '';
     var feed = BB.ebwise.feed();
     if (!feed) return '';
     var state = BB.store.get();
     var seenAt = (state.ebwise && state.ebwise.seenAt) || {};
-    var items = BB.ebwise.core.materialsFor(
-      feed,
-      BB.ebwise.mapping().map,
-      found.subject.id,
-      seenAt[found.subject.id] || ''
-    );
-    if (!items.length) return '';
+    var map = BB.ebwise.mapping().map;
+    var items = BB.ebwise.core.materialsFor(feed, map, found.subject.id, seenAt[found.subject.id] || '');
+    var groups = BB.ebwise.core.filesFor(feed, map, found.subject.id);
+    var total = fileTotal(groups);
+    if (!items.length && !total) return '';
 
     var more = items.length > 5
       ? '<a href="index.html#ebwise" class="text-caption font-semibold text-primary hover:underline">' +
         esc(t('sd.ebwise.all')) + '</a>'
+      : '';
+    var recent = items.length
+      ? '<div class="mt-2">' +
+        BB.ebwise.ui.materialRowsHtml(items.slice(0, 5), {
+          site: feed.site,
+          files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
+        }) +
+        '</div>'
       : '';
     return (
       '<div class="bb-card p-5">' +
@@ -443,12 +482,9 @@
       '<h3 class="text-title-md font-bold text-ink flex items-center gap-2">' +
       '<span class="material-symbols-outlined text-[20px] text-primary">school</span>' +
       esc(t('sd.ebwise.title')) + '</h3>' + more + '</div>' +
-      '<div class="mt-2">' +
-      BB.ebwise.ui.materialRowsHtml(items.slice(0, 5), {
-        site: feed.site,
-        files: typeof BB.ebwise.filesLinked === 'function' && BB.ebwise.filesLinked()
-      }) +
-      '</div></div>'
+      recent +
+      filesDetailsHtml(total) +
+      '</div>'
     );
   }
 
@@ -724,4 +760,18 @@
       host.innerHTML = ebwiseInner(found);
     });
   }
+
+  /* ファイルの一覧は、開いたときに初めて作る。開いた状態は保存しない。 */
+  document.addEventListener(
+    'toggle',
+    function (event) {
+      var details = event.target;
+      if (!details || typeof details.hasAttribute !== 'function') return;
+      if (!details.hasAttribute('data-sd-ebwise-files') || !details.open) return;
+      var found = resolve();
+      if (!found) return;
+      fillFiles(details, found);
+    },
+    true
+  );
 })();

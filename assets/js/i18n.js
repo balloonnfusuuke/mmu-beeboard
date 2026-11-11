@@ -1157,7 +1157,8 @@
         next: 'Next session',
         ebwise: {
           title: 'New in eBwise',
-          all: 'See all'
+          all: 'See all',
+          files: 'All files ({n})'
         }
       },
       sl: {
@@ -2839,7 +2840,8 @@
         next: '次の回',
         ebwise: {
           title: 'eBwise の新着',
-          all: 'すべて見る'
+          all: 'すべて見る',
+          files: 'すべてのファイル（{n}）'
         }
       },
       sl: {
